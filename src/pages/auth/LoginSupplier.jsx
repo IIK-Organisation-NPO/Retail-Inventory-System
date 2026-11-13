@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
 import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
+import PasswordInput from "../../components/common/PasswordInput";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png";
 
@@ -85,8 +86,7 @@ const LoginSupplier = () => {
               {/* Password Input Field */}
               <div className="input-group">
                 <label>Password</label>
-                <input
-                  type="password"
+                <PasswordInput
                   defaultValue="••••••••"
                   className="form-input"
                 />

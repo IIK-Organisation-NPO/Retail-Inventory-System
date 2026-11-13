@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 // Import the Footer and Forgot Password popup components from the common folder
 import Footer from "../../components/common/Footer";
 import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
+import PasswordInput from "../../components/common/PasswordInput";
 
 // Import images from assets/images
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
@@ -66,8 +67,7 @@ const AdminLogin = () => {
 
               <div className="input-group">
                 <label>Password</label>
-                <input 
-                  type="password" 
+                <PasswordInput
                   defaultValue="••••••••" 
                   className="form-input" 
                 />

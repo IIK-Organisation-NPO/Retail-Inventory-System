@@ -2,12 +2,24 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
+import PasswordInput from "../../components/common/PasswordInput";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png";
 
 const SignupSupplier = () => {
   const navigate = useNavigate();
   const [hasDisability, setHasDisability] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState("");
+
+  const handleCreateAccount = (event) => {
+    event.preventDefault();
+    if (!termsAccepted) {
+      setTermsError("You must agree to the Terms and Conditions to create an account.");
+      return;
+    }
+    setTermsError("");
+  };
 
   return (
     // Main page wrapper using CSS Grid to keep footer at the bottom
@@ -66,7 +78,7 @@ const SignupSupplier = () => {
               </button>
             </div>
 
-            <form>
+            <form onSubmit={handleCreateAccount}>
               {/* Section Title */}
               <h3 className="section-title">Your details</h3>
 
@@ -117,6 +129,7 @@ const SignupSupplier = () => {
                         id="disability-type"
                         type="text"
                         className="form-input"
+                        required
                       />
                     </div>
                   )}
@@ -149,22 +162,59 @@ const SignupSupplier = () => {
               {/* Password Input */}
               <div className="input-group">
                 <label>Password</label>
-                <input type="password" className="form-input" />
+                <PasswordInput
+                  className="form-input"
+                  minLength={8}
+                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
+                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
+                  autoComplete="new-password"
+                  required
+                />
+                <ul className="password-requirements">
+                  <li>At least 8 characters</li>
+                  <li>At least one uppercase letter</li>
+                  <li>At least one lowercase letter</li>
+                  <li>At least one number</li>
+                  <li className="special-character-requirement">
+                    At least one special character (e.g. ! @ # $ % ^ &amp; *)
+                  </li>
+                </ul>
               </div>
 
               {/* Confirm Password Input */}
               <div className="input-group">
                 <label>Confirm password</label>
-                <input type="password" className="form-input" />
+                <PasswordInput
+                  className="form-input"
+                  minLength={8}
+                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
+                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
+                  autoComplete="new-password"
+                  required
+                />
               </div>
 
               {/* Terms & Conditions Checkbox */}
               <div className="terms-group">
-                <input type="checkbox" id="terms" />
-                <label htmlFor="terms">
+                <input
+                  type="checkbox"
+                  id="supplier-terms"
+                  checked={termsAccepted}
+                  onChange={(event) => {
+                    setTermsAccepted(event.target.checked);
+                    if (event.target.checked) setTermsError("");
+                  }}
+                  aria-describedby={termsError ? "supplier-terms-error" : undefined}
+                />
+                <label htmlFor="supplier-terms">
                   I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
                 </label>
               </div>
+              {termsError && (
+                <p id="supplier-terms-error" className="field-error" role="alert">
+                  {termsError}
+                </p>
+              )}
 
               {/* Form Submit Button */}
               <button type="submit" className="submit-btn">
