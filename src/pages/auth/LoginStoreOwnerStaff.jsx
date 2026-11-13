@@ -1,11 +1,14 @@
-import React from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
+import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png"; 
 
 const LoginStoreOwnerStaff = () => {
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
   return (
     // Main page wrapper using CSS Grid to keep footer at the bottom
     <div className="login-page-wrapper">
@@ -88,7 +91,9 @@ const LoginStoreOwnerStaff = () => {
                   <input type="checkbox" id="remember" defaultChecked />
                   <label htmlFor="remember">Remember me</label>
                 </div>
-                <a href="#" className="forgot-link">Forgot password?</a>
+                <button type="button" className="forgot-link" onClick={() => setShowForgotPassword(true)}>
+                  Forgot password?
+                </button>
               </div>
 
               {/* Form Submit Button */}
@@ -108,6 +113,11 @@ const LoginStoreOwnerStaff = () => {
 
       {/* Global Footer Component */}
       <Footer />
+
+      {/* Forgot Password Popup */}
+      {showForgotPassword && (
+        <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
+      )}
       
     </div>
   );

@@ -1235,3 +1235,175 @@
   display: block;
   margin-bottom: 5px;
 }
+
+/* ============================================
+   FORGOT PASSWORD POPUP
+   (Forgot password / Enter your code / Create a new password)
+   ============================================ */
+
+/* "Forgot password?" is a button (opens the popup) styled as a link */
+button.forgot-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+/* Dark backdrop covering the page */
+.auth-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* Popup card */
+.auth-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 28px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  text-align: left;
+}
+
+.auth-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.auth-modal-header h2 {
+  font-size: 1.5rem;
+  color: #000;
+}
+
+/* Small square close (×) button */
+.auth-modal-close {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.auth-modal-close:hover {
+  background: #f2f2f2;
+}
+
+.auth-modal-text {
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #666;
+}
+
+.auth-modal-text strong {
+  color: #000;
+}
+
+/* Six OTP digit boxes */
+.otp-inputs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.otp-input {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+}
+
+.otp-input:focus {
+  border-color: #000;
+}
+
+/* Grey resend countdown box */
+.auth-modal-note {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background-color: #e6e7ea;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.resend-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  color: #000;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Helper and error text under inputs */
+.field-hint {
+  margin-top: 5px;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.field-error {
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: #c62828;
+}
+
+/* White button with black border (Cancel / Change number) */
+.outline-btn {
+  width: 100%;
+  padding: 13px;
+  background-color: #fff;
+  color: #000;
+  border: 2px solid #000;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.outline-btn:hover {
+  background-color: #f2f2f2;
+}
+
+@media (max-width: 400px) {
+  .auth-modal {
+    padding: 20px;
+  }
+
+  .otp-inputs {
+    gap: 6px;
+  }
+
+  .otp-input {
+    height: 44px;
+  }
+}

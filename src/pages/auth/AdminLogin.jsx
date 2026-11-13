@@ -1,15 +1,19 @@
 // Import the CSS from the styles folder (filename is auth.css)
 import "../../Style/components/auth.css";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
-// Import the Footer component from the common folder
+// Import the Footer and Forgot Password popup components from the common folder
 import Footer from "../../components/common/Footer";
+import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
 
 // Import images from assets/images
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png"; 
 
 const AdminLogin = () => {
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
   return (
     <div className="login-page-wrapper admin-login-page">
       
@@ -74,7 +78,9 @@ const AdminLogin = () => {
                   <input type="checkbox" id="remember" defaultChecked />
                   <label htmlFor="remember">Remember me</label>
                 </div>
-                <a href="#" className="forgot-link">Forgot password?</a>
+                <button type="button" className="forgot-link" onClick={() => setShowForgotPassword(true)}>
+                  Forgot password?
+                </button>
               </div>
 
               <button type="submit" className="submit-btn">
@@ -92,6 +98,11 @@ const AdminLogin = () => {
 
       {/* FOOTER COMPONENT */}
       <Footer />
+
+      {/* FORGOT PASSWORD POPUP */}
+      {showForgotPassword && (
+        <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
+      )}
       
     </div>
   );
