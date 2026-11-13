@@ -1,5 +1,6 @@
 // Import the CSS from the styles folder (filename is auth.css)
 import "../../Style/components/auth.css";
+import { Link } from "react-router-dom";
 
 // Import the Footer component from the common folder
 import Footer from "../../components/common/Footer";
@@ -10,7 +11,7 @@ import Logo from "../../assets/images/IIK logo.png";
 
 const AdminLogin = () => {
   return (
-    <div className="login-page-wrapper">
+    <div className="login-page-wrapper admin-login-page">
       
       {/* MAIN CONTENT ROW (Left Image + Right Form) */}
       <div className="login-content">
@@ -45,7 +46,7 @@ const AdminLogin = () => {
             <p className="subtitle">Admin is selected by default. Choose your role to continue.</p>
 
             <div className="role-toggle">
-              <button className="role-btn active">Store</button>
+              <Link to="/login/store-owner-staff" className="role-btn">Store</Link>
               <button className="role-btn">Supplier</button>
             </div>
 
