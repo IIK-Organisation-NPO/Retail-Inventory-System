@@ -2,96 +2,23 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
+import PasswordInput from "../../components/common/PasswordInput";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png";
 
 const SignupSupplier = () => {
   const navigate = useNavigate();
-  
-  // State for form fields
-  const [formData, setFormData] = useState({
-    companyName: "",
-    name: "",
-    surname: "",
-    email: "",
-    mobileNumber: "",
-    gender: "",
-    disability: false,
-    disabilityDescription: "",
-    password: "",
-    confirmPassword: "",
-    acceptTerms: false
-  });
-  
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [hasDisability, setHasDisability] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState("");
 
-  // Universal handler for all inputs
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" || type === "radio" ? checked : value
-    });
-  };
-
-  // Specific handler for the Disability Radio buttons
-  const handleDisabilityChange = (isDisabled) => {
-    setFormData({
-      ...formData,
-      disability: isDisabled,
-      disabilityDescription: isDisabled ? formData.disabilityDescription : "" 
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-
-    // Basic Validation
-    if (formData.password !== formData.confirmPassword) {
-      return setError("Passwords do not match");
+  const handleCreateAccount = (event) => {
+    event.preventDefault();
+    if (!termsAccepted) {
+      setTermsError("You must agree to the Terms and Conditions to create an account.");
+      return;
     }
-    if (!formData.acceptTerms) {
-      return setError("You must accept the Terms and Conditions");
-    }
-    if (formData.disability && !formData.disabilityDescription) {
-      return setError("Please describe your disability");
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch("http://localhost:5000/api/auth/register/supplier", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyName: formData.companyName,
-          name: formData.name,
-          surname: formData.surname,
-          email: formData.email,
-          mobileNumber: formData.mobileNumber,
-          gender: formData.gender,
-          disability: formData.disability,
-          disabilityDescription: formData.disability ? formData.disabilityDescription : null,
-          password: formData.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Registration failed");
-      }
-
-      alert("Supplier account created successfully! Please log in.");
-      navigate("/login/supplier");
-
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setTermsError("");
   };
 
   return (
@@ -123,8 +50,9 @@ const SignupSupplier = () => {
 
             <h2>Create account</h2>
 
+            {/* Role Selection Toggle (Store / Supplier) */}
             <div className="role-toggle">
-              <button type="button" className="role-btn active">Supplier</button>
+              {/* 'Store' switches to the store owner sign up page */}
               <button
                 type="button"
                 className="role-btn"
@@ -132,11 +60,11 @@ const SignupSupplier = () => {
               >
                 Store
               </button>
+              <button type="button" className="role-btn active">Supplier</button>
             </div>
 
-            <form onSubmit={handleSubmit}>
-              {error && <div className="error-message" style={{color: 'red', marginBottom: '10px', fontWeight: 'bold'}}>{error}</div>}
-
+            <form onSubmit={handleCreateAccount}>
+              {/* Section Title */}
               <h3 className="section-title">Your details</h3>
 
               {/* Company Name */}
@@ -179,6 +107,17 @@ const SignupSupplier = () => {
                     <option value="female">Female</option>
                     <option value="other">Other</option>
                   </select>
+                  {hasDisability && (
+                    <div className="disability-details">
+                      <label htmlFor="disability-type">What type of disability?</label>
+                      <input
+                        id="disability-type"
+                        type="text"
+                        className="form-input"
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="input-group">
                   <label>Disability</label>
@@ -222,20 +161,57 @@ const SignupSupplier = () => {
               {/* Passwords */}
               <div className="input-group">
                 <label>Password</label>
-                <input type="password" name="password" value={formData.password} onChange={handleChange} className="form-input" required minLength="8" />
+                <PasswordInput
+                  className="form-input"
+                  minLength={8}
+                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
+                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
+                  autoComplete="new-password"
+                  required
+                />
+                <ul className="password-requirements">
+                  <li>At least 8 characters</li>
+                  <li>At least one uppercase letter</li>
+                  <li>At least one lowercase letter</li>
+                  <li>At least one number</li>
+                  <li className="special-character-requirement">
+                    At least one special character (e.g. ! @ # $ % ^ &amp; *)
+                  </li>
+                </ul>
               </div>
               <div className="input-group">
                 <label>Confirm password</label>
-                <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} className="form-input" required minLength="8" />
+                <PasswordInput
+                  className="form-input"
+                  minLength={8}
+                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
+                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
+                  autoComplete="new-password"
+                  required
+                />
               </div>
 
               {/* Terms */}
               <div className="terms-group">
-                <input type="checkbox" id="terms" name="acceptTerms" checked={formData.acceptTerms} onChange={handleChange} required />
-                <label htmlFor="terms">
+                <input
+                  type="checkbox"
+                  id="supplier-terms"
+                  checked={termsAccepted}
+                  onChange={(event) => {
+                    setTermsAccepted(event.target.checked);
+                    if (event.target.checked) setTermsError("");
+                  }}
+                  aria-describedby={termsError ? "supplier-terms-error" : undefined}
+                />
+                <label htmlFor="supplier-terms">
                   I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
                 </label>
               </div>
+              {termsError && (
+                <p id="supplier-terms-error" className="field-error" role="alert">
+                  {termsError}
+                </p>
+              )}
 
               {/* Submit */}
               <button type="submit" className="submit-btn" disabled={loading}>

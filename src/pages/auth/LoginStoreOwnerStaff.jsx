@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
 import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
+import PasswordInput from "../../components/common/PasswordInput";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png"; 
 
@@ -90,8 +91,10 @@ const LoginStoreOwnerStaff = () => {
             <p className="subtitle">Sign in as a store owner or a staff member to continue.</p>
 
             <div className="role-toggle">
-              <button type="button" className="role-btn active">Store</button>
-              <button type="button" className="role-btn">Supplier</button>
+ 
+              {/* 'active' class highlights the currently selected role */}
+              <button className="role-btn active">Store</button>
+              <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
             {/* Form starts here */}
@@ -117,11 +120,9 @@ const LoginStoreOwnerStaff = () => {
               </div>
 
               <div className="input-group">
-                <label>Password or user code (for Staff)</label>
-                <input 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
+                <label>Password or user code( for Staff)</label>
+                <PasswordInput
+                  defaultValue="••••••••" 
                   className="form-input" 
                   placeholder="Enter your password"
                   required

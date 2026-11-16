@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import Footer from "../../components/common/Footer";
 import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
+import PasswordInput from "../../components/common/PasswordInput";
 
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png"; 
@@ -120,10 +121,8 @@ const AdminLogin = () => {
 
               <div className="input-group">
                 <label>Password</label>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                <PasswordInput
+                  defaultValue="••••••••" 
                   className="form-input" 
                   placeholder="Enter password"
                   required

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../../Style/components/auth.css";
+import PasswordInput from "./PasswordInput";
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
@@ -113,8 +114,14 @@ const ForgotPasswordModal = ({ onClose }) => {
   // --- Step 3: New password ---
   const handleResetPassword = (e) => {
     e.preventDefault();
-    if (password.length < 8 || !/\d/.test(password)) {
-      setError("Password must be at least 8 characters with a number.");
+    const meetsRequirements = password.length >= 8
+      && /[A-Z]/.test(password)
+      && /[a-z]/.test(password)
+      && /\d/.test(password)
+      && /[^A-Za-z0-9]/.test(password);
+
+    if (!meetsRequirements) {
+      setError("Password must meet all the requirements listed above.");
       return;
     }
     if (password !== confirmPassword) {
@@ -234,25 +241,37 @@ const ForgotPasswordModal = ({ onClose }) => {
 
             <div className="input-group">
               <label htmlFor="new-password">New password</label>
-              <input
+              <PasswordInput
                 id="new-password"
-                type="password"
                 className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                minLength={8}
+                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
+                title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                 autoFocus
               />
-              <p className="field-hint">At least 8 characters with a number.</p>
+              <ul className="password-requirements">
+                <li>At least 8 characters</li>
+                <li>At least one uppercase letter</li>
+                <li>At least one lowercase letter</li>
+                <li>At least one number</li>
+                <li className="special-character-requirement">
+                  At least one special character (e.g. ! @ # $ % ^ &amp; *)
+                </li>
+              </ul>
             </div>
 
             <div className="input-group">
               <label htmlFor="confirm-new-password">Confirm new password</label>
-              <input
+              <PasswordInput
                 id="confirm-new-password"
-                type="password"
                 className="form-input"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                minLength={8}
+                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
+                title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
               />
             </div>
 
