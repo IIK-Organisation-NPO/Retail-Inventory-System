@@ -61,7 +61,7 @@ const LoginStoreOwnerStaff = () => {
             <div className="role-toggle">
               {/* 'active' class highlights the currently selected role */}
               <button className="role-btn active">Store</button>
-              <button className="role-btn">Supplier</button>
+              <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
             {/* Main Login Form */}

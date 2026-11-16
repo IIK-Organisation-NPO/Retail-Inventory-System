@@ -52,7 +52,7 @@ const AdminLogin = () => {
 
             <div className="role-toggle">
               <Link to="/login/store-owner-staff" className="role-btn">Store</Link>
-              <button className="role-btn">Supplier</button>
+              <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
             <form>

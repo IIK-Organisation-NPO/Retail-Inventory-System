@@ -153,7 +153,7 @@ const SignupStoreOwner = () => {
 
             <div className="role-toggle">
               <button className="role-btn active">Store</button>
-              <button className="role-btn">Supplier</button>
+              <Link to="/signupsupplier" className="role-btn">Supplier</Link>
             </div>
 
             {/* Attach the submit handler to the form */}

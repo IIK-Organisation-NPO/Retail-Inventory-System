@@ -65,9 +65,8 @@ const SignupSupplier = () => {
             {/* Form Header */}
             <h2>Create account</h2>
 
-            {/* Role Selection Toggle (Supplier / Store) */}
+            {/* Role Selection Toggle (Store / Supplier) */}
             <div className="role-toggle">
-              <button type="button" className="role-btn active">Supplier</button>
               {/* 'Store' switches to the store owner sign up page */}
               <button
                 type="button"
@@ -76,6 +75,7 @@ const SignupSupplier = () => {
               >
                 Store
               </button>
+              <button type="button" className="role-btn active">Supplier</button>
             </div>
 
             <form onSubmit={handleCreateAccount}>

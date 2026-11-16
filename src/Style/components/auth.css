@@ -1143,6 +1143,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: #555;
+  text-align: center;
   transition: all 0.2s;
 }
 
@@ -1293,6 +1294,20 @@
 }
 
 /* Adjust padding on the right panel to accommodate the taller form */
+.signup-content {
+  align-items: stretch;
+}
+
+.hero-background .bg-image {
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-background .overlay {
+  background: rgba(0, 0, 0, 0.3);
+}
+
 .signup-right {
   padding-top: 60px;
   padding-bottom: 60px;
