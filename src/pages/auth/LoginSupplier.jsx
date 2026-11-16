@@ -160,8 +160,8 @@ const LoginSupplier = () => {
       <Footer />
 
       {showForgotPassword && (
-        <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
-      )}
+  <ForgotPasswordModal role="SUPPLIER" onClose={() => setShowForgotPassword(false)} />
+)}
 
     </div>
   );

@@ -158,9 +158,9 @@ const LoginStoreOwnerStaff = () => {
 
       <Footer />
 
-      {showForgotPassword && (
-        <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
-      )}
+     {showForgotPassword && (
+  <ForgotPasswordModal role="OWNER" onClose={() => setShowForgotPassword(false)} />
+)}
     
     </div>
   );

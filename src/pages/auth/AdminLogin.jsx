@@ -160,8 +160,8 @@ const AdminLogin = () => {
       <Footer />
 
       {showForgotPassword && (
-        <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
-      )}
+  <ForgotPasswordModal role="ADMIN" onClose={() => setShowForgotPassword(false)} />
+)}
       
     </div>
   );

@@ -1,5 +1,4 @@
 // src/components/common/ForgotPasswordModal.jsx
-// Forgot password popup flow: mobile number -> OTP code -> new password
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../../Style/components/auth.css";
@@ -14,13 +13,12 @@ const TITLES = {
   reset: "Create a new password",
 };
 
-// Shows the first 3 and last 4 digits, e.g. 0821234567 -> 082 *** 4567
 const maskNumber = (number) => {
   const digits = number.replace(/\D/g, "");
   return `${digits.slice(0, 3)} *** ${digits.slice(-4)}`;
 };
 
-const ForgotPasswordModal = ({ onClose }) => {
+const ForgotPasswordModal = ({ role = "OWNER", onClose }) => {
   const [step, setStep] = useState("mobile");
   const [mobile, setMobile] = useState("");
   const [code, setCode] = useState(Array(OTP_LENGTH).fill(""));
@@ -28,9 +26,9 @@ const ForgotPasswordModal = ({ onClose }) => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // Added loading state
   const otpRefs = useRef([]);
 
-  // Close on Escape and stop the page behind the popup from scrolling
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") onClose();
@@ -44,7 +42,6 @@ const ForgotPasswordModal = ({ onClose }) => {
     };
   }, [onClose]);
 
-  // Countdown before a new code can be requested
   useEffect(() => {
     if (step !== "code" || secondsLeft === 0) return;
     const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
@@ -56,24 +53,45 @@ const ForgotPasswordModal = ({ onClose }) => {
     setStep(nextStep);
   };
 
-  const sendCode = () => {
-    // TODO: call the API to send the OTP to `mobile`
-    setCode(Array(OTP_LENGTH).fill(""));
-    setSecondsLeft(RESEND_SECONDS);
-    goTo("code");
+  // ==========================================
+  // STEP 1: REQUEST OTP API CALL
+  // ==========================================
+  const sendCode = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/forgot-password/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobileNumber: mobile, role: role })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.message);
+
+      setCode(Array(OTP_LENGTH).fill(""));
+      setSecondsLeft(RESEND_SECONDS);
+      goTo("code");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // --- Step 1: Mobile number ---
   const handleSendOtp = (e) => {
     e.preventDefault();
-    if (mobile.replace(/\D/g, "").length !== 10) {
+    if (mobile.replace(/\D/g, "").length < 10) {
       setError("Enter a valid 10-digit mobile number.");
       return;
     }
     sendCode();
   };
 
-  // --- Step 2: OTP code ---
+  // ==========================================
+  // STEP 2: OTP INPUT HANDLING
+  // ==========================================
   const handleCodeChange = (index, value) => {
     const digit = value.replace(/\D/g, "").slice(-1);
     const nextCode = [...code];
@@ -83,7 +101,6 @@ const ForgotPasswordModal = ({ onClose }) => {
   };
 
   const handleCodeKeyDown = (index, e) => {
-    // Jump back to the previous box when deleting from an empty one
     if (e.key === "Backspace" && !code[index] && index > 0) {
       otpRefs.current[index - 1].focus();
     }
@@ -101,19 +118,23 @@ const ForgotPasswordModal = ({ onClose }) => {
     otpRefs.current[Math.min(digits.length, OTP_LENGTH - 1)].focus();
   };
 
+  // Move to reset step (Backend will verify OTP in the final step)
   const handleVerifyCode = (e) => {
     e.preventDefault();
     if (code.join("").length !== OTP_LENGTH) {
       setError("Enter the 6-digit code.");
       return;
     }
-    // TODO: verify the code with the API
     goTo("reset");
   };
 
-  // --- Step 3: New password ---
-  const handleResetPassword = (e) => {
+  // ==========================================
+  // STEP 3: RESET PASSWORD API CALL
+  // ==========================================
+  const handleResetPassword = async (e) => {
     e.preventDefault();
+    setError("");
+
     const meetsRequirements = password.length >= 8
       && /[A-Z]/.test(password)
       && /[a-z]/.test(password)
@@ -128,12 +149,34 @@ const ForgotPasswordModal = ({ onClose }) => {
       setError("Passwords do not match.");
       return;
     }
-    // TODO: save the new password with the API
-    onClose();
+
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/forgot-password/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          mobileNumber: mobile, 
+          otp: code.join(""), 
+          newPassword: password, 
+          role: role 
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.message);
+
+      alert("Password reset successfully! You can now log in with your new password.");
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return createPortal(
-    // Clicking the dark backdrop (outside the popup) closes it
     <div
       className="auth-modal-backdrop"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
@@ -144,7 +187,6 @@ const ForgotPasswordModal = ({ onClose }) => {
         aria-modal="true"
         aria-labelledby="auth-modal-title"
       >
-        {/* Popup Header */}
         <div className="auth-modal-header">
           <h2 id="auth-modal-title">{TITLES[step]}</h2>
           <button type="button" className="auth-modal-close" aria-label="Close" onClick={onClose}>
@@ -152,9 +194,7 @@ const ForgotPasswordModal = ({ onClose }) => {
           </button>
         </div>
 
-        {/* =========================================
-            STEP 1: FORGOT PASSWORD
-            ========================================= */}
+        {/* STEP 1: MOBILE */}
         {step === "mobile" && (
           <form onSubmit={handleSendOtp} noValidate>
             <p className="auth-modal-text">
@@ -170,26 +210,28 @@ const ForgotPasswordModal = ({ onClose }) => {
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
                 autoFocus
+                disabled={loading}
               />
             </div>
 
             {error && <p className="field-error">{error}</p>}
 
-            <button type="submit" className="submit-btn">Send reset OTP</button>
-            <button type="button" className="outline-btn" onClick={onClose}>Cancel</button>
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? "Sending..." : "Send reset OTP"}
+            </button>
+            <button type="button" className="outline-btn" onClick={onClose} disabled={loading}>
+              Cancel
+            </button>
           </form>
         )}
 
-        {/* =========================================
-            STEP 2: ENTER YOUR CODE
-            ========================================= */}
+        {/* STEP 2: OTP CODE */}
         {step === "code" && (
           <form onSubmit={handleVerifyCode} noValidate>
             <p className="auth-modal-text">
               We sent a 6-digit code to <strong>{maskNumber(mobile)}</strong>. Enter it below to continue.
             </p>
 
-            {/* One box per digit */}
             <div className="otp-inputs" onPaste={handleCodePaste}>
               {code.map((digit, index) => (
                 <input
@@ -209,7 +251,6 @@ const ForgotPasswordModal = ({ onClose }) => {
               ))}
             </div>
 
-            {/* Resend countdown */}
             <div className="auth-modal-note">
               {secondsLeft > 0 ? (
                 <>Didn't get a code? You can request a new one in 0:{String(secondsLeft).padStart(2, "0")}.</>
@@ -230,9 +271,7 @@ const ForgotPasswordModal = ({ onClose }) => {
           </form>
         )}
 
-        {/* =========================================
-            STEP 3: CREATE A NEW PASSWORD
-            ========================================= */}
+        {/* STEP 3: NEW PASSWORD */}
         {step === "reset" && (
           <form onSubmit={handleResetPassword} noValidate>
             <p className="auth-modal-text">
@@ -250,6 +289,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                 pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
                 title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                 autoFocus
+                disabled={loading}
               />
               <ul className="password-requirements">
                 <li>At least 8 characters</li>
@@ -272,12 +312,15 @@ const ForgotPasswordModal = ({ onClose }) => {
                 minLength={8}
                 pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
                 title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
+                disabled={loading}
               />
             </div>
 
             {error && <p className="field-error">{error}</p>}
 
-            <button type="submit" className="submit-btn">Reset password</button>
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? "Resetting..." : "Reset password"}
+            </button>
           </form>
         )}
       </div>
