@@ -1,18 +1,62 @@
-// Import the CSS from the styles folder (filename is auth.css)
 import "../../Style/components/auth.css";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-// Import the Footer and Forgot Password popup components from the common folder
 import Footer from "../../components/common/Footer";
 import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
 
-// Import images from assets/images
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png"; 
 
 const AdminLogin = () => {
+  const navigate = useNavigate();
+  
+  // State for form and UI feedback
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          role: "ADMIN" // <--- This tells the backend to check the Admin table
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // Save the token and role to local storage
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("userName", data.user.name);
+
+      alert(`Welcome back, Admin ${data.user.name}!`);
+      
+      // Redirect to the Admin Dashboard (You will build this next)
+      // navigate("/dashboard/admin"); 
+      
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="login-page-wrapper admin-login-page">
@@ -35,7 +79,6 @@ const AdminLogin = () => {
               <p>Stock, sales and group buying for rural stores.</p>
             </div>
 
-            {/* Bottom Logo (Using the imported Logo from assets) */}
             <div className="partner-logo">
               <img src={Logo} alt="IIK Organisation Logo" className="partner-logo-img" />
               <span>IIK Organisation</span>
@@ -51,16 +94,27 @@ const AdminLogin = () => {
 
             <div className="role-toggle">
               <Link to="/login/store-owner-staff" className="role-btn">Store</Link>
-              <button className="role-btn">Supplier</button>
+              <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
-            <form>
+            <form onSubmit={handleSubmit}>
+              
+              {/* Error Message Display */}
+              {error && (
+                <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px' }}>
+                  {error}
+                </div>
+              )}
+
               <div className="input-group">
                 <label>Email or mobile number</label>
                 <input 
                   type="text" 
-                  defaultValue="admin@iik.co.za" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="form-input" 
+                  placeholder="Enter admin email"
+                  required
                 />
               </div>
 
@@ -68,14 +122,22 @@ const AdminLogin = () => {
                 <label>Password</label>
                 <input 
                   type="password" 
-                  defaultValue="••••••••" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="form-input" 
+                  placeholder="Enter password"
+                  required
                 />
               </div>
 
               <div className="form-actions">
                 <div className="checkbox-group">
-                  <input type="checkbox" id="remember" defaultChecked />
+                  <input 
+                    type="checkbox" 
+                    id="remember" 
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
                   <label htmlFor="remember">Remember me</label>
                 </div>
                 <button type="button" className="forgot-link" onClick={() => setShowForgotPassword(true)}>
@@ -83,8 +145,8 @@ const AdminLogin = () => {
                 </button>
               </div>
 
-              <button type="submit" className="submit-btn">
-                Sign in as Admin
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? "Signing in..." : "Sign in as Admin"}
               </button>
             </form>
 
@@ -96,10 +158,8 @@ const AdminLogin = () => {
 
       </div>
 
-      {/* FOOTER COMPONENT */}
       <Footer />
 
-      {/* FORGOT PASSWORD POPUP */}
       {showForgotPassword && (
         <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
       )}

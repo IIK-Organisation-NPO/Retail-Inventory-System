@@ -7,36 +7,109 @@ import Logo from "../../assets/images/IIK logo.png";
 
 const SignupSupplier = () => {
   const navigate = useNavigate();
-  const [hasDisability, setHasDisability] = useState(false);
+  
+  // State for form fields
+  const [formData, setFormData] = useState({
+    companyName: "",
+    name: "",
+    surname: "",
+    email: "",
+    mobileNumber: "",
+    gender: "",
+    disability: false,
+    disabilityDescription: "",
+    password: "",
+    confirmPassword: "",
+    acceptTerms: false
+  });
+  
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Universal handler for all inputs
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" || type === "radio" ? checked : value
+    });
+  };
+
+  // Specific handler for the Disability Radio buttons
+  const handleDisabilityChange = (isDisabled) => {
+    setFormData({
+      ...formData,
+      disability: isDisabled,
+      disabilityDescription: isDisabled ? formData.disabilityDescription : "" 
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    // Basic Validation
+    if (formData.password !== formData.confirmPassword) {
+      return setError("Passwords do not match");
+    }
+    if (!formData.acceptTerms) {
+      return setError("You must accept the Terms and Conditions");
+    }
+    if (formData.disability && !formData.disabilityDescription) {
+      return setError("Please describe your disability");
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/register/supplier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: formData.companyName,
+          name: formData.name,
+          surname: formData.surname,
+          email: formData.email,
+          mobileNumber: formData.mobileNumber,
+          gender: formData.gender,
+          disability: formData.disability,
+          disabilityDescription: formData.disability ? formData.disabilityDescription : null,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      alert("Supplier account created successfully! Please log in.");
+      navigate("/login/supplier");
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    // Main page wrapper using CSS Grid to keep footer at the bottom
     <div className="login-page-wrapper">
-
-      {/* Main content area split into left (image) and right (form) panels */}
       <div className="login-content signup-content">
 
-        {/* =========================================
-            LEFT SIDE: HERO SECTION
-            ========================================= */}
+        {/* LEFT SIDE: HERO SECTION */}
         <div className="login-left">
-
-          {/* Background image with a dark overlay */}
           <div className="hero-background">
             <img src={BackgroundImage} alt="Store background" className="bg-image" />
             <div className="overlay"></div>
           </div>
-
-          {/* Content layered on top of the background image */}
           <div className="left-content">
             <div className="logo-top">SpazaNet</div>
-
             <div className="welcome-text">
               <h1>Become one of us</h1>
               <p>Stock, sales and group buying for rural stores.</p>
             </div>
-
-            {/* Bottom Partner Logo */}
             <div className="partner-logo">
               <img src={Logo} alt="IIK Organisation Logo" className="partner-logo-img" />
               <span>IIK Organisation</span>
@@ -44,19 +117,14 @@ const SignupSupplier = () => {
           </div>
         </div>
 
-        {/* =========================================
-            RIGHT SIDE: SIGN UP FORM
-            ========================================= */}
+        {/* RIGHT SIDE: SIGN UP FORM */}
         <div className="login-right signup-right">
           <div className="form-wrapper registration-wrapper">
 
-            {/* Form Header */}
             <h2>Create account</h2>
 
-            {/* Role Selection Toggle (Supplier / Store) */}
             <div className="role-toggle">
               <button type="button" className="role-btn active">Supplier</button>
-              {/* 'Store' switches to the store owner sign up page */}
               <button
                 type="button"
                 className="role-btn"
@@ -66,60 +134,51 @@ const SignupSupplier = () => {
               </button>
             </div>
 
-            <form>
-              {/* Section Title */}
+            <form onSubmit={handleSubmit}>
+              {error && <div className="error-message" style={{color: 'red', marginBottom: '10px', fontWeight: 'bold'}}>{error}</div>}
+
               <h3 className="section-title">Your details</h3>
 
-              {/* Company Name Input */}
+              {/* Company Name */}
               <div className="input-group">
                 <label>Company name</label>
-                <input type="text" className="form-input" />
+                <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="form-input" required />
               </div>
 
-              {/* Name & Surname Row */}
+              {/* Name & Surname */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Name</label>
-                  <input type="text" className="form-input" />
+                  <input type="text" name="name" value={formData.name} onChange={handleChange} className="form-input" required />
                 </div>
                 <div className="input-group">
                   <label>Surname</label>
-                  <input type="text" className="form-input" />
+                  <input type="text" name="surname" value={formData.surname} onChange={handleChange} className="form-input" required />
                 </div>
               </div>
 
-              {/* Email Input */}
+              {/* Email */}
               <div className="input-group">
                 <label>Email address</label>
-                <input type="email" className="form-input" />
+                <input type="email" name="email" value={formData.email} onChange={handleChange} className="form-input" required />
               </div>
 
-              {/* Mobile Number Input */}
+              {/* Mobile */}
               <div className="input-group">
                 <label>Mobile number</label>
-                <input type="tel" className="form-input" />
+                <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} className="form-input" required />
               </div>
 
-              {/* Gender & Disability Row */}
+              {/* Gender & Disability */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Gender</label>
-                  <select className="form-input select-input" defaultValue="">
+                  <select name="gender" value={formData.gender} onChange={handleChange} className="form-input select-input" required>
                     <option value="" disabled>Select your gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                     <option value="other">Other</option>
                   </select>
-                  {hasDisability && (
-                    <div className="disability-details">
-                      <label htmlFor="disability-type">What type of disability?</label>
-                      <input
-                        id="disability-type"
-                        type="text"
-                        className="form-input"
-                      />
-                    </div>
-                  )}
                 </div>
                 <div className="input-group">
                   <label>Disability</label>
@@ -127,52 +186,63 @@ const SignupSupplier = () => {
                     <label className="radio-label">
                       <input
                         type="radio"
-                        name="disability"
-                        value="yes"
-                        checked={hasDisability}
-                        onChange={() => setHasDisability(true)}
+                        name="disabilityRadio"
+                        checked={formData.disability === true}
+                        onChange={() => handleDisabilityChange(true)}
                       /> Yes
                     </label>
                     <label className="radio-label">
                       <input
                         type="radio"
-                        name="disability"
-                        value="no"
-                        checked={!hasDisability}
-                        onChange={() => setHasDisability(false)}
+                        name="disabilityRadio"
+                        checked={formData.disability === false}
+                        onChange={() => handleDisabilityChange(false)}
                       /> No
                     </label>
                   </div>
                 </div>
               </div>
 
-              {/* Password Input */}
+              {/* Disability Description */}
+              {formData.disability && (
+                <div className="input-group disability-details" style={{marginBottom: '15px'}}>
+                  <label htmlFor="disability-type">What type of disability?</label>
+                  <input
+                    id="disability-type"
+                    type="text"
+                    name="disabilityDescription"
+                    value={formData.disabilityDescription}
+                    onChange={handleChange}
+                    className="form-input"
+                    required={formData.disability}
+                  />
+                </div>
+              )}
+
+              {/* Passwords */}
               <div className="input-group">
                 <label>Password</label>
-                <input type="password" className="form-input" />
+                <input type="password" name="password" value={formData.password} onChange={handleChange} className="form-input" required minLength="8" />
               </div>
-
-              {/* Confirm Password Input */}
               <div className="input-group">
                 <label>Confirm password</label>
-                <input type="password" className="form-input" />
+                <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} className="form-input" required minLength="8" />
               </div>
 
-              {/* Terms & Conditions Checkbox */}
+              {/* Terms */}
               <div className="terms-group">
-                <input type="checkbox" id="terms" />
+                <input type="checkbox" id="terms" name="acceptTerms" checked={formData.acceptTerms} onChange={handleChange} required />
                 <label htmlFor="terms">
                   I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
                 </label>
               </div>
 
-              {/* Form Submit Button */}
-              <button type="submit" className="submit-btn">
-                Create account
+              {/* Submit */}
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? "Creating account..." : "Create account"}
               </button>
             </form>
 
-            {/* Login Redirect Link */}
             <p className="auth-footer-text">
               Already registered? <Link to="/login/supplier">Sign in</Link>
             </p>
@@ -180,10 +250,7 @@ const SignupSupplier = () => {
         </div>
 
       </div>
-
-      {/* Global Footer Component */}
       <Footer />
-
     </div>
   );
 };
