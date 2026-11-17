@@ -7,8 +7,8 @@ import LoginStoreOwnerStaff from '../pages/auth/LoginStoreOwnerStaff';
 import SignupStoreOwner from '../pages/auth/SignupStoreOwner';
 import LoginSupplier from '../pages/auth/LoginSupplier';
 import SignupSupplier from '../pages/auth/SignupSupplier';
-import StoreOwner_Dashboard from "../pages/StoreOwner/StoreOwner_Dashboard";
-import Products from "../pages/StoreOwner/Products";
+import StoreOwner_Dashboard from "../pages/Store Owner/StoreOwner_Dashboard";
+import Products from "../pages/Store Owner/Products";
 
 const AppRoutes = () => {
   return (
