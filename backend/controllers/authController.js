@@ -2,6 +2,16 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+
+// Setup Nodemailer transporter
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 // Mapping Roles to their specific Database Tables and ID columns
 const roleConfig = {
@@ -53,17 +63,17 @@ exports.register = async (req, res) => {
         let values = [];
 
         if (roleName === 'Supplier') {
-            query = `INSERT INTO Supplier (CompanyName, Name, Surname, Email, MobileNumber, Gender, Disability, DisabilityDescription, PasswordHash, RoleID) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            query = `INSERT INTO Supplier (CompanyName, Name, Surname, Email, MobileNumber, Gender, Disability, DisabilityDescription, PasswordHash, RoleID, IsActive) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`;
             values = [companyName, name, surname, email, mobileNumber, gender, disability || false, disabilityDescription || null, passwordHash, roleId];
         } else if (roleName === 'Admin') {
-            query = `INSERT INTO Admin (Name, Surname, Email, MobileNumber, Gender, PasswordHash, RoleID) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`;
+            query = `INSERT INTO Admin (Name, Surname, Email, MobileNumber, Gender, PasswordHash, RoleID, IsActive) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`;
             values = [name, surname, email, mobileNumber, gender, passwordHash, roleId];
         } else {
             // Owner or Staff
-            query = `INSERT INTO ${table} (Name, Surname, Email, MobileNumber, Gender, Disability, DisabilityDescription, PasswordHash, RoleID) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            query = `INSERT INTO ${table} (Name, Surname, Email, MobileNumber, Gender, Disability, DisabilityDescription, PasswordHash, RoleID, IsActive) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`;
             values = [name, surname, email, mobileNumber, gender, disability || false, disabilityDescription || null, passwordHash, roleId];
         }
 
@@ -202,5 +212,110 @@ exports.resetPassword = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// ==========================================
+// 5. SEND OTP
+// ==========================================
+exports.sendOTP = async (req, res) => {
+    const { email, roleName, ...userData } = req.body; 
+
+    if (!roleConfig[roleName]) {
+        return res.status(400).json({ message: 'Invalid role.' });
+    }
+
+    try {
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+
+        await db.query('DELETE FROM OTP_Verification WHERE email = ?', [email]); 
+        await db.query(
+            'INSERT INTO OTP_Verification (email, otp_code, user_data, expires_at) VALUES (?, ?, ?, ?)',
+            [email, otpCode, JSON.stringify({ ...userData, roleName }), expiresAt]
+        );
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'SpazaNet - Verify Your Email',
+            text: `Your verification code is: ${otpCode}. It expires in 10 minutes.`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: 'OTP sent to your email.' });
+
+    } catch (error) {
+        console.error('Error sending OTP:', error);
+        res.status(500).json({ message: 'Failed to send OTP email.' });
+    }
+};
+
+// ==========================================
+// 6. VERIFY OTP & REGISTER
+// ==========================================
+exports.verifyOTP = async (req, res) => {
+    const { email, otp } = req.body;
+
+    try {
+        // 1. Find the OTP record
+        const [records] = await db.query(
+            'SELECT * FROM OTP_Verification WHERE email = ? AND otp_code = ? AND expires_at > NOW()',
+            [email, otp]
+        );
+
+        if (records.length === 0) {
+            return res.status(400).json({ message: 'Invalid or expired OTP.' });
+        }
+
+        // 2. Get the user data from the JSON column (Handle MySQL auto-parsing)
+        const userData = typeof records[0].user_data === 'string' 
+            ? JSON.parse(records[0].user_data) 
+            : records[0].user_data;
+            
+        const { roleName, name, surname, mobileNumber, gender, password, disability, disabilityDescription, companyName } = userData;
+
+        // 3. Clean up the OTP record so it can't be used again
+        await db.query('DELETE FROM OTP_Verification WHERE email = ?', [email]);
+
+        // 4. Check if email is already taken across ALL tables before saving
+        const tablesToCheck = ['Admin', 'Owner', 'Staff', 'Supplier'];
+        for (let t of tablesToCheck) {
+            const [existing] = await db.query(`SELECT Email FROM ${t} WHERE Email = ?`, [email]);
+            if (existing.length > 0) {
+                return res.status(400).json({ message: 'Email is already registered in the system' });
+            }
+        }
+
+        // 5. Hash the password (Using the bcrypt imported at the top)
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        // 6. Insert the user into the correct table
+        const { table, roleId } = roleConfig[roleName];
+        let query = '';
+        let values = [];
+
+        if (roleName === 'Supplier') {
+            query = `INSERT INTO Supplier (CompanyName, Name, Surname, Email, MobileNumber, Gender, Disability, DisabilityDescription, PasswordHash, RoleID, IsActive) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`;
+            values = [companyName, name, surname, email, mobileNumber, gender, disability || false, disabilityDescription || null, passwordHash, roleId];
+        } else if (roleName === 'Admin') {
+            query = `INSERT INTO Admin (Name, Surname, Email, MobileNumber, Gender, PasswordHash, RoleID, IsActive) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`;
+            values = [name, surname, email, mobileNumber, gender, passwordHash, roleId];
+        } else {
+            query = `INSERT INTO ${table} (Name, Surname, Email, MobileNumber, Gender, Disability, DisabilityDescription, PasswordHash, RoleID, IsActive) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`;
+            values = [name, surname, email, mobileNumber, gender, disability || false, disabilityDescription || null, passwordHash, roleId];
+        }
+
+        await db.query(query, values);
+        
+        res.status(200).json({ message: `${roleName} registered successfully` });
+
+    } catch (error) {
+        console.error('Error verifying OTP:', error);
+        res.status(500).json({ message: 'Server error during verification.' });
     }
 };

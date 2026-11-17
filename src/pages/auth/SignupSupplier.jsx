@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
 import PasswordInput from "../../components/common/PasswordInput";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
-import Logo from "../../assets/images/IIK logo.png";
+import Logo from "../../assets/images/IIK logo.png"; 
+
+const OTP_LENGTH = 6;
 
 const SignupSupplier = () => {
   const navigate = useNavigate();
+  const [showPopup, setShowPopup] = useState(false);
   const [accountCreated, setAccountCreated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState("");
@@ -17,16 +20,14 @@ const SignupSupplier = () => {
 
   // Form State
   const [formData, setFormData] = useState({
-    companyName: "",
-    name: "",
-    surname: "",
-    email: "",
-    mobileNumber: "",
-    gender: "",
-    disabilityDescription: "",
-    password: "",
-    confirmPassword: ""
+    companyName: "", name: "", surname: "", email: "", mobileNumber: "", 
+    gender: "", disabilityDescription: "", password: "", confirmPassword: ""
   });
+
+  // OTP State
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
+  const [otpError, setOtpError] = useState("");
+  const otpInputRefs = useRef([]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -50,11 +51,11 @@ const SignupSupplier = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch('http://localhost:5000/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          roleName: "Supplier", 
+          roleName: "Supplier",
           companyName: formData.companyName,
           name: formData.name,
           surname: formData.surname,
@@ -70,7 +71,7 @@ const SignupSupplier = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setAccountCreated(true);
+        setShowPopup(true); 
       } else {
         setApiError(data.message);
       }
@@ -82,6 +83,53 @@ const SignupSupplier = () => {
     }
   };
 
+  const handleVerifyEmail = async () => {
+    const otpString = otp.join("");
+    if (otpString.length < OTP_LENGTH) {
+      setOtpError("Enter all 6 digits.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, otp: otpString }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setShowPopup(false);
+        setAccountCreated(true);
+      } else {
+        setOtpError(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      setOtpError("Server error during verification.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOtpChange = (index, value) => {
+    const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH - index);
+    setOtpError("");
+    if (!digits) {
+      setOtp((current) => current.map((d, i) => (i === index ? "" : d)));
+      return;
+    }
+    setOtp((current) => {
+      const next = [...current];
+      digits.split("").forEach((d, offset) => { next[index + offset] = d; });
+      return next;
+    });
+    const nextIndex = index + digits.length;
+    otpInputRefs.current[Math.min(nextIndex, OTP_LENGTH - 1)]?.focus();
+  };
+
   const handleSuccessContinue = () => {
     setAccountCreated(false);
     navigate('/login/supplier');
@@ -91,13 +139,12 @@ const SignupSupplier = () => {
     <div className="login-page-wrapper">
       <div className="login-content signup-content">
 
-        {/* LEFT SIDE: HERO SECTION */}
+        {/* LEFT SIDE */}
         <div className="login-left">
           <div className="hero-background">
             <img src={BackgroundImage} alt="Store background" className="bg-image" />
             <div className="overlay"></div>
           </div>
-
           <div className="left-content">
             <div className="logo-top">SpazaNet</div>
             <div className="welcome-text">
@@ -111,24 +158,17 @@ const SignupSupplier = () => {
           </div>
         </div>
 
-        {/* RIGHT SIDE: SIGN UP FORM */}
+        {/* RIGHT SIDE */}
         <div className="login-right signup-right">
           <div className="form-wrapper registration-wrapper">
             <h2>Create account</h2>
 
             <div className="role-toggle">
-              <button
-                type="button"
-                className="role-btn"
-                onClick={() => navigate("/signupstoreowner")}
-              >
-                Store
-              </button>
+              <button type="button" className="role-btn" onClick={() => navigate("/signupstoreowner")}>Store</button>
               <button type="button" className="role-btn active">Supplier</button>
             </div>
 
             <form onSubmit={handleCreateAccount}>
-              
               {apiError && (
                 <div style={{ color: '#d32f2f', backgroundColor: '#fde8e8', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
                   {apiError}
@@ -172,8 +212,10 @@ const SignupSupplier = () => {
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
                   </select>
+                  
+                  {/* Disability text field shows if YES */}
                   {hasDisability && (
-                    <div className="disability-details">
+                    <div className="disability-details" style={{ marginTop: '10px' }}>
                       <label htmlFor="disability-type">What type of disability?</label>
                       <input
                         id="disability-type"
@@ -218,9 +260,7 @@ const SignupSupplier = () => {
                   <li>At least one uppercase letter</li>
                   <li>At least one lowercase letter</li>
                   <li>At least one number</li>
-                  <li className="special-character-requirement">
-                    At least one special character (e.g. ! @ # $ % ^ &amp; *)
-                  </li>
+                  <li className="special-character-requirement">At least one special character (e.g. ! @ # $ % ^ &amp; *)</li>
                 </ul>
               </div>
 
@@ -230,6 +270,8 @@ const SignupSupplier = () => {
                   name="confirmPassword"
                   className="form-input"
                   minLength={8}
+                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
+                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
@@ -251,14 +293,10 @@ const SignupSupplier = () => {
                   I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
                 </label>
               </div>
-              {termsError && (
-                <p id="supplier-terms-error" className="field-error" role="alert">
-                  {termsError}
-                </p>
-              )}
+              {termsError && <p id="supplier-terms-error" className="field-error" style={{color: 'red'}} role="alert">{termsError}</p>}
 
               <button type="submit" className="submit-btn" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Create account"}
+                {isLoading ? "Sending OTP..." : "Create account"}
               </button>
             </form>
 
@@ -272,21 +310,49 @@ const SignupSupplier = () => {
 
       <Footer />
 
+      {/* OTP MODAL */}
+      {showPopup && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-header">
+              <h2>Verify your email</h2>
+              <button className="modal-close-btn" onClick={() => setShowPopup(false)}>✕</button>
+            </div>
+            
+            <p className="modal-subtitle">
+              We sent a 6-digit code to <strong>{formData.email}</strong>.
+            </p>
+
+            <div className="otp-input-group">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(el) => { otpInputRefs.current[index] = el; }}
+                  type="text"
+                  maxLength="1"
+                  className="otp-box"
+                  value={digit}
+                  onChange={(e) => handleOtpChange(index, e.target.value)}
+                />
+              ))}
+            </div>
+
+            {otpError && <p className="field-error" style={{color: 'red'}}>{otpError}</p>}
+            
+            <button type="button" className="modal-submit-btn" onClick={handleVerifyEmail} disabled={isLoading}>
+              {isLoading ? "Verifying..." : "Verify email"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* SUCCESS MODAL */}
       {accountCreated && (
         <div className="modal-overlay">
-          <div className="modal-card" role="status" aria-live="polite">
-            <div className="modal-header">
-              <h2>Account successfully created</h2>
-            </div>
-            <p className="modal-subtitle">
-              Your supplier account is ready. You can now sign in.
-            </p>
-            <button
-              type="button"
-              className="modal-submit-btn"
-              onClick={handleSuccessContinue}
-            >
+          <div className="modal-card">
+            <h2>Account successfully created</h2>
+            <p>Your supplier account is ready. You can now sign in.</p>
+            <button type="button" className="modal-submit-btn" onClick={handleSuccessContinue}>
               Continue to Login
             </button>
           </div>
