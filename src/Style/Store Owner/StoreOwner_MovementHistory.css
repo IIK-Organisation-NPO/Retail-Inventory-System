@@ -1,0 +1,142 @@
+/* ============================================
+   Store Owner Movement History Page Stylesheet
+   Layout, sidebar, header, buttons and base table
+   styles come from StoreOwnerInventory.css.
+   ============================================ */
+
+/* --- Back link --- */
+.mh-back-link {
+  align-self: flex-start;
+  margin-top: -6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  text-decoration: underline;
+}
+
+.mh-back-link:hover {
+  opacity: 0.75;
+}
+
+/* --- Filters --- */
+.mh-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mh-select {
+  min-width: 150px;
+  padding: 8px 32px 8px 10px;
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  color: #111;
+  font-size: 13px;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.mh-select:focus {
+  outline: 2px solid #111;
+  outline-offset: 1px;
+}
+
+/* --- Table card --- */
+.mh-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.mh-table td {
+  border-top: 1px solid #ededf0;
+}
+
+/* Reset the inventory page's column widths */
+.mh-table th:nth-child(n) {
+  width: auto;
+}
+
+.mh-change {
+  font-weight: 700;
+}
+
+.mh-empty {
+  text-align: center;
+  color: #6b6b70 !important;
+  padding: 32px 10px !important;
+}
+
+/* Movement type pills */
+.mh-type {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: #ececee;
+  color: #333;
+}
+
+.mh-type-stock-in {
+  background-color: #e3ecff;
+  color: #2b59c3;
+}
+
+.mh-type-stock-out {
+  background-color: #dcdce0;
+  color: #111;
+}
+
+/* --- Pagination --- */
+.mh-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.mh-pagination-info {
+  margin: 0;
+  font-size: 11px;
+  color: #6b6b70;
+}
+
+.mh-pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.mh-pagination-buttons .so-btn {
+  min-width: 90px;
+}
+
+/* Disabled state for all buttons on this page */
+.so-layout .so-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .mh-select {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .mh-select {
+    flex-basis: 100%;
+  }
+}

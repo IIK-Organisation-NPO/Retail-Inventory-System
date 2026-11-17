@@ -1,0 +1,178 @@
+/* ============================================
+   Store Owner Header Menus Stylesheet
+   Store switcher dropdown + user (avatar) menu
+   ============================================ */
+
+/* =========================================================
+   SHARED: DROPDOWN CARD
+   ========================================================= */
+.hm-dropdown {
+  position: relative;
+}
+
+.hm-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 500;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  text-align: left;
+  animation: hmFadeIn 0.14s ease-out;
+}
+
+@keyframes hmFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hm-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background-color: #ececee;
+}
+
+/* =========================================================
+   1. STORE SWITCHER
+   ========================================================= */
+.so-store-selector {
+  font-family: inherit;
+}
+
+.hm-chevron {
+  color: #111;
+  transition: transform 0.15s ease;
+}
+
+.hm-chevron.open {
+  transform: rotate(180deg);
+}
+
+.hm-store-menu {
+  left: 0;
+  min-width: 240px;
+}
+
+.hm-menu-heading {
+  margin: 0;
+  padding: 8px 10px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b6b70;
+}
+
+.hm-store-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #111;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hm-store-option:hover,
+.hm-store-option:focus-visible {
+  background-color: #f2f2f4;
+  outline: none;
+}
+
+.hm-store-option[aria-checked="true"] {
+  font-weight: 700;
+}
+
+.hm-store-option-name {
+  flex: 1;
+}
+
+.hm-check {
+  flex-shrink: 0;
+  color: #111;
+}
+
+/* =========================================================
+   2. USER MENU
+   ========================================================= */
+
+/* Avatar button — gets a black ring while the menu is open */
+.hm-avatar-btn {
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.hm-avatar-btn.open,
+.hm-avatar-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #111;
+}
+
+.hm-user-menu {
+  right: 0;
+  width: 280px;
+  max-width: calc(100vw - 32px);
+}
+
+.hm-user-info {
+  padding: 12px 14px 10px;
+}
+
+.hm-user-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111;
+}
+
+.hm-user-role {
+  margin: 0;
+  font-size: 13px;
+  color: #6b6b70;
+}
+
+.hm-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hm-item:hover,
+.hm-item:focus-visible {
+  background-color: #f2f2f4;
+  outline: none;
+}
+
+.hm-item-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111;
+}
+
+.hm-item-sub {
+  font-size: 13px;
+  color: #6b6b70;
+}

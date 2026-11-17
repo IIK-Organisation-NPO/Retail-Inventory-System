@@ -1,0 +1,375 @@
+/* ============================================
+   Store Owner Inventory Page Stylesheet
+   (also styles the shared StoreOwnerSidebar)
+   ============================================ */
+
+/* --- Page Layout --- */
+.so-layout {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100svh;
+  width: 100%;
+  background-color: #f5f5f6;
+  color: #111;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  text-align: left;
+}
+
+.so-layout *,
+.so-layout *::before,
+.so-layout *::after {
+  box-sizing: border-box;
+}
+
+/* ============================================
+   SIDEBAR
+   ============================================ */
+.so-sidebar {
+  flex: 0 0 220px;
+  background-color: #fff;
+  border-right: 1px solid #e5e5e7;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.so-sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px;
+}
+
+.so-sidebar-logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+}
+
+.so-sidebar-role {
+  font-size: 12px;
+  color: #6b6b70;
+}
+
+.so-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.so-sidebar-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #222;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.so-sidebar-link:hover {
+  background-color: #f0f0f2;
+}
+
+.so-sidebar-link.active {
+  background-color: #111;
+  color: #fff;
+  font-weight: 500;
+}
+
+.so-sidebar-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background-color: #e3ecff;
+  color: #2b59c3;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================
+   MAIN CONTENT
+   ============================================ */
+.so-main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --- Header --- */
+.so-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.so-page-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #111;
+}
+
+.so-header-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Avatars (store + user initials) */
+.so-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: #111;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.so-avatar-sm {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+}
+
+/* Store selector */
+.so-store-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid #111;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #111;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.so-chevron {
+  font-size: 12px;
+  line-height: 1;
+  margin-top: -4px;
+}
+
+/* Buttons */
+.so-btn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.so-btn-primary {
+  background-color: #111;
+  color: #fff;
+  border: 1px solid #111;
+}
+
+.so-btn-primary:hover {
+  opacity: 0.85;
+}
+
+.so-btn-outline {
+  background-color: #fff;
+  color: #111;
+  border: 1px solid #111;
+}
+
+.so-btn-outline:hover {
+  background-color: #f0f0f2;
+}
+
+/* --- Summary Cards --- */
+.so-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.so-stat-card {
+  background-color: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.so-stat-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: #6b6b70;
+}
+
+.so-stat-value {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+}
+
+.so-stat-value-danger {
+  color: #e5133a;
+}
+
+/* --- Stock Levels Card --- */
+.so-card {
+  flex: 1;
+  background-color: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 6px;
+  padding: 16px 12px;
+}
+
+.so-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.so-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #111;
+}
+
+.so-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* --- Table --- */
+.so-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.so-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.so-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b6b70;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.so-table td {
+  padding: 12px 10px;
+  color: #111;
+  white-space: nowrap;
+}
+
+/* Column widths to match the design */
+.so-table th:nth-child(1) { width: 26%; }
+.so-table th:nth-child(2) { width: 12%; }
+.so-table th:nth-child(3) { width: 17%; }
+.so-table th:nth-child(4) { width: 11%; }
+
+/* Status pills */
+.so-status {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.so-status-ok {
+  background-color: #ececee;
+  color: #333;
+}
+
+.so-status-low {
+  background-color: #fde4e8;
+  color: #e5133a;
+}
+
+.so-status-out {
+  background-color: #e5133a;
+  color: #fff;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+  .so-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .so-layout {
+    flex-direction: column;
+  }
+
+  /* Sidebar becomes a horizontal scrolling bar on small screens */
+  .so-sidebar {
+    flex: none;
+    border-right: none;
+    border-bottom: 1px solid #e5e5e7;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .so-sidebar-brand {
+    padding: 0;
+  }
+
+  .so-sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 4px;
+  }
+
+  .so-sidebar-link {
+    flex-shrink: 0;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .so-main {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .so-stats {
+    grid-template-columns: 1fr;
+  }
+}
