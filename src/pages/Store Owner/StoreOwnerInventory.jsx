@@ -1,7 +1,13 @@
 // src/pages/Store Owner/StoreOwnerInventory.jsx
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
+import {
+  StockInPopup,
+  StockOutPopup,
+  StockAdjustmentPopup,
+} from "../../components/Store Owner/StoreOwner_StockIn_popup";
 
 // Mock data — replace with API data once the backend is connected
 const SUMMARY = {
@@ -27,8 +33,31 @@ const getStatus = (onHand, reorderLevel) => {
   return { label: "OK", className: "ok" };
 };
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "2026-11-13" -> "13 Nov"
+const formatShortDate = (iso) => {
+  const [, month, day] = iso.split("-").map(Number);
+  return `${day} ${MONTHS[month - 1]}`;
+};
+
 const StoreOwnerInventory = () => {
   const navigate = useNavigate();
+  const [stockItems, setStockItems] = useState(STOCK_ITEMS);
+  const [openPopup, setOpenPopup] = useState(null); // "in" | "out" | "adjust" | null
+
+  const closePopup = useCallback(() => setOpenPopup(null), []);
+
+  // Update one product's quantity and last movement after a popup is saved
+  const applyMovement = (productId, getNewOnHand, label, date) => {
+    setStockItems((items) =>
+      items.map((item) =>
+        item.id === productId
+          ? { ...item, onHand: getNewOnHand(item.onHand), lastMovement: `${label}, ${formatShortDate(date)}` }
+          : item
+      )
+    );
+  };
 
   return (
     <div className="so-layout">
@@ -52,9 +81,15 @@ const StoreOwnerInventory = () => {
               <span className="so-chevron" aria-hidden="true">⌄</span>
             </button>
 
-            <button type="button" className="so-btn so-btn-primary">Stock in</button>
-            <button type="button" className="so-btn so-btn-outline">Stock out</button>
-            <button type="button" className="so-btn so-btn-outline">Adjust stock</button>
+            <button type="button" className="so-btn so-btn-primary" onClick={() => setOpenPopup("in")}>
+              Stock in
+            </button>
+            <button type="button" className="so-btn so-btn-outline" onClick={() => setOpenPopup("out")}>
+              Stock out
+            </button>
+            <button type="button" className="so-btn so-btn-outline" onClick={() => setOpenPopup("adjust")}>
+              Adjust stock
+            </button>
 
             <span className="so-avatar" title="Account">SD</span>
           </div>
@@ -105,7 +140,7 @@ const StoreOwnerInventory = () => {
                 </tr>
               </thead>
               <tbody>
-                {STOCK_ITEMS.map((item) => {
+                {stockItems.map((item) => {
                   const status = getStatus(item.onHand, item.reorderLevel);
                   return (
                     <tr key={item.id}>
@@ -126,6 +161,39 @@ const StoreOwnerInventory = () => {
           </div>
         </section>
       </main>
+
+      {/* =========================================
+          POPUPS
+          ========================================= */}
+      {openPopup === "in" && (
+        <StockInPopup
+          products={stockItems}
+          onClose={closePopup}
+          onSave={({ productId, quantity, date }) =>
+            applyMovement(productId, (onHand) => onHand + quantity, "Stock in", date)
+          }
+        />
+      )}
+
+      {openPopup === "out" && (
+        <StockOutPopup
+          products={stockItems}
+          onClose={closePopup}
+          onSave={({ productId, quantity, date }) =>
+            applyMovement(productId, (onHand) => onHand - quantity, "Stock out", date)
+          }
+        />
+      )}
+
+      {openPopup === "adjust" && (
+        <StockAdjustmentPopup
+          products={stockItems}
+          onClose={closePopup}
+          onSave={({ productId, quantityAfter, date }) =>
+            applyMovement(productId, () => quantityAfter, "Adjustment", date)
+          }
+        />
+      )}
     </div>
   );
 };
