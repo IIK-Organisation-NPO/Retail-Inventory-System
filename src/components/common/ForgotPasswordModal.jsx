@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../../Style/components/auth.css";
 import PasswordInput from "./PasswordInput";
+import PasswordRequirements from "./PasswordRequirements";
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
@@ -251,15 +252,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                 title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                 autoFocus
               />
-              <ul className="password-requirements">
-                <li>At least 8 characters</li>
-                <li>At least one uppercase letter</li>
-                <li>At least one lowercase letter</li>
-                <li>At least one number</li>
-                <li className="special-character-requirement">
-                  At least one special character (e.g. ! @ # $ % ^ &amp; *)
-                </li>
-              </ul>
+              <PasswordRequirements password={password} />
             </div>
 
             <div className="input-group">

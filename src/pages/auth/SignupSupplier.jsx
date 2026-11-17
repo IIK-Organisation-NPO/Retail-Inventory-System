@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
 import PasswordInput from "../../components/common/PasswordInput";
+import PasswordRequirements from "../../components/common/PasswordRequirements";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png";
 
@@ -11,6 +12,7 @@ const SignupSupplier = () => {
   const [hasDisability, setHasDisability] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsError, setTermsError] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleCreateAccount = (event) => {
     event.preventDefault();
@@ -164,21 +166,15 @@ const SignupSupplier = () => {
                 <label>Password</label>
                 <PasswordInput
                   className="form-input"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   minLength={8}
                   pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
                   title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
                   required
                 />
-                <ul className="password-requirements">
-                  <li>At least 8 characters</li>
-                  <li>At least one uppercase letter</li>
-                  <li>At least one lowercase letter</li>
-                  <li>At least one number</li>
-                  <li className="special-character-requirement">
-                    At least one special character (e.g. ! @ # $ % ^ &amp; *)
-                  </li>
-                </ul>
+                <PasswordRequirements password={password} />
               </div>
 
               {/* Confirm Password Input */}

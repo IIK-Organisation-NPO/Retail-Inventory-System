@@ -7,6 +7,7 @@ import "../../Style/components/auth.css";
 // Import the shared Footer component
 import Footer from "../../components/common/Footer";
 import PasswordInput from "../../components/common/PasswordInput";
+import PasswordRequirements from "../../components/common/PasswordRequirements";
 
 // Import background and logo images from the assets directory
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
@@ -20,6 +21,7 @@ const SignupStoreOwner = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [accountCreated, setAccountCreated] = useState(false);
   const [email, setEmail] = useState("owner@tuckshop.co.za");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [otpError, setOtpError] = useState("");
   const [resendSeconds, setResendSeconds] = useState(OTP_RESEND_SECONDS);
@@ -238,21 +240,15 @@ const SignupStoreOwner = () => {
                 <label>Password</label>
                 <PasswordInput
                   className="form-input"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   minLength={8}
                   pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
                   title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
                   required
                 />
-                <ul className="password-requirements">
-                  <li>At least 8 characters</li>
-                  <li>At least one uppercase letter</li>
-                  <li>At least one lowercase letter</li>
-                  <li>At least one number</li>
-                  <li className="special-character-requirement">
-                    At least one special character (e.g. ! @ # $ % ^ &amp; *)
-                  </li>
-                </ul>
+                <PasswordRequirements password={password} />
               </div>
 
               <div className="input-group">

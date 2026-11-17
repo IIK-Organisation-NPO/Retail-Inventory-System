@@ -1460,18 +1460,32 @@
 
 .password-requirements {
   margin: 6px 0 0;
-  padding-left: 18px;
-  color: #17803d;
+  padding: 0;
   font-size: 0.8rem;
   line-height: 1.4;
+  list-style: none;
 }
 
-.password-requirements li {
-  display: list-item;
+.password-requirement {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: #6b7280;
 }
 
-.password-requirements .special-character-requirement {
-  color: #c62828;
+.password-requirement span {
+  width: 14px;
+  flex: 0 0 14px;
+  font-weight: 700;
+}
+
+.password-requirement.is-unmet {
+  color: #b42318;
+}
+
+.password-requirement.is-met {
+  color: #17803d;
+  font-weight: 600;
 }
 
 /* ============================================
