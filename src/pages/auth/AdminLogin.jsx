@@ -1,24 +1,67 @@
-// Import the CSS from the styles folder (filename is auth.css)
 import "../../Style/components/auth.css";
 import { useState } from "react";
-import { Link } from "react-router-dom";
-
-// Import the Footer and Forgot Password popup components from the common folder
+import { Link, useNavigate } from "react-router-dom";
 import Footer from "../../components/common/Footer";
 import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
-import PasswordInput from "../../components/common/PasswordInput";
-
-// Import images from assets/images
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png"; 
 
 const AdminLogin = () => {
+  const navigate = useNavigate();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  // Form State
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  
+  // UI State
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMessage("");
+
+    // DEBUG LOG - This will print in the browser console
+    console.log("SENDING TO BACKEND:", { email, password, rememberMe });
+
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          roleName: "Admin", // Hardcoded for this page
+          rememberMe: rememberMe
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userRole', data.user.role);
+        localStorage.setItem('userName', data.user.name);
+
+        // Redirect to Admin Dashboard
+        navigate('/admin-dashboard'); 
+      } else {
+        setErrorMessage(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Server is down or CORS is blocking the request.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="login-page-wrapper admin-login-page">
       
-      {/* MAIN CONTENT ROW (Left Image + Right Form) */}
       <div className="login-content">
         
         {/* LEFT SIDE - HERO SECTION */}
@@ -36,7 +79,6 @@ const AdminLogin = () => {
               <p>Stock, sales and group buying for rural stores.</p>
             </div>
 
-            {/* Bottom Logo (Using the imported Logo from assets) */}
             <div className="partner-logo">
               <img src={Logo} alt="IIK Organisation Logo" className="partner-logo-img" />
               <span>IIK Organisation</span>
@@ -55,27 +97,46 @@ const AdminLogin = () => {
               <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
-            <form>
+            <form onSubmit={handleSubmit}>
+              
+              {/* Error Message */}
+              {errorMessage && (
+                <div style={{ color: '#d32f2f', backgroundColor: '#fde8e8', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
+                  {errorMessage}
+                </div>
+              )}
+
               <div className="input-group">
                 <label>Email or mobile number</label>
                 <input 
                   type="text" 
-                  defaultValue="admin@iik.co.za" 
                   className="form-input" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@iik.co.za"
+                  required
                 />
               </div>
 
               <div className="input-group">
                 <label>Password</label>
-                <PasswordInput
-                  defaultValue="••••••••" 
+                <input
+                  type="password"
                   className="form-input" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
               </div>
 
               <div className="form-actions">
                 <div className="checkbox-group">
-                  <input type="checkbox" id="remember" defaultChecked />
+                  <input 
+                    type="checkbox" 
+                    id="remember" 
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
                   <label htmlFor="remember">Remember me</label>
                 </div>
                 <button type="button" className="forgot-link" onClick={() => setShowForgotPassword(true)}>
@@ -83,8 +144,8 @@ const AdminLogin = () => {
                 </button>
               </div>
 
-              <button type="submit" className="submit-btn">
-                Sign in as Admin
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Sign in as Admin"}
               </button>
             </form>
 
@@ -96,10 +157,8 @@ const AdminLogin = () => {
 
       </div>
 
-      {/* FOOTER COMPONENT */}
       <Footer />
 
-      {/* FORGOT PASSWORD POPUP */}
       {showForgotPassword && (
         <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
       )}

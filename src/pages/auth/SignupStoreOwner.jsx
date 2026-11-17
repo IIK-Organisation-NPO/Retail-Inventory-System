@@ -1,129 +1,97 @@
-import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-
-// Import the stylesheet for the auth/registration pages
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
-
-// Import the shared Footer component
 import Footer from "../../components/common/Footer";
 import PasswordInput from "../../components/common/PasswordInput";
-
-// Import background and logo images from the assets directory
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png"; 
 
-const OTP_LENGTH = 6;
-const OTP_RESEND_SECONDS = 30;
-
 const SignupStoreOwner = () => {
-  // State to control the visibility of the verification popup
-  const [showPopup, setShowPopup] = useState(false);
+  const navigate = useNavigate();
   const [accountCreated, setAccountCreated] = useState(false);
-  const [email, setEmail] = useState("owner@tuckshop.co.za");
-  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
-  const [otpError, setOtpError] = useState("");
-  const [resendSeconds, setResendSeconds] = useState(OTP_RESEND_SECONDS);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
   const [termsError, setTermsError] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [hasDisability, setHasDisability] = useState(false);
-  const emailInputRef = useRef(null);
-  const otpInputRefs = useRef([]);
-  const termsInputRef = useRef(null);
 
-  useEffect(() => {
-    if (!showPopup || resendSeconds === 0) return undefined;
+  // Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    surname: "",
+    email: "",
+    mobileNumber: "",
+    gender: "",
+    disabilityDescription: "",
+    password: "",
+    confirmPassword: ""
+  });
 
-    const timer = setTimeout(() => {
-      setResendSeconds((seconds) => seconds - 1);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [showPopup, resendSeconds]);
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   // Handler for the main form submission
-  const handleCreateAccount = (e) => {
+  const handleCreateAccount = async (e) => {
     e.preventDefault();
+    setApiError("");
+
     if (!termsAccepted) {
       setTermsError("You must agree to the Terms and Conditions to create an account.");
-      termsInputRef.current?.focus();
       return;
     }
-
     setTermsError("");
-    // In a real app, you would send form data to the backend here.
-    // Assuming success, show the verification modal.
-    setOtp(Array(OTP_LENGTH).fill(""));
-    setOtpError("");
-    setResendSeconds(OTP_RESEND_SECONDS);
-    setShowPopup(true);
-  };
 
-  const handleResendCode = () => {
-    // TODO: request a new email verification code from the API.
-    setOtp(Array(OTP_LENGTH).fill(""));
-    setOtpError("");
-    setResendSeconds(OTP_RESEND_SECONDS);
-    otpInputRefs.current[0]?.focus();
-  };
-
-  const handleOtpChange = (index, value) => {
-    const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH - index);
-    setOtpError("");
-    if (!digits) {
-      setOtp((currentOtp) => currentOtp.map((digit, position) => (
-        position === index ? "" : digit
-      )));
+    if (formData.password !== formData.confirmPassword) {
+      setApiError("Passwords do not match.");
       return;
     }
 
-    setOtp((currentOtp) => {
-      const nextOtp = [...currentOtp];
-      digits.split("").forEach((digit, offset) => {
-        nextOtp[index + offset] = digit;
+    setIsLoading(true);
+
+    try {
+      // Connect to the real backend API
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roleName: "Owner", // This page is for Store Owners
+          name: formData.name,
+          surname: formData.surname,
+          email: formData.email,
+          mobileNumber: formData.mobileNumber,
+          gender: formData.gender,
+          password: formData.password,
+          disability: hasDisability,
+          disabilityDescription: hasDisability ? formData.disabilityDescription : null
+        }),
       });
-      return nextOtp;
-    });
 
-    const nextIndex = index + digits.length;
-    otpInputRefs.current[Math.min(nextIndex, OTP_LENGTH - 1)]?.focus();
-  };
+      const data = await response.json();
 
-  const handleOtpKeyDown = (index, event) => {
-    if (event.key === "Backspace" && !otp[index] && index > 0) {
-      otpInputRefs.current[index - 1]?.focus();
-    } else if (event.key === "ArrowLeft" && index > 0) {
-      otpInputRefs.current[index - 1]?.focus();
-    } else if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) {
-      otpInputRefs.current[index + 1]?.focus();
+      if (response.ok) {
+        // Success! Show the account created popup
+        setAccountCreated(true);
+      } else {
+        // Show error from backend (e.g. Email already exists)
+        setApiError(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      setApiError("Server is down. Please check your connection.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleChangeEmail = () => {
-    setShowPopup(false);
-    requestAnimationFrame(() => {
-      emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      emailInputRef.current?.focus();
-    });
+  // Handler for the "Continue" button on the success modal
+  const handleSuccessContinue = () => {
+    setAccountCreated(false);
+    navigate('/login/store-owner-staff'); // Send them to login page
   };
-
-  const handleVerifyEmail = () => {
-    if (otp.some((digit) => !digit)) {
-      setOtpError("Enter all six digits to verify your email.");
-      return;
-    }
-
-    setShowPopup(false);
-    setAccountCreated(true);
-  };
-
-  const maskedEmail = email.replace(/^(.).+(@.*)$/, "$1***$2");
 
   return (
     <div className="login-page-wrapper">
-      
-      {/* =========================================
-          MAIN SIGNUP PAGE CONTENT
-          ========================================= */}
       <div className="login-content signup-content">
         
         {/* LEFT SIDE: HERO SECTION */}
@@ -156,46 +124,46 @@ const SignupStoreOwner = () => {
               <Link to="/signupsupplier" className="role-btn">Supplier</Link>
             </div>
 
-            {/* Attach the submit handler to the form */}
             <form onSubmit={handleCreateAccount}>
+              
+              {/* Display API Error */}
+              {apiError && (
+                <div style={{ color: '#d32f2f', backgroundColor: '#fde8e8', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
+                  {apiError}
+                </div>
+              )}
+
               <h3 className="section-title">Your details</h3>
 
               <div className="form-row">
                 <div className="input-group">
                   <label>Name</label>
-                  <input type="text" className="form-input" required />
+                  <input type="text" name="name" className="form-input" value={formData.name} onChange={handleChange} required />
                 </div>
                 <div className="input-group">
                   <label>Surname</label>
-                  <input type="text" className="form-input" required />
+                  <input type="text" name="surname" className="form-input" value={formData.surname} onChange={handleChange} required />
                 </div>
               </div>
 
               <div className="input-group">
                 <label>Email address</label>
-                <input
-                  ref={emailInputRef}
-                  type="email"
-                  className="form-input"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                />
+                <input type="email" name="email" className="form-input" value={formData.email} onChange={handleChange} required />
               </div>
 
               <div className="input-group">
                 <label>Mobile number</label>
-                <input type="tel" className="form-input" required />
+                <input type="tel" name="mobileNumber" className="form-input" value={formData.mobileNumber} onChange={handleChange} required />
               </div>
 
               <div className="form-row">
                 <div className="input-group">
                   <label>Gender</label>
-                  <select className="form-input select-input" defaultValue="" required>
+                  <select name="gender" className="form-input select-input" value={formData.gender} onChange={handleChange} required>
                     <option value="" disabled>Select your gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
                   </select>
                   {hasDisability && (
                     <div className="disability-details">
@@ -203,7 +171,10 @@ const SignupStoreOwner = () => {
                       <input
                         id="store-disability-type"
                         type="text"
+                        name="disabilityDescription"
                         className="form-input"
+                        value={formData.disabilityDescription}
+                        onChange={handleChange}
                         required
                       />
                     </div>
@@ -213,22 +184,10 @@ const SignupStoreOwner = () => {
                   <label>Disability</label>
                   <div className="radio-group">
                     <label className="radio-label">
-                      <input
-                        type="radio"
-                        name="store-disability"
-                        value="yes"
-                        checked={hasDisability}
-                        onChange={() => setHasDisability(true)}
-                      /> Yes
+                      <input type="radio" name="store-disability" value="yes" checked={hasDisability} onChange={() => setHasDisability(true)} /> Yes
                     </label>
                     <label className="radio-label">
-                      <input
-                        type="radio"
-                        name="store-disability"
-                        value="no"
-                        checked={!hasDisability}
-                        onChange={() => setHasDisability(false)}
-                      /> No
+                      <input type="radio" name="store-disability" value="no" checked={!hasDisability} onChange={() => setHasDisability(false)} /> No
                     </label>
                   </div>
                 </div>
@@ -237,11 +196,14 @@ const SignupStoreOwner = () => {
               <div className="input-group">
                 <label>Password</label>
                 <PasswordInput
+                  name="password"
                   className="form-input"
                   minLength={8}
                   pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
                   title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
+                  value={formData.password}
+                  onChange={handleChange}
                   required
                 />
                 <ul className="password-requirements">
@@ -249,27 +211,25 @@ const SignupStoreOwner = () => {
                   <li>At least one uppercase letter</li>
                   <li>At least one lowercase letter</li>
                   <li>At least one number</li>
-                  <li className="special-character-requirement">
-                    At least one special character (e.g. ! @ # $ % ^ &amp; *)
-                  </li>
+                  <li className="special-character-requirement">At least one special character</li>
                 </ul>
               </div>
 
               <div className="input-group">
                 <label>Confirm password</label>
                 <PasswordInput
+                  name="confirmPassword"
                   className="form-input"
                   minLength={8}
-                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
-                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
                   required
                 />
               </div>
 
               <div className="terms-group">
                 <input
-                  ref={termsInputRef}
                   type="checkbox"
                   id="terms"
                   checked={termsAccepted}
@@ -277,7 +237,6 @@ const SignupStoreOwner = () => {
                     setTermsAccepted(event.target.checked);
                     if (event.target.checked) setTermsError("");
                   }}
-                  aria-describedby={termsError ? "terms-error" : undefined}
                 />
                 <label htmlFor="terms">
                   I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
@@ -285,8 +244,8 @@ const SignupStoreOwner = () => {
               </div>
               {termsError && <p id="terms-error" className="field-error" role="alert">{termsError}</p>}
 
-              <button type="submit" className="submit-btn">
-                Create account
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? "Creating account..." : "Create account"}
               </button>
             </form>
 
@@ -299,90 +258,7 @@ const SignupStoreOwner = () => {
 
       <Footer />
 
-      {/* =========================================
-          VERIFICATION POPUP MODAL
-          Only renders if showPopup is true
-          ========================================= */}
-      {showPopup && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            
-            {/* Modal Header */}
-            <div className="modal-header">
-              <h2>Verify your email</h2>
-              <button 
-                className="modal-close-btn" 
-                onClick={() => setShowPopup(false)}
-                aria-label="Close modal"
-              >
-                ✕
-              </button>
-            </div>
-            
-            {/* Modal Body */}
-            <p className="modal-subtitle">
-              We sent a 6-digit code to <strong>{maskedEmail}</strong>. Enter it below to activate your account.
-            </p>
-
-            {/* 6-Digit OTP Inputs */}
-            <div className="otp-input-group">
-              {otp.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(element) => { otpInputRefs.current[index] = element; }}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength="1"
-                  className="otp-box"
-                  value={digit}
-                  onChange={(event) => handleOtpChange(index, event.target.value)}
-                  onKeyDown={(event) => handleOtpKeyDown(index, event)}
-                  onPaste={(event) => {
-                    event.preventDefault();
-                    handleOtpChange(index, event.clipboardData.getData("text"));
-                  }}
-                  aria-label={`Verification digit ${index + 1}`}
-                  autoFocus={index === 0}
-                />
-              ))}
-            </div>
-
-            {/* Info Box */}
-            <div className="modal-info-box">
-              <p>
-                Didn't get an email? Check your spam folder.{" "}
-                {resendSeconds > 0 ? (
-                  <>You can request a new code in 0:{String(resendSeconds).padStart(2, "0")}.</>
-                ) : (
-                  <button type="button" className="resend-btn" onClick={handleResendCode}>
-                    Resend code
-                  </button>
-                )}
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            {otpError && <p className="field-error" role="alert">{otpError}</p>}
-            <button
-              type="button"
-              className="modal-submit-btn"
-              onClick={handleVerifyEmail}
-            >
-              Verify email
-            </button>
-            <button
-              type="button"
-              className="modal-secondary-btn"
-              onClick={handleChangeEmail}
-            >
-              Change email address
-            </button>
-
-          </div>
-        </div>
-      )}
-
+      {/* SUCCESS MODAL (Replaced OTP) */}
       {accountCreated && (
         <div className="modal-overlay">
           <div className="modal-card" role="status" aria-live="polite">
@@ -390,14 +266,14 @@ const SignupStoreOwner = () => {
               <h2>Account successfully created</h2>
             </div>
             <p className="modal-subtitle">
-              Your email has been verified and your account is ready.
+              Your account is ready. You can now sign in.
             </p>
             <button
               type="button"
               className="modal-submit-btn"
-              onClick={() => setAccountCreated(false)}
+              onClick={handleSuccessContinue}
             >
-              Continue
+              Continue to Login
             </button>
           </div>
         </div>

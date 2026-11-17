@@ -11,36 +11,70 @@ const LoginSupplier = () => {
   const navigate = useNavigate();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
+  // Form State
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  
+  // UI State
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          roleName: "Supplier", // Hardcoded for this page
+          rememberMe: rememberMe
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userRole', data.user.role);
+        localStorage.setItem('userName', data.user.name);
+
+        // Redirect to Supplier Dashboard
+        navigate('/supplier-dashboard'); 
+      } else {
+        setErrorMessage(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Server is down or CORS is blocking the request.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    // Main page wrapper using CSS Grid to keep footer at the bottom
     <div className="login-page-wrapper">
 
-      {/* Main content area split into left (image) and right (form) panels */}
       <div className="login-content">
 
-        {/* =========================================
-            LEFT SIDE: HERO SECTION
-            ========================================= */}
+        {/* LEFT SIDE: HERO SECTION */}
         <div className="login-left">
-
-          {/* Background image with a dark overlay for text readability */}
           <div className="hero-background">
             <img src={BackgroundImage} alt="Store background" className="bg-image" />
             <div className="overlay"></div>
           </div>
 
-          {/* Content layered on top of the background image */}
           <div className="left-content">
-            {/* Top Brand Logo */}
             <div className="logo-top">SpazaNet</div>
-
-            {/* Main Welcome Message */}
             <div className="welcome-text">
               <h1>Welcome back</h1>
               <p>Stock, sales and group buying for rural stores.</p>
             </div>
-
-            {/* Bottom Partner Logo (IIK Organisation) */}
             <div className="partner-logo">
               <img src={Logo} alt="IIK Organisation Logo" className="partner-logo-img" />
               <span>IIK Organisation</span>
@@ -48,19 +82,14 @@ const LoginSupplier = () => {
           </div>
         </div>
 
-        {/* =========================================
-            RIGHT SIDE: LOGIN FORM
-            ========================================= */}
+        {/* RIGHT SIDE: LOGIN FORM */}
         <div className="login-right">
           <div className="form-wrapper">
 
-            {/* Form Header */}
             <h2>Sign in</h2>
             <p className="subtitle">Sign in as a supplier to continue.</p>
 
-            {/* Role Selection Toggle (Store / Supplier) */}
             <div className="role-toggle">
-              {/* 'Store' switches to the store owner & staff login page */}
               <button
                 type="button"
                 className="role-btn"
@@ -71,31 +100,45 @@ const LoginSupplier = () => {
               <button type="button" className="role-btn active">Supplier</button>
             </div>
 
-            {/* Main Login Form */}
-            <form>
-              {/* Email/Phone Input Field */}
+            <form onSubmit={handleSubmit}>
+              
+              {/* Display API Error */}
+              {errorMessage && (
+                <div style={{ color: '#d32f2f', backgroundColor: '#fde8e8', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
+                  {errorMessage}
+                </div>
+              )}
+
               <div className="input-group">
                 <label>Email or mobile number</label>
                 <input
                   type="text"
-                  defaultValue="sales@supplier.co.za"
                   className="form-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="sales@supplier.co.za"
+                  required
                 />
               </div>
 
-              {/* Password Input Field */}
               <div className="input-group">
                 <label>Password</label>
                 <PasswordInput
-                  defaultValue="••••••••"
                   className="form-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
               </div>
 
-              {/* Remember Me & Forgot Password Links */}
               <div className="form-actions">
                 <div className="checkbox-group">
-                  <input type="checkbox" id="remember" defaultChecked />
+                  <input 
+                    type="checkbox" 
+                    id="remember" 
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
                   <label htmlFor="remember">Remember me</label>
                 </div>
                 <button type="button" className="forgot-link" onClick={() => setShowForgotPassword(true)}>
@@ -103,13 +146,11 @@ const LoginSupplier = () => {
                 </button>
               </div>
 
-              {/* Form Submit Button */}
-              <button type="submit" className="submit-btn">
-                Sign in
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Sign in"}
               </button>
             </form>
 
-            {/* Registration Call-to-Action for New Suppliers */}
             <p className="auth-footer-text">
               New Supplier? <Link to="/signupsupplier">Register your company</Link>
             </p>
@@ -118,10 +159,8 @@ const LoginSupplier = () => {
 
       </div>
 
-      {/* Global Footer Component */}
       <Footer />
 
-      {/* Forgot Password Popup */}
       {showForgotPassword && (
         <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
       )}

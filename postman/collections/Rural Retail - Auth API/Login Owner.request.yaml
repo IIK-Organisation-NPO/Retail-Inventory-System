@@ -1,0 +1,13 @@
+$kind: http-request
+url: http://localhost:5000/api/auth/login
+method: POST
+body:
+  type: json
+  content: |-
+    {
+      "email": "owner@store.com",
+      "password": "Password123!",
+      "roleName": "Owner",
+      "rememberMe": true
+    }
+order: 3000

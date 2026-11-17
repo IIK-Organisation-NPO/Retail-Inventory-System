@@ -1,0 +1,18 @@
+$kind: http-request
+url: http://localhost:5000/api/auth/register
+method: POST
+body:
+  type: json
+  content: |-
+    {
+      "roleName": "Supplier",
+      "companyName": "AgriSupply SA",
+      "name": "Sarah",
+      "surname": "Jones",
+      "email": "supplier@agri.com",
+      "mobileNumber": "0854445555",
+      "gender": "Female",
+      "password": "Password123!",
+      "disability": false
+    }
+order: 2000

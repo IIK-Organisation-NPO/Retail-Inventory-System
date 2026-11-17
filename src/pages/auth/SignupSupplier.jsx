@@ -8,47 +8,102 @@ import Logo from "../../assets/images/IIK logo.png";
 
 const SignupSupplier = () => {
   const navigate = useNavigate();
-  const [hasDisability, setHasDisability] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
   const [termsError, setTermsError] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [hasDisability, setHasDisability] = useState(false);
 
-  const handleCreateAccount = (event) => {
+  // Form State
+  const [formData, setFormData] = useState({
+    companyName: "",
+    name: "",
+    surname: "",
+    email: "",
+    mobileNumber: "",
+    gender: "",
+    disabilityDescription: "",
+    password: "",
+    confirmPassword: ""
+  });
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleCreateAccount = async (event) => {
     event.preventDefault();
+    setApiError("");
+
     if (!termsAccepted) {
       setTermsError("You must agree to the Terms and Conditions to create an account.");
       return;
     }
     setTermsError("");
+
+    if (formData.password !== formData.confirmPassword) {
+      setApiError("Passwords do not match.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roleName: "Supplier", 
+          companyName: formData.companyName,
+          name: formData.name,
+          surname: formData.surname,
+          email: formData.email,
+          mobileNumber: formData.mobileNumber,
+          gender: formData.gender,
+          password: formData.password,
+          disability: hasDisability,
+          disabilityDescription: hasDisability ? formData.disabilityDescription : null
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAccountCreated(true);
+      } else {
+        setApiError(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      setApiError("Server is down. Please check your connection.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSuccessContinue = () => {
+    setAccountCreated(false);
+    navigate('/login/supplier');
   };
 
   return (
-    // Main page wrapper using CSS Grid to keep footer at the bottom
     <div className="login-page-wrapper">
-
-      {/* Main content area split into left (image) and right (form) panels */}
       <div className="login-content signup-content">
 
-        {/* =========================================
-            LEFT SIDE: HERO SECTION
-            ========================================= */}
+        {/* LEFT SIDE: HERO SECTION */}
         <div className="login-left">
-
-          {/* Background image with a dark overlay */}
           <div className="hero-background">
             <img src={BackgroundImage} alt="Store background" className="bg-image" />
             <div className="overlay"></div>
           </div>
 
-          {/* Content layered on top of the background image */}
           <div className="left-content">
             <div className="logo-top">SpazaNet</div>
-
             <div className="welcome-text">
               <h1>Become one of us</h1>
               <p>Stock, sales and group buying for rural stores.</p>
             </div>
-
-            {/* Bottom Partner Logo */}
             <div className="partner-logo">
               <img src={Logo} alt="IIK Organisation Logo" className="partner-logo-img" />
               <span>IIK Organisation</span>
@@ -56,18 +111,12 @@ const SignupSupplier = () => {
           </div>
         </div>
 
-        {/* =========================================
-            RIGHT SIDE: SIGN UP FORM
-            ========================================= */}
+        {/* RIGHT SIDE: SIGN UP FORM */}
         <div className="login-right signup-right">
           <div className="form-wrapper registration-wrapper">
-
-            {/* Form Header */}
             <h2>Create account</h2>
 
-            {/* Role Selection Toggle (Store / Supplier) */}
             <div className="role-toggle">
-              {/* 'Store' switches to the store owner sign up page */}
               <button
                 type="button"
                 className="role-btn"
@@ -79,48 +128,49 @@ const SignupSupplier = () => {
             </div>
 
             <form onSubmit={handleCreateAccount}>
-              {/* Section Title */}
+              
+              {apiError && (
+                <div style={{ color: '#d32f2f', backgroundColor: '#fde8e8', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
+                  {apiError}
+                </div>
+              )}
+
               <h3 className="section-title">Your details</h3>
 
-              {/* Company Name Input */}
               <div className="input-group">
                 <label>Company name</label>
-                <input type="text" className="form-input" />
+                <input type="text" name="companyName" className="form-input" value={formData.companyName} onChange={handleChange} required />
               </div>
 
-              {/* Name & Surname Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Name</label>
-                  <input type="text" className="form-input" />
+                  <input type="text" name="name" className="form-input" value={formData.name} onChange={handleChange} required />
                 </div>
                 <div className="input-group">
                   <label>Surname</label>
-                  <input type="text" className="form-input" />
+                  <input type="text" name="surname" className="form-input" value={formData.surname} onChange={handleChange} required />
                 </div>
               </div>
 
-              {/* Email Input */}
               <div className="input-group">
                 <label>Email address</label>
-                <input type="email" className="form-input" />
+                <input type="email" name="email" className="form-input" value={formData.email} onChange={handleChange} required />
               </div>
 
-              {/* Mobile Number Input */}
               <div className="input-group">
                 <label>Mobile number</label>
-                <input type="tel" className="form-input" />
+                <input type="tel" name="mobileNumber" className="form-input" value={formData.mobileNumber} onChange={handleChange} required />
               </div>
 
-              {/* Gender & Disability Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Gender</label>
-                  <select className="form-input select-input" defaultValue="">
+                  <select name="gender" className="form-input select-input" value={formData.gender} onChange={handleChange} required>
                     <option value="" disabled>Select your gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
                   </select>
                   {hasDisability && (
                     <div className="disability-details">
@@ -128,7 +178,10 @@ const SignupSupplier = () => {
                       <input
                         id="disability-type"
                         type="text"
+                        name="disabilityDescription"
                         className="form-input"
+                        value={formData.disabilityDescription}
+                        onChange={handleChange}
                         required
                       />
                     </div>
@@ -138,36 +191,26 @@ const SignupSupplier = () => {
                   <label>Disability</label>
                   <div className="radio-group">
                     <label className="radio-label">
-                      <input
-                        type="radio"
-                        name="disability"
-                        value="yes"
-                        checked={hasDisability}
-                        onChange={() => setHasDisability(true)}
-                      /> Yes
+                      <input type="radio" name="disability" value="yes" checked={hasDisability} onChange={() => setHasDisability(true)} /> Yes
                     </label>
                     <label className="radio-label">
-                      <input
-                        type="radio"
-                        name="disability"
-                        value="no"
-                        checked={!hasDisability}
-                        onChange={() => setHasDisability(false)}
-                      /> No
+                      <input type="radio" name="disability" value="no" checked={!hasDisability} onChange={() => setHasDisability(false)} /> No
                     </label>
                   </div>
                 </div>
               </div>
 
-              {/* Password Input */}
               <div className="input-group">
                 <label>Password</label>
                 <PasswordInput
+                  name="password"
                   className="form-input"
                   minLength={8}
                   pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
                   title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
+                  value={formData.password}
+                  onChange={handleChange}
                   required
                 />
                 <ul className="password-requirements">
@@ -181,20 +224,19 @@ const SignupSupplier = () => {
                 </ul>
               </div>
 
-              {/* Confirm Password Input */}
               <div className="input-group">
                 <label>Confirm password</label>
                 <PasswordInput
+                  name="confirmPassword"
                   className="form-input"
                   minLength={8}
-                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
-                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
                   required
                 />
               </div>
 
-              {/* Terms & Conditions Checkbox */}
               <div className="terms-group">
                 <input
                   type="checkbox"
@@ -204,7 +246,6 @@ const SignupSupplier = () => {
                     setTermsAccepted(event.target.checked);
                     if (event.target.checked) setTermsError("");
                   }}
-                  aria-describedby={termsError ? "supplier-terms-error" : undefined}
                 />
                 <label htmlFor="supplier-terms">
                   I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
@@ -216,13 +257,11 @@ const SignupSupplier = () => {
                 </p>
               )}
 
-              {/* Form Submit Button */}
-              <button type="submit" className="submit-btn">
-                Create account
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? "Creating account..." : "Create account"}
               </button>
             </form>
 
-            {/* Login Redirect Link */}
             <p className="auth-footer-text">
               Already registered? <Link to="/login/supplier">Sign in</Link>
             </p>
@@ -231,8 +270,28 @@ const SignupSupplier = () => {
 
       </div>
 
-      {/* Global Footer Component */}
       <Footer />
+
+      {/* SUCCESS MODAL */}
+      {accountCreated && (
+        <div className="modal-overlay">
+          <div className="modal-card" role="status" aria-live="polite">
+            <div className="modal-header">
+              <h2>Account successfully created</h2>
+            </div>
+            <p className="modal-subtitle">
+              Your supplier account is ready. You can now sign in.
+            </p>
+            <button
+              type="button"
+              className="modal-submit-btn"
+              onClick={handleSuccessContinue}
+            >
+              Continue to Login
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: 8607548b-7313-4b08-86e8-4e68517b49c3
+
+cloudResources:
+  collections:
+    ../postman/collections/Rural Retail - Auth API: 26ad15fa-503b-4fd3-90b0-81342b89e479
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/

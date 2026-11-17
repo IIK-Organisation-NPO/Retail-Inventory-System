@@ -1,0 +1,27 @@
+$kind: http-request
+name: http://localhost:5000/api/auth/register
+description: ""
+url: http://localhost:5000/api/auth/register
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"roleName\": \"Staff\",\r
+
+    \  \"name\": \"Peter\",\r
+
+    \  \"surname\": \"Parker\",\r
+
+    \  \"email\": \"staff@store.com\",\r
+
+    \  \"mobileNumber\": \"0843334444\",\r
+
+    \  \"gender\": \"Male\",\r
+
+    \  \"password\": \"Password123!\",\r
+
+    \  \"disability\": false\r
+
+    }"
+order: 7000
