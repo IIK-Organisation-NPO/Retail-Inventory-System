@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 import "../../Style/Store Owner/StoreOwner_MovementHistory.css";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
+import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
+import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 
 // Mock data — replace with API data once the backend is connected
 const MOVEMENTS = [
@@ -172,11 +174,7 @@ const StoreOwner_MovementHistory = () => {
           <h1 className="so-page-title">Movement history</h1>
 
           <div className="so-header-actions">
-            <button type="button" className="so-store-selector">
-              <span className="so-avatar so-avatar-sm">MT</span>
-              <span className="so-store-name">Mseleku Tuckshop</span>
-              <span className="so-chevron" aria-hidden="true">⌄</span>
-            </button>
+            <StoreOwner_StoreSwitcher />
 
             <button
               type="button"
@@ -187,7 +185,7 @@ const StoreOwner_MovementHistory = () => {
               {isExporting ? "Exporting…" : "Export"}
             </button>
 
-            <span className="so-avatar" title="Account">SD</span>
+            <StoreOwner_UserMenu />
           </div>
         </header>
 

@@ -3,6 +3,8 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
+import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
+import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import {
   StockInPopup,
   StockOutPopup,
@@ -75,11 +77,7 @@ const StoreOwnerInventory = () => {
           <h1 className="so-page-title">Inventory</h1>
 
           <div className="so-header-actions">
-            <button type="button" className="so-store-selector">
-              <span className="so-avatar so-avatar-sm">MT</span>
-              <span className="so-store-name">Mseleku Tuckshop</span>
-              <span className="so-chevron" aria-hidden="true">⌄</span>
-            </button>
+            <StoreOwner_StoreSwitcher />
 
             <button type="button" className="so-btn so-btn-primary" onClick={() => setOpenPopup("in")}>
               Stock in
@@ -91,7 +89,7 @@ const StoreOwnerInventory = () => {
               Adjust stock
             </button>
 
-            <span className="so-avatar" title="Account">SD</span>
+            <StoreOwner_UserMenu />
           </div>
         </header>
 
