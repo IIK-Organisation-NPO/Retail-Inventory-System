@@ -1,14 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-
-// Import the stylesheet for the auth/registration pages
+import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
-
-// Import the shared Footer component
 import Footer from "../../components/common/Footer";
 import PasswordInput from "../../components/common/PasswordInput";
-
-// Import background and logo images from the assets directory
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png"; 
 
@@ -16,50 +10,209 @@ const OTP_LENGTH = 6;
 const OTP_RESEND_SECONDS = 30;
 
 const SignupStoreOwner = () => {
-  // State to control the visibility of the verification popup
+  const navigate = useNavigate();
+
+  // --- Form State ---
+  const [formData, setFormData] = useState({
+    name: "",
+    surname: "",
+    email: "",
+    mobileNumber: "",
+    gender: "",
+    disability: false,
+    disabilityDescription: "",
+    password: "",
+    confirmPassword: "",
+    acceptTerms: false
+  });
+
+  // --- Validation Errors State ---
+  const [validationErrors, setValidationErrors] = useState({});
+
+  // --- UI State ---
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(""); // For backend errors
+  const [hasDisability, setHasDisability] = useState(false);
+
+  // --- Verification Modal State ---
   const [showPopup, setShowPopup] = useState(false);
   const [accountCreated, setAccountCreated] = useState(false);
-  const [email, setEmail] = useState("owner@tuckshop.co.za");
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [otpError, setOtpError] = useState("");
   const [resendSeconds, setResendSeconds] = useState(OTP_RESEND_SECONDS);
-  const [termsError, setTermsError] = useState("");
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [hasDisability, setHasDisability] = useState(false);
+  
   const emailInputRef = useRef(null);
   const otpInputRefs = useRef([]);
-  const termsInputRef = useRef(null);
 
   useEffect(() => {
     if (!showPopup || resendSeconds === 0) return undefined;
-
     const timer = setTimeout(() => {
       setResendSeconds((seconds) => seconds - 1);
     }, 1000);
-
     return () => clearTimeout(timer);
   }, [showPopup, resendSeconds]);
 
-  // Handler for the main form submission
-  const handleCreateAccount = (e) => {
+  // Handle changes for all text inputs and clear their specific error
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" || type === "radio" ? checked : value
+    });
+
+    // Clear the error message for this field as the user types
+    if (validationErrors[name]) {
+      setValidationErrors({ ...validationErrors, [name]: "" });
+    }
+  };
+
+  const handleDisabilityChange = (isDisabled) => {
+    setFormData({
+      ...formData,
+      disability: isDisabled,
+      disabilityDescription: isDisabled ? formData.disabilityDescription : "" 
+    });
+  };
+
+  // --- Validation Function ---
+  const validateForm = () => {
+    const errors = {};
+
+    // Name validation
+    const nameRegex = /^[A-Za-z\s\-']+$/;
+    if (!formData.name.trim()) {
+      errors.name = "Name is required.";
+    } else if (!nameRegex.test(formData.name)) {
+      errors.name = "Name can only contain letters, spaces, hyphens, and apostrophes.";
+    }
+
+    // Surname validation
+    if (!formData.surname.trim()) {
+      errors.surname = "Surname is required.";
+    } else if (!nameRegex.test(formData.surname)) {
+      errors.surname = "Surname can only contain letters, spaces, hyphens, and apostrophes.";
+    }
+
+    // Email validation
+    if (!formData.email.trim()) {
+      errors.email = "Email address is required";
+    }
+
+    // Mobile validation (South African format)
+    // Allows 0821234567 or +27821234567
+    const mobileRegex = /^(?:\+27|0)[6-8][0-9]{8}$/;
+    if (!formData.mobileNumber.trim()) {
+      errors.mobileNumber = "Mobile number is required.";
+    } else if (!mobileRegex.test(formData.mobileNumber.replace(/\s/g, ''))) {
+      errors.mobileNumber = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567)";
+    }
+
+    // Gender validation
+    if (!formData.gender) {
+      errors.gender = "Please select a gender in the list";
+    }
+
+    // Password validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      errors.password = "Use at least 8 characters, including UpperCase and lowerCase letters, a number and a special character";
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+    }
+
+    // Terms validation
+    if (!formData.acceptTerms) {
+      errors.acceptTerms = "You must agree to the Terms of Service and Privacy Policy to continue.";
+    }
+
+    return errors;
+  };
+
+  // --- API Call: Register Owner ---
+  const handleCreateAccount = async (e) => {
     e.preventDefault();
-    if (!termsAccepted) {
-      setTermsError("You must agree to the Terms and Conditions to create an account.");
-      termsInputRef.current?.focus();
+    setError("");
+
+    // Run validations
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return; // Stop submission if there are errors
+    }
+
+    setValidationErrors({});
+    setLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/register/owner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          surname: formData.surname,
+          email: formData.email,
+          mobileNumber: formData.mobileNumber,
+          gender: formData.gender,
+          disability: formData.disability,
+          disabilityDescription: formData.disability ? formData.disabilityDescription : null,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      // Success! Show the built-in modal
+      setOtp(Array(OTP_LENGTH).fill(""));
+      setOtpError("");
+      setResendSeconds(OTP_RESEND_SECONDS);
+      setShowPopup(true);
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- API Call: Verify Email ---
+  const handleVerifyEmail = async () => {
+    if (otp.some((digit) => !digit)) {
+      setOtpError("Enter all six digits to verify your email.");
       return;
     }
 
-    setTermsError("");
-    // In a real app, you would send form data to the backend here.
-    // Assuming success, show the verification modal.
-    setOtp(Array(OTP_LENGTH).fill(""));
     setOtpError("");
-    setResendSeconds(OTP_RESEND_SECONDS);
-    setShowPopup(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email: formData.email, 
+          otp: otp.join(""), 
+          role: "OWNER" 
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Verification failed");
+      }
+
+      setShowPopup(false);
+      setAccountCreated(true);
+    } catch (err) {
+      setOtpError(err.message);
+    }
   };
 
-  const handleResendCode = () => {
-    // TODO: request a new email verification code from the API.
+  const handleResendCode = async () => {
     setOtp(Array(OTP_LENGTH).fill(""));
     setOtpError("");
     setResendSeconds(OTP_RESEND_SECONDS);
@@ -106,26 +259,12 @@ const SignupStoreOwner = () => {
     });
   };
 
-  const handleVerifyEmail = () => {
-    if (otp.some((digit) => !digit)) {
-      setOtpError("Enter all six digits to verify your email.");
-      return;
-    }
-
-    setShowPopup(false);
-    setAccountCreated(true);
-  };
-
-  const maskedEmail = email.replace(/^(.).+(@.*)$/, "$1***$2");
+  const maskedEmail = formData.email.replace(/^(.).+(@.*)$/, "$1***$2");
 
   return (
     <div className="login-page-wrapper">
       
-      {/* =========================================
-          MAIN SIGNUP PAGE CONTENT
-          ========================================= */}
       <div className="login-content signup-content">
-        
         {/* LEFT SIDE: HERO SECTION */}
         <div className="login-left">
           <div className="hero-background">
@@ -135,7 +274,7 @@ const SignupStoreOwner = () => {
           <div className="left-content">
             <div className="logo-top">SpazaNet</div>
             <div className="welcome-text">
-              <h1>Welcome back</h1>
+              <h1>Become one of us</h1>
               <p>Stock, sales and group buying for rural stores.</p>
             </div>
             <div className="partner-logo">
@@ -155,18 +294,34 @@ const SignupStoreOwner = () => {
               <Link to="/signupsupplier" className="role-btn">Supplier</Link>
             </div>
 
-            {/* Attach the submit handler to the form */}
-            <form onSubmit={handleCreateAccount}>
+            {/* Added noValidate to prevent browser default popups */}
+            <form onSubmit={handleCreateAccount} noValidate>
+              {error && <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px' }}>{error}</div>}
+
               <h3 className="section-title">Your details</h3>
 
               <div className="form-row">
                 <div className="input-group">
                   <label>Name</label>
-                  <input type="text" className="form-input" required />
+                  <input 
+                    type="text" 
+                    name="name" 
+                    value={formData.name} 
+                    onChange={handleChange} 
+                    className="form-input" 
+                  />
+                  {validationErrors.name && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.name}</span>}
                 </div>
                 <div className="input-group">
                   <label>Surname</label>
-                  <input type="text" className="form-input" required />
+                  <input 
+                    type="text" 
+                    name="surname" 
+                    value={formData.surname} 
+                    onChange={handleChange} 
+                    className="form-input" 
+                  />
+                  {validationErrors.surname && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.surname}</span>}
                 </div>
               </div>
 
@@ -175,38 +330,42 @@ const SignupStoreOwner = () => {
                 <input
                   ref={emailInputRef}
                   type="email"
+                  name="email"
                   className="form-input"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
+                  value={formData.email}
+                  onChange={handleChange}
                 />
+                {validationErrors.email && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.email}</span>}
               </div>
 
               <div className="input-group">
                 <label>Mobile number</label>
-                <input type="tel" className="form-input" required />
+                <input 
+                  type="tel" 
+                  name="mobileNumber" 
+                  value={formData.mobileNumber} 
+                  onChange={handleChange} 
+                  className="form-input" 
+                  placeholder="e.g., 0821234567 or +27821234567"
+                />
+                {validationErrors.mobileNumber && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.mobileNumber}</span>}
               </div>
 
               <div className="form-row">
                 <div className="input-group">
                   <label>Gender</label>
-                  <select className="form-input select-input" defaultValue="" required>
+                  <select 
+                    name="gender" 
+                    value={formData.gender} 
+                    onChange={handleChange} 
+                    className="form-input select-input"
+                  >
                     <option value="" disabled>Select your gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                     <option value="other">Other</option>
                   </select>
-                  {hasDisability && (
-                    <div className="disability-details">
-                      <label htmlFor="store-disability-type">What type of disability?</label>
-                      <input
-                        id="store-disability-type"
-                        type="text"
-                        className="form-input"
-                        required
-                      />
-                    </div>
-                  )}
+                  {validationErrors.gender && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.gender}</span>}
                 </div>
                 <div className="input-group">
                   <label>Disability</label>
@@ -214,35 +373,47 @@ const SignupStoreOwner = () => {
                     <label className="radio-label">
                       <input
                         type="radio"
-                        name="store-disability"
-                        value="yes"
-                        checked={hasDisability}
-                        onChange={() => setHasDisability(true)}
+                        name="disabilityRadio"
+                        checked={formData.disability === true}
+                        onChange={() => handleDisabilityChange(true)}
                       /> Yes
                     </label>
                     <label className="radio-label">
                       <input
                         type="radio"
-                        name="store-disability"
-                        value="no"
-                        checked={!hasDisability}
-                        onChange={() => setHasDisability(false)}
+                        name="disabilityRadio"
+                        checked={formData.disability === false}
+                        onChange={() => handleDisabilityChange(false)}
                       /> No
                     </label>
                   </div>
                 </div>
               </div>
 
+              {formData.disability && (
+                <div className="input-group disability-details" style={{marginBottom: '15px'}}>
+                  <label htmlFor="store-disability-type">What type of disability?</label>
+                  <input
+                    id="store-disability-type"
+                    type="text"
+                    name="disabilityDescription"
+                    value={formData.disabilityDescription}
+                    onChange={handleChange}
+                    className="form-input"
+                  />
+                </div>
+              )}
+
               <div className="input-group">
                 <label>Password</label>
                 <PasswordInput
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
                   className="form-input"
-                  minLength={8}
-                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
-                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
-                  required
                 />
+                {validationErrors.password && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.password}</span>}
                 <ul className="password-requirements">
                   <li>At least 8 characters</li>
                   <li>At least one uppercase letter</li>
@@ -257,35 +428,31 @@ const SignupStoreOwner = () => {
               <div className="input-group">
                 <label>Confirm password</label>
                 <PasswordInput
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
                   className="form-input"
-                  minLength={8}
-                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
-                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
-                  required
                 />
+                {validationErrors.confirmPassword && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.confirmPassword}</span>}
               </div>
 
               <div className="terms-group">
                 <input
-                  ref={termsInputRef}
                   type="checkbox"
                   id="terms"
-                  checked={termsAccepted}
-                  onChange={(event) => {
-                    setTermsAccepted(event.target.checked);
-                    if (event.target.checked) setTermsError("");
-                  }}
-                  aria-describedby={termsError ? "terms-error" : undefined}
+                  name="acceptTerms"
+                  checked={formData.acceptTerms}
+                  onChange={handleChange}
                 />
                 <label htmlFor="terms">
                   I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
                 </label>
               </div>
-              {termsError && <p id="terms-error" className="field-error" role="alert">{termsError}</p>}
+              {validationErrors.acceptTerms && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block', width: '100%' }}>{validationErrors.acceptTerms}</span>}
 
-              <button type="submit" className="submit-btn">
-                Create account
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? "Creating account..." : "Create account"}
               </button>
             </form>
 
@@ -300,13 +467,11 @@ const SignupStoreOwner = () => {
 
       {/* =========================================
           VERIFICATION POPUP MODAL
-          Only renders if showPopup is true
           ========================================= */}
       {showPopup && (
         <div className="modal-overlay">
           <div className="modal-card">
             
-            {/* Modal Header */}
             <div className="modal-header">
               <h2>Verify your email</h2>
               <button 
@@ -318,12 +483,10 @@ const SignupStoreOwner = () => {
               </button>
             </div>
             
-            {/* Modal Body */}
             <p className="modal-subtitle">
               We sent a 6-digit code to <strong>{maskedEmail}</strong>. Enter it below to activate your account.
             </p>
 
-            {/* 6-Digit OTP Inputs */}
             <div className="otp-input-group">
               {otp.map((digit, index) => (
                 <input
@@ -347,7 +510,6 @@ const SignupStoreOwner = () => {
               ))}
             </div>
 
-            {/* Info Box */}
             <div className="modal-info-box">
               <p>
                 Didn't get an email? Check your spam folder.{" "}
@@ -361,20 +523,12 @@ const SignupStoreOwner = () => {
               </p>
             </div>
 
-            {/* Action Buttons */}
             {otpError && <p className="field-error" role="alert">{otpError}</p>}
-            <button
-              type="button"
-              className="modal-submit-btn"
-              onClick={handleVerifyEmail}
-            >
+            
+            <button type="button" className="modal-submit-btn" onClick={handleVerifyEmail}>
               Verify email
             </button>
-            <button
-              type="button"
-              className="modal-secondary-btn"
-              onClick={handleChangeEmail}
-            >
+            <button type="button" className="modal-secondary-btn" onClick={handleChangeEmail}>
               Change email address
             </button>
 
@@ -382,6 +536,9 @@ const SignupStoreOwner = () => {
         </div>
       )}
 
+      {/* =========================================
+          SUCCESS MODAL
+          ========================================= */}
       {accountCreated && (
         <div className="modal-overlay">
           <div className="modal-card" role="status" aria-live="polite">
@@ -389,14 +546,14 @@ const SignupStoreOwner = () => {
               <h2>Account successfully created</h2>
             </div>
             <p className="modal-subtitle">
-              Your email has been verified and your account is ready.
+              Your email has been verified and your account is ready. You can now sign in.
             </p>
             <button
               type="button"
               className="modal-submit-btn"
-              onClick={() => setAccountCreated(false)}
+              onClick={() => navigate("/login/store-owner-staff")}
             >
-              Continue
+              Continue to Sign in
             </button>
           </div>
         </div>

@@ -24,19 +24,30 @@ const SignupSupplier = () => {
     acceptTerms: false
   });
   
-  const [error, setError] = useState("");
+  // 2. State for Validation Errors
+  const [validationErrors, setValidationErrors] = useState({});
+  
+  const [error, setError] = useState(""); // For backend errors
   const [loading, setLoading] = useState(false);
 
-  // 2. Universal handler for all inputs
+  // 3. Universal handler for all inputs
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
       [name]: type === "checkbox" || type === "radio" ? checked : value
     });
+
+    // Clear the specific error message as the user types/selects
+    if (validationErrors[name]) {
+      setValidationErrors({
+        ...validationErrors,
+        [name]: ""
+      });
+    }
   };
 
-  // 3. Handler for Disability toggle
+  // 4. Handler for Disability toggle
   const handleDisabilityChange = (isDisabled) => {
     setFormData({
       ...formData,
@@ -45,22 +56,78 @@ const SignupSupplier = () => {
     });
   };
 
-  // 4. Form Submission
+  // 5. The Validation Logic
+  const validateForm = () => {
+    const errors = {};
+
+    // Company Name Validation
+    if (!formData.companyName.trim()) {
+      errors.companyName = "Please enter a company name";
+    }
+
+    // Name & Surname Validation
+    const nameRegex = /^[A-Za-z\s\-']+$/;
+    if (!formData.name.trim()) {
+      errors.name = "Name is required";
+    } else if (!nameRegex.test(formData.name)) {
+      errors.name = "Name can only contain letters, spaces, hyphens, and apostrophes";
+    }
+
+    if (!formData.surname.trim()) {
+      errors.surname = "Surname is required";
+    } else if (!nameRegex.test(formData.surname)) {
+      errors.surname = "Surname can only contain letters, spaces, hyphens, and apostrophes";
+    }
+
+    // Email Validation
+    if (!formData.email.trim()) {
+      errors.email = "Email address is required";
+    }
+
+    // Mobile Number Validation (SA format)
+    const mobileRegex = /^(?:\+27|0)[6-8][0-9]{8}$/;
+    if (!formData.mobileNumber.trim()) {
+      errors.mobileNumber = "Mobile number is required";
+    } else if (!mobileRegex.test(formData.mobileNumber.replace(/\s/g, ''))) {
+      errors.mobileNumber = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567)";
+    }
+
+    // Gender Validation
+    if (!formData.gender) {
+      errors.gender = "Please select a gender in the list";
+    }
+
+    // Password Validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      errors.password = "use atleast 8 characters, including Uppercase and lowercase letters, a number and a special character";
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+    }
+
+    // Terms Validation
+    if (!formData.acceptTerms) {
+      errors.acceptTerms = "You must agree to the Terms of Service and Privacy Policy to continue.";
+    }
+
+    return errors;
+  };
+
+  // 6. Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      return setError("Passwords do not match");
-    }
-    if (!formData.acceptTerms) {
-      return setError("You must agree to the Terms and Conditions to create an account.");
-    }
-    if (formData.disability && !formData.disabilityDescription) {
-      return setError("Please describe your disability");
+    // Run frontend validation
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return; // Stop submission
     }
 
+    setValidationErrors({});
     setLoading(true);
 
     try {
@@ -136,7 +203,8 @@ const SignupSupplier = () => {
               <button type="button" className="role-btn active">Supplier</button>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            {/* noValidate prevents the browser's default popups */}
+            <form onSubmit={handleSubmit} noValidate>
               
               {/* Backend Error Message */}
               {error && (
@@ -150,43 +218,49 @@ const SignupSupplier = () => {
               {/* Company Name */}
               <div className="input-group">
                 <label>Company name</label>
-                <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="form-input" required />
+                <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="form-input" />
+                {validationErrors.companyName && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.companyName}</span>}
               </div>
 
               {/* Name & Surname */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Name</label>
-                  <input type="text" name="name" value={formData.name} onChange={handleChange} className="form-input" required />
+                  <input type="text" name="name" value={formData.name} onChange={handleChange} className="form-input" />
+                  {validationErrors.name && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.name}</span>}
                 </div>
                 <div className="input-group">
                   <label>Surname</label>
-                  <input type="text" name="surname" value={formData.surname} onChange={handleChange} className="form-input" required />
+                  <input type="text" name="surname" value={formData.surname} onChange={handleChange} className="form-input" />
+                  {validationErrors.surname && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.surname}</span>}
                 </div>
               </div>
 
               {/* Email */}
               <div className="input-group">
                 <label>Email address</label>
-                <input type="email" name="email" value={formData.email} onChange={handleChange} className="form-input" required />
+                <input type="email" name="email" value={formData.email} onChange={handleChange} className="form-input" />
+                {validationErrors.email && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.email}</span>}
               </div>
 
               {/* Mobile */}
               <div className="input-group">
                 <label>Mobile number</label>
-                <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} className="form-input" required />
+                <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} className="form-input" placeholder="e.g., 0821234567 or +27821234567" />
+                {validationErrors.mobileNumber && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.mobileNumber}</span>}
               </div>
 
               {/* Gender & Disability */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Gender</label>
-                  <select name="gender" value={formData.gender} onChange={handleChange} className="form-input select-input" required>
+                  <select name="gender" value={formData.gender} onChange={handleChange} className="form-input select-input">
                     <option value="" disabled>Select your gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                     <option value="other">Other</option>
                   </select>
+                  {validationErrors.gender && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.gender}</span>}
                 </div>
                 <div className="input-group">
                   <label>Disability</label>
@@ -222,7 +296,6 @@ const SignupSupplier = () => {
                     value={formData.disabilityDescription}
                     onChange={handleChange}
                     className="form-input"
-                    required={formData.disability}
                   />
                 </div>
               )}
@@ -235,12 +308,9 @@ const SignupSupplier = () => {
                   value={formData.password}
                   onChange={handleChange}
                   className="form-input"
-                  minLength={8}
-                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
-                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
-                  required
                 />
+                {validationErrors.password && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.password}</span>}
                 <ul className="password-requirements">
                   <li>At least 8 characters</li>
                   <li>At least one uppercase letter</li>
@@ -251,6 +321,7 @@ const SignupSupplier = () => {
                   </li>
                 </ul>
               </div>
+              
               <div className="input-group">
                 <label>Confirm password</label>
                 <PasswordInput
@@ -258,12 +329,9 @@ const SignupSupplier = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className="form-input"
-                  minLength={8}
-                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
-                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
-                  required
                 />
+                {validationErrors.confirmPassword && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.confirmPassword}</span>}
               </div>
 
               {/* Terms */}
@@ -279,6 +347,7 @@ const SignupSupplier = () => {
                   I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
                 </label>
               </div>
+              {validationErrors.acceptTerms && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block', width: '100%' }}>{validationErrors.acceptTerms}</span>}
 
               {/* Submit */}
               <button type="submit" className="submit-btn" disabled={loading}>
