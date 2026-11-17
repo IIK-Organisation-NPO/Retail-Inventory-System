@@ -1429,6 +1429,16 @@
   background-color: #f2f2f2;
 }
 
+.hero-background {
+  overflow: hidden;
+}
+
+.hero-background .bg-image {
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+
 .admin-login-page .form-wrapper > h2,
 .admin-login-page .form-wrapper > .subtitle {
   text-align: center;

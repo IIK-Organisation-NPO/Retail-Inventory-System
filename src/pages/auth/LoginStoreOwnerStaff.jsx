@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
 import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
@@ -9,6 +9,12 @@ import Logo from "../../assets/images/IIK logo.png";
 
 const LoginStoreOwnerStaff = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    navigate("/dashboard");
+  };
 
   return (
     // Main page wrapper using CSS Grid to keep footer at the bottom
@@ -65,7 +71,7 @@ const LoginStoreOwnerStaff = () => {
             </div>
 
             {/* Main Login Form */}
-            <form>
+            <form onSubmit={handleSubmit}>
               {/* Email/Phone Input Field */}
               <div className="input-group">
                 <label>Email or mobile number</label>

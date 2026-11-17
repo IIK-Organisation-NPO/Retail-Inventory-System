@@ -1,0 +1,343 @@
+/* --- App Layout --- */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9fafb; /* Very light grey background */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.main-content {
+  flex: 1;
+  padding: 32px 40px;
+  overflow-y: auto;
+}
+
+/* --- Top Header --- */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-logo-wrap {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6px;
+}
+
+.header-title h2 {
+  font-size: 1.5rem;
+  color: #000;
+  margin-bottom: 2px;
+}
+
+.header-title p {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sync-status {
+  font-size: 0.85rem;
+  color: #374151;
+  margin-right: 8px;
+}
+
+.avatar-user {
+  width: 36px;
+  height: 36px;
+  background-color: #000;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* --- Buttons --- */
+.btn-primary {
+  background-color: #000;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #d1d5db;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-outline {
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #d1d5db;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* --- Alerts --- */
+.alert-banners {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.alert {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.alert-danger {
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+.alert-info {
+  background-color: #eff6ff;
+  color: #1e40af;
+}
+
+/* --- Stat Cards --- */
+.stat-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  color: #000;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.text-danger {
+  color: #dc2626;
+}
+
+.stat-sub {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* --- Dashboard Rows & Cards --- */
+.dashboard-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.card-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #000;
+}
+
+/* --- Chart --- */
+.chart-container {
+  height: 250px;
+  width: 100%;
+}
+
+/* --- Top Selling List --- */
+.top-selling-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.top-selling-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.95rem;
+}
+
+.top-selling-list li:last-child {
+  border-bottom: none;
+}
+
+.top-selling-list span {
+  color: #374151;
+}
+
+.top-selling-list strong {
+  color: #000;
+}
+
+/* --- Data Tables --- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.data-table th {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6b7280;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.data-table td {
+  padding: 14px 0;
+  font-size: 0.9rem;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* --- Status Pills --- */
+.status-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-danger {
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+.status-warning {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.status-neutral {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.status-info {
+  background-color: #eff6ff;
+  color: #1e40af;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 1200px) {
+  .stat-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .dashboard-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+  
+  .main-content {
+    padding: 20px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-right {
+    flex-wrap: wrap;
+  }
+
+  .stat-cards-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .alert-banners {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}

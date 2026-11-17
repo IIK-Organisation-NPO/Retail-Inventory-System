@@ -1,0 +1,71 @@
+/* Sidebar Layout */
+.sidebar {
+  width: 240px;
+  background-color: #fff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  padding: 24px 16px;
+}
+
+/* Brand Header */
+.sidebar-header {
+  margin-bottom: 30px;
+  padding-left: 8px;
+}
+
+.sidebar-header h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 2px;
+}
+
+.sidebar-header p {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Navigation */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-decoration: none;
+}
+
+.nav-item:hover {
+  background-color: #f3f4f6;
+}
+
+/* Active State */
+.nav-item.active {
+  background-color: #000;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Notification Badge */
+.nav-badge {
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
