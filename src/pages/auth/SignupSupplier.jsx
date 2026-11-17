@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
@@ -7,21 +7,130 @@ import PasswordRequirements from "../../components/common/PasswordRequirements";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png";
 
+const OTP_LENGTH = 6;
+const OTP_RESEND_SECONDS = 30;
+
 const SignupSupplier = () => {
   const navigate = useNavigate();
   const [hasDisability, setHasDisability] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsError, setTermsError] = useState("");
-  const [password, setPassword] = useState("");
 
+  // Form values needed for the verification step and password check
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  // Verification popup state
+  const [showPopup, setShowPopup] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
+  const [otpError, setOtpError] = useState("");
+  const [resendSeconds, setResendSeconds] = useState(OTP_RESEND_SECONDS);
+
+  const emailInputRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
+  const otpInputRefs = useRef([]);
+  const termsInputRef = useRef(null);
+
+  // Countdown before a new code can be requested
+  useEffect(() => {
+    if (!showPopup || resendSeconds === 0) return undefined;
+
+    const timer = setTimeout(() => {
+      setResendSeconds((seconds) => seconds - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [showPopup, resendSeconds]);
+
+  // Handler for the main form submission
   const handleCreateAccount = (event) => {
     event.preventDefault();
+
+    if (password !== confirmPassword) {
+      setPasswordError("Passwords do not match.");
+      confirmPasswordRef.current?.focus();
+      return;
+    }
+    setPasswordError("");
+
     if (!termsAccepted) {
       setTermsError("You must agree to the Terms and Conditions to create an account.");
+      termsInputRef.current?.focus();
       return;
     }
     setTermsError("");
+
+    // TODO: send the form data to the backend here.
+    // Assuming success, show the verification popup.
+    setOtp(Array(OTP_LENGTH).fill(""));
+    setOtpError("");
+    setResendSeconds(OTP_RESEND_SECONDS);
+    setShowPopup(true);
   };
+
+  const handleResendCode = () => {
+    // TODO: request a new email verification code from the API.
+    setOtp(Array(OTP_LENGTH).fill(""));
+    setOtpError("");
+    setResendSeconds(OTP_RESEND_SECONDS);
+    otpInputRefs.current[0]?.focus();
+  };
+
+  const handleOtpChange = (index, value) => {
+    const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH - index);
+    setOtpError("");
+    if (!digits) {
+      setOtp((currentOtp) => currentOtp.map((digit, position) => (
+        position === index ? "" : digit
+      )));
+      return;
+    }
+
+    setOtp((currentOtp) => {
+      const nextOtp = [...currentOtp];
+      digits.split("").forEach((digit, offset) => {
+        nextOtp[index + offset] = digit;
+      });
+      return nextOtp;
+    });
+
+    const nextIndex = index + digits.length;
+    otpInputRefs.current[Math.min(nextIndex, OTP_LENGTH - 1)]?.focus();
+  };
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    } else if (event.key === "ArrowLeft" && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    } else if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleChangeEmail = () => {
+    setShowPopup(false);
+    requestAnimationFrame(() => {
+      emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      emailInputRef.current?.focus();
+    });
+  };
+
+  const handleVerifyEmail = () => {
+    if (otp.some((digit) => !digit)) {
+      setOtpError("Enter all six digits to verify your email.");
+      return;
+    }
+
+    // TODO: verify the code with the API.
+    setShowPopup(false);
+    setAccountCreated(true);
+  };
+
+  const maskedEmail = email.replace(/^(.).+(@.*)$/, "$1***$2");
 
   return (
     // Main page wrapper using CSS Grid to keep footer at the bottom
@@ -87,38 +196,45 @@ const SignupSupplier = () => {
               {/* Company Name Input */}
               <div className="input-group">
                 <label>Company name</label>
-                <input type="text" className="form-input" />
+                <input type="text" className="form-input" required />
               </div>
 
               {/* Name & Surname Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Name</label>
-                  <input type="text" className="form-input" />
+                  <input type="text" className="form-input" required />
                 </div>
                 <div className="input-group">
                   <label>Surname</label>
-                  <input type="text" className="form-input" />
+                  <input type="text" className="form-input" required />
                 </div>
               </div>
 
               {/* Email Input */}
               <div className="input-group">
                 <label>Email address</label>
-                <input type="email" className="form-input" />
+                <input
+                  ref={emailInputRef}
+                  type="email"
+                  className="form-input"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
               </div>
 
               {/* Mobile Number Input */}
               <div className="input-group">
                 <label>Mobile number</label>
-                <input type="tel" className="form-input" />
+                <input type="tel" className="form-input" required />
               </div>
 
               {/* Gender & Disability Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Gender</label>
-                  <select className="form-input select-input" defaultValue="">
+                  <select className="form-input select-input" defaultValue="" required>
                     <option value="" disabled>Select your gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -181,18 +297,31 @@ const SignupSupplier = () => {
               <div className="input-group">
                 <label>Confirm password</label>
                 <PasswordInput
+                  ref={confirmPasswordRef}
                   className="form-input"
+                  value={confirmPassword}
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    setPasswordError("");
+                  }}
                   minLength={8}
                   pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
                   title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
                   autoComplete="new-password"
+                  aria-describedby={passwordError ? "supplier-password-error" : undefined}
                   required
                 />
+                {passwordError && (
+                  <p id="supplier-password-error" className="field-error" role="alert">
+                    {passwordError}
+                  </p>
+                )}
               </div>
 
               {/* Terms & Conditions Checkbox */}
               <div className="terms-group">
                 <input
+                  ref={termsInputRef}
                   type="checkbox"
                   id="supplier-terms"
                   checked={termsAccepted}
@@ -229,6 +358,114 @@ const SignupSupplier = () => {
 
       {/* Global Footer Component */}
       <Footer />
+
+      {/* =========================================
+          VERIFICATION POPUP MODAL
+          Only renders if showPopup is true
+          ========================================= */}
+      {showPopup && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h2>Verify your email</h2>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowPopup(false)}
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <p className="modal-subtitle">
+              We sent a 6-digit code to <strong>{maskedEmail}</strong>. Enter it below to activate your account.
+            </p>
+
+            {/* 6-Digit OTP Inputs */}
+            <div className="otp-input-group">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(element) => { otpInputRefs.current[index] = element; }}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength="1"
+                  className="otp-box"
+                  value={digit}
+                  onChange={(event) => handleOtpChange(index, event.target.value)}
+                  onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                  onPaste={(event) => {
+                    event.preventDefault();
+                    handleOtpChange(index, event.clipboardData.getData("text"));
+                  }}
+                  aria-label={`Verification digit ${index + 1}`}
+                  autoFocus={index === 0}
+                />
+              ))}
+            </div>
+
+            {/* Info Box */}
+            <div className="modal-info-box">
+              <p>
+                Didn't get an email? Check your spam folder.{" "}
+                {resendSeconds > 0 ? (
+                  <>You can request a new code in 0:{String(resendSeconds).padStart(2, "0")}.</>
+                ) : (
+                  <button type="button" className="resend-btn" onClick={handleResendCode}>
+                    Resend code
+                  </button>
+                )}
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            {otpError && <p className="field-error" role="alert">{otpError}</p>}
+            <button
+              type="button"
+              className="modal-submit-btn"
+              onClick={handleVerifyEmail}
+            >
+              Verify email
+            </button>
+            <button
+              type="button"
+              className="modal-secondary-btn"
+              onClick={handleChangeEmail}
+            >
+              Change email address
+            </button>
+
+          </div>
+        </div>
+      )}
+
+      {/* =========================================
+          ACCOUNT CREATED MESSAGE
+          ========================================= */}
+      {accountCreated && (
+        <div className="modal-overlay">
+          <div className="modal-card" role="status" aria-live="polite">
+            <div className="modal-header">
+              <h2>Account successfully created</h2>
+            </div>
+            <p className="modal-subtitle">
+              Your email has been verified and your supplier account is ready. Sign in to continue.
+            </p>
+            <button
+              type="button"
+              className="modal-submit-btn"
+              onClick={() => navigate("/login/supplier")}
+            >
+              Continue to sign in
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

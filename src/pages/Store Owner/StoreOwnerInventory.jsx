@@ -1,6 +1,6 @@
 // src/pages/Store Owner/StoreOwnerInventory.jsx
-import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
@@ -44,11 +44,20 @@ const formatShortDate = (iso) => {
 };
 
 const StoreOwnerInventory = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [stockItems, setStockItems] = useState(STOCK_ITEMS);
-  const [openPopup, setOpenPopup] = useState(null); // "in" | "out" | "adjust" | null
+  const [openPopup, setOpenPopup] = useState(() => (
+    location.state?.openPopup === "in" ? "in" : null
+  )); // "in" | "out" | "adjust" | null
 
   const closePopup = useCallback(() => setOpenPopup(null), []);
+
+  useEffect(() => {
+    if (location.state?.openPopup === "in") {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   // Update one product's quantity and last movement after a popup is saved
   const applyMovement = (productId, getNewOnHand, label, date) => {

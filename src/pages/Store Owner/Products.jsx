@@ -1,6 +1,8 @@
 import { useState } from "react";
 // Reusing the Sidebar component
-import Sidebar from "../../components/StoreOwner/Sidebar";
+import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
+import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
+import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 // Importing the stylesheet
 import "../../Style/Store Owner/Products.css";
 
@@ -92,7 +94,7 @@ const Products = () => {
 
   return (
     <div className="app-layout">
-      <Sidebar />
+      <StoreOwnerSidebar />
 
       <main className="main-content">
         
@@ -101,12 +103,8 @@ const Products = () => {
           <h1 className="page-title">Products</h1>
           
           <div className="header-actions">
-            <div className="store-selector">
-              <div className="avatar-small">MT</div>
-              <span>Mseleku Tuckshop</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-            <div className="avatar-user">SD</div>
+            <StoreOwner_StoreSwitcher />
+            <StoreOwner_UserMenu />
           </div>
         </header>
 

@@ -28,6 +28,8 @@ const AppRoutes = () => {
         <Route path="/signupsupplier" element={<SignupSupplier />} />
 
         {/* Store Owner */}
+        <Route path="/store-owner/dashboard" element={<StoreOwner_Dashboard />} />
+        <Route path="/store-owner/products" element={<Products />} />
         <Route path="/store-owner/inventory" element={<StoreOwnerInventory />} />
         <Route path="/store-owner/inventory/movement-history" element={<StoreOwner_MovementHistory />} />
         

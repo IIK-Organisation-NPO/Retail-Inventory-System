@@ -1,5 +1,7 @@
+import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList } from "recharts";
-import Sidebar from "../../components/StoreOwner/Sidebar";
+import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
+import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import Logo from "../../assets/images/IIK logo.png";
 import "../../Style/Store Owner/StoreOwner_Dashboard.css";
 
@@ -15,10 +17,12 @@ const salesData = [
 ];
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="app-layout">
       {/* Sidebar Component */}
-      <Sidebar />
+      <StoreOwnerSidebar />
 
       {/* Main Content Area */}
       <main className="main-content">
@@ -38,9 +42,15 @@ const Dashboard = () => {
           <div className="header-right">
             <span className="sync-status">Synced 2 min ago</span>
             <button className="btn-primary">Record sale</button>
-            <button className="btn-secondary">Stock in</button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => navigate("/store-owner/inventory", { state: { openPopup: "in" } })}
+            >
+              Stock in
+            </button>
             <button className="btn-secondary">Request stock</button>
-            <div className="avatar-user">SD</div>
+            <StoreOwner_UserMenu />
           </div>
         </header>
 
