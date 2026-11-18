@@ -1,0 +1,194 @@
+/* ============================================
+   Store Owner Profile Page Stylesheet
+   Layout, sidebar, header and avatars come from
+   StoreOwnerInventory.css.
+   ============================================ */
+
+/* --- Profile card --- */
+.pf-card {
+  width: 100%;
+  max-width: 560px;
+  padding: 16px;
+  background-color: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 6px;
+}
+
+/* --- Avatar, name and role --- */
+.pf-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pf-avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 15px;
+}
+
+.pf-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+}
+
+.pf-role {
+  margin: 0;
+  font-size: 12px;
+  color: #6b6b70;
+}
+
+/* --- Form fields (two columns) --- */
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 10px;
+}
+
+.pf-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pf-field label {
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: #444;
+}
+
+.pf-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #8a8a8f;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #111;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.pf-input:focus {
+  border-color: #111;
+  box-shadow: 0 0 0 1px #111;
+}
+
+/* --- Change password row (thin lines above and below) --- */
+.pf-password-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding: 8px 6px;
+  border-top: 1px solid #ededf0;
+  border-bottom: 1px solid #ededf0;
+}
+
+.pf-password-row .so-link-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pf-password-row .so-link-btn:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+/* --- Error message --- */
+.pf-error {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #c62828;
+}
+
+/* --- Save / Cancel --- */
+.pf-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.pf-btn {
+  min-width: 56px;
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.pf-btn-primary {
+  min-width: 76px;
+  background-color: #111;
+  color: #fff;
+  border: 1px solid #111;
+}
+
+.pf-btn-primary:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.pf-btn-outline {
+  background-color: #fff;
+  color: #111;
+  border: 1px solid #111;
+}
+
+.pf-btn-outline:hover:not(:disabled) {
+  background-color: #f0f0f2;
+}
+
+.pf-btn:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+/* Save / Cancel stay greyed out until something changes */
+.pf-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- Success message (bottom of the screen) --- */
+.pf-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 1200;
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border-radius: 8px;
+  background-color: #111;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%);
+  animation: pfToastIn 0.2s ease-out;
+}
+
+@keyframes pfToastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* --- Small screens: one column --- */
+@media (max-width: 560px) {
+  .pf-grid {
+    grid-template-columns: 1fr;
+  }
+}
