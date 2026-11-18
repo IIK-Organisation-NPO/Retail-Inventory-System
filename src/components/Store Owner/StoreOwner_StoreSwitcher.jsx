@@ -3,16 +3,7 @@
 import { useState } from "react";
 import useDropdown from "../../hooks/useDropdown";
 import "../../Style/Store Owner/StoreOwner_HeaderMenus.css";
-
-// Mock data — replace with the owner's stores from the API
-const DEFAULT_STORES = [
-  { id: "mseleku", name: "Mseleku Tuckshop" },
-  { id: "ezakheni", name: "Ezakheni Spaza" },
-  { id: "nquthu", name: "Nquthu Corner Shop" },
-];
-
-// Remembers the chosen store when moving between pages
-const STORAGE_KEY = "spazanet.selectedStoreId";
+import { STORES as DEFAULT_STORES, readSavedStoreId, saveStoreId } from "../../data/stores";
 
 // "Mseleku Tuckshop" -> "MT"
 const getInitials = (name) =>
@@ -23,16 +14,6 @@ const getInitials = (name) =>
     .map((word) => word[0].toUpperCase())
     .join("");
 
-const readSavedStoreId = (stores) => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (stores.some((s) => s.id === saved)) return saved;
-  } catch {
-    // Storage unavailable (e.g. private mode) — fall back to the first store
-  }
-  return stores[0]?.id;
-};
-
 const StoreOwner_StoreSwitcher = ({ stores = DEFAULT_STORES, onChange }) => {
   const { ref, isOpen, toggle, close } = useDropdown();
   const [selectedId, setSelectedId] = useState(() => readSavedStoreId(stores));
@@ -42,11 +23,7 @@ const StoreOwner_StoreSwitcher = ({ stores = DEFAULT_STORES, onChange }) => {
 
   const handleSelect = (store) => {
     setSelectedId(store.id);
-    try {
-      localStorage.setItem(STORAGE_KEY, store.id);
-    } catch {
-      // Ignore — the choice just won't be remembered
-    }
+    saveStoreId(store.id);
     close();
     onChange?.(store);
   };

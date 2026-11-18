@@ -1,0 +1,131 @@
+/* ============================================
+   Store Owner Sales Page Stylesheet
+   Layout, sidebar, header, buttons, cards and base
+   table styles come from StoreOwnerInventory.css.
+   ============================================ */
+
+/* --- Summary cards (3 across) --- */
+.sl-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* --- Filters --- */
+.sl-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sl-select {
+  min-width: 170px;
+  padding: 8px 32px 8px 10px;
+  border: 1px solid #c4c4c8;
+  border-radius: 6px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  color: #111;
+  font-family: inherit;
+  font-size: 13px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.sl-select:focus {
+  outline: 2px solid #111;
+  outline-offset: 1px;
+}
+
+/* --- Transaction history card --- */
+.sl-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.sl-table td {
+  border-top: 1px solid #ededf0;
+}
+
+/* Reset the inventory page's column widths */
+.sl-table th:nth-child(n) {
+  width: auto;
+}
+
+.sl-table th:nth-child(3) {
+  width: 45%;
+}
+
+/* Long item lists can wrap */
+.sl-table td.sl-items {
+  white-space: normal;
+}
+
+.sl-empty {
+  text-align: center;
+  color: #6b6b70 !important;
+  padding: 32px 10px !important;
+}
+
+.so-link-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- Pagination --- */
+.sl-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.sl-pagination-info {
+  margin: 0;
+  font-size: 11px;
+  color: #6b6b70;
+}
+
+.sl-pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.sl-pagination-buttons .so-btn {
+  min-width: 90px;
+}
+
+.sl-pagination-buttons .so-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .sl-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sl-select {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .sl-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .sl-select {
+    flex-basis: 100%;
+  }
+}

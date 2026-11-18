@@ -13,6 +13,8 @@ import Products from "../pages/Store Owner/Products";
 // Store Owner pages
 import StoreOwnerInventory from '../pages/Store Owner/StoreOwnerInventory';
 import StoreOwner_MovementHistory from '../pages/Store Owner/StoreOwner_MovementHistory';
+import StoreOwner_Sales from '../pages/Store Owner/StoreOwner_Sales';
+import StoreOwner_Staff from '../pages/Store Owner/StoreOwner_Staff';
 
 const AppRoutes = () => {
   return (
@@ -32,6 +34,8 @@ const AppRoutes = () => {
         <Route path="/store-owner/products" element={<Products />} />
         <Route path="/store-owner/inventory" element={<StoreOwnerInventory />} />
         <Route path="/store-owner/inventory/movement-history" element={<StoreOwner_MovementHistory />} />
+        <Route path="/store-owner/sales" element={<StoreOwner_Sales />} />
+        <Route path="/store-owner/staff" element={<StoreOwner_Staff />} />
         
       </Routes>
     </Router>
