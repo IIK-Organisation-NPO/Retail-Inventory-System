@@ -99,7 +99,13 @@ const Dashboard = () => {
           <div className="card chart-card">
             <div className="card-header">
               <h3>Sales, last 7 days</h3>
-              <button className="btn-outline">View sales report</button>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => navigate("/store-owner/sales")}
+              >
+                View sales report
+              </button>
             </div>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height="100%">

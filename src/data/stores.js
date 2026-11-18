@@ -14,11 +14,11 @@ const STORAGE_KEY = "spazanet.selectedStoreId";
 export const readSavedStoreId = (stores = STORES) => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (stores.some((s) => s.id === saved)) return saved;
+    if (stores.some((store) => String(store.id) === saved)) return saved;
   } catch {
     // Storage unavailable (e.g. private mode) — fall back to the first store
   }
-  return stores[0]?.id;
+  return stores[0] ? String(stores[0].id) : undefined;
 };
 
 export const saveStoreId = (storeId) => {

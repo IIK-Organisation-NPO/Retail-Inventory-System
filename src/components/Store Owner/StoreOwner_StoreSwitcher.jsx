@@ -19,16 +19,6 @@ const StoreLogo = ({ store }) => (
   </svg>
 );
 
-const readSavedStoreId = (stores) => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (stores.some((store) => String(store.id) === saved)) return saved;
-  } catch {
-    // Storage unavailable (e.g. private mode) — fall back to the first store
-  }
-  return stores[0] ? String(stores[0].id) : undefined;
-};
-
 const StoreOwner_StoreSwitcher = ({ stores = DEFAULT_STORES, onChange }) => {
   const { ref, isOpen, toggle, close } = useDropdown();
   const [selectedId, setSelectedId] = useState(() => readSavedStoreId(stores));
@@ -37,8 +27,8 @@ const StoreOwner_StoreSwitcher = ({ stores = DEFAULT_STORES, onChange }) => {
   if (!selected) return null;
 
   const handleSelect = (store) => {
-    setSelectedId(store.id);
-    saveStoreId(store.id);
+    setSelectedId(String(store.id));
+    saveStoreId(String(store.id));
     close();
     onChange?.(store);
   };
