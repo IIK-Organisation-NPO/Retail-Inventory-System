@@ -14,36 +14,42 @@ const DEFAULT_STORES = [
 // Remembers the chosen store when moving between pages
 const STORAGE_KEY = "spazanet.selectedStoreId";
 
-// "Mseleku Tuckshop" -> "MT"
-const getInitials = (name) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join("");
+const StoreLogo = ({ store }) => (
+  <svg
+    className="so-store-logo"
+    viewBox="0 0 32 32"
+    role="img"
+    aria-label={`${store.name} logo`}
+  >
+    <circle cx="16" cy="16" r="16" fill="#e5e7eb" />
+    <rect x="7" y="8" width="18" height="16" rx="3" fill="#fff" stroke="#9ca3af" strokeWidth="1.5" />
+    <circle cx="12.5" cy="13.5" r="2" fill="#9ca3af" />
+    <path d="m9 22 5-5 3 3 2-2 4 4" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 const readSavedStoreId = (stores) => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (stores.some((s) => s.id === saved)) return saved;
+    if (stores.some((store) => String(store.id) === saved)) return saved;
   } catch {
     // Storage unavailable (e.g. private mode) — fall back to the first store
   }
-  return stores[0]?.id;
+  return stores[0] ? String(stores[0].id) : undefined;
 };
 
 const StoreOwner_StoreSwitcher = ({ stores = DEFAULT_STORES, onChange }) => {
   const { ref, isOpen, toggle, close } = useDropdown();
   const [selectedId, setSelectedId] = useState(() => readSavedStoreId(stores));
 
-  const selected = stores.find((s) => s.id === selectedId) ?? stores[0];
+  const selected = stores.find((store) => String(store.id) === selectedId) ?? stores[0];
   if (!selected) return null;
 
   const handleSelect = (store) => {
-    setSelectedId(store.id);
+    const storeId = String(store.id);
+    setSelectedId(storeId);
     try {
-      localStorage.setItem(STORAGE_KEY, store.id);
+      localStorage.setItem(STORAGE_KEY, storeId);
     } catch {
       // Ignore — the choice just won't be remembered
     }
@@ -61,7 +67,7 @@ const StoreOwner_StoreSwitcher = ({ stores = DEFAULT_STORES, onChange }) => {
         aria-expanded={isOpen}
         onClick={toggle}
       >
-        <span className="so-avatar so-avatar-sm">{getInitials(selected.name)}</span>
+        <StoreLogo store={selected} />
         <span className="so-store-name">{selected.name}</span>
         <svg
           className={`hm-chevron${isOpen ? " open" : ""}`}
@@ -79,7 +85,7 @@ const StoreOwner_StoreSwitcher = ({ stores = DEFAULT_STORES, onChange }) => {
         <div className="hm-menu hm-store-menu" role="menu" aria-label="Your stores">
           <p className="hm-menu-heading">Your stores</p>
           {stores.map((store) => {
-            const isSelected = store.id === selected.id;
+            const isSelected = String(store.id) === String(selected.id);
             return (
               <button
                 key={store.id}
@@ -89,7 +95,7 @@ const StoreOwner_StoreSwitcher = ({ stores = DEFAULT_STORES, onChange }) => {
                 className="hm-store-option"
                 onClick={() => handleSelect(store)}
               >
-                <span className="so-avatar so-avatar-sm">{getInitials(store.name)}</span>
+                <StoreLogo store={store} />
                 <span className="hm-store-option-name">{store.name}</span>
                 {isSelected && (
                   <svg className="hm-check" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">

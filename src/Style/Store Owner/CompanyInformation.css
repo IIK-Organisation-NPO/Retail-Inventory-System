@@ -1,0 +1,180 @@
+/* =========================================
+   COMPANY INFORMATION PAGE STYLES
+   ========================================= */
+
+/* --- Progress Stepper --- */
+.stepper-card {
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #9ca3af; 
+}
+
+.step-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.step-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Active Step */
+.step.active .step-circle {
+  background-color: #000;
+  color: #fff;
+}
+
+.step.active .step-label {
+  color: #000;
+  font-weight: 600;
+}
+
+/* Completed Step */
+.step.completed .step-circle {
+  background-color: #e0e7ff;
+  color: #4f46e5;
+}
+
+.step-divider {
+  flex: 1;
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 0 20px;
+}
+
+/* --- Company Info Card --- */
+.info-display-card {
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.form-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 8px;
+}
+
+.form-desc {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.verification-tag {
+  display: inline-block;
+  background-color: #f3f4f6;
+  color: #374151;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-bottom: 32px;
+}
+
+/* Data List */
+.company-data-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 32px;
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.data-row:last-child {
+  border-bottom: none;
+}
+
+.data-label {
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+.data-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #000;
+  text-align: right;
+  max-width: 60%;
+}
+
+/* Disclaimer Banner */
+.disclaimer-banner {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  padding: 16px 24px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 40px;
+}
+
+/* Bottom Action Row */
+.bottom-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 40px;
+}
+
+.bottom-actions-row .btn-outline {
+  padding: 12px 32px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+}
+
+.bottom-actions-row .btn-primary {
+  padding: 12px 32px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .stepper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .step-divider {
+    display: none; 
+  }
+  
+  .data-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .data-value {
+    text-align: left;
+    max-width: 100%;
+  }
+}

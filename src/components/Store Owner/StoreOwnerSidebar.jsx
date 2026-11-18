@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { label: "Procurement", to: "/store-owner/procurement" },
   { label: "Reports", to: "/store-owner/reports" },
   { label: "Staff", to: "/store-owner/staff" },
-  { label: "Store profile", to: "/store-owner/store-profile" },
+  { label: "Stores", to: "/store-owner/stores" },
   { label: "Notifications", to: "/store-owner/notifications", showBadge: true },
 ];
 

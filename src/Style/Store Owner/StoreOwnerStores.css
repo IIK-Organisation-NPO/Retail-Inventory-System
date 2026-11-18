@@ -1,0 +1,175 @@
+/* =========================================
+   STORES PAGE STYLES
+   ========================================= */
+
+/* Page Header Subtitle */
+.page-subtitle {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* Adjust Stat Cards for this page (they have text inline with numbers) */
+.stores-stats-grid {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 40px;
+}
+
+.stat-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.stat-value-row .stat-value {
+  font-size: 2rem;
+  margin-bottom: 0;
+}
+
+.stat-value-row .stat-sub {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Section Header */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.section-count {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Filters */
+.stores-filters-row {
+  margin-bottom: 24px;
+}
+
+.stores-filter-select {
+  width: 250px;
+}
+
+/* --- Stores Grid --- */
+.stores-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.stores-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 24px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* Store Card */
+.store-card {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.store-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.store-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #000;
+}
+
+.store-location, .store-type {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+/* Divider Line */
+.store-card-divider {
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 20px 0;
+}
+
+/* Card Footer */
+.store-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: auto;
+}
+
+.store-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.store-staff {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #000;
+}
+
+.store-phone {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Register Store Highlight Card */
+.register-store-card {
+  background-color: #f9fafb; /* Light grey background to distinguish it */
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.register-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 12px;
+}
+
+.register-desc {
+  font-size: 0.95rem;
+  color: #4b5563;
+  line-height: 1.5;
+  margin-bottom: 24px;
+  max-width: 90%;
+}
+
+.register-btn {
+  padding: 12px 24px;
+  font-size: 0.95rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1024px) {
+  .stores-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stores-grid {
+    grid-template-columns: 1fr;
+  }
+}

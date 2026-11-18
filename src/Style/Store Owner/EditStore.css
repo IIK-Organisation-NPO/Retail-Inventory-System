@@ -1,0 +1,321 @@
+/* =========================================
+   EDIT STORE PAGE STYLES
+   ========================================= */
+
+/* --- Layout Grid (Same as Store Profile) --- */
+.store-profile-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 32px;
+}
+
+.profile-form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile-sidebar-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* --- Logo Card (Unique to Edit) --- */
+.logo-upload-card {
+  padding: 24px;
+}
+
+.logo-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.avatar-large-initials {
+  width: 80px;
+  height: 80px;
+  background-color: #000;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.logo-preview {
+  object-fit: cover;
+}
+
+.upload-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.choose-logo-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  width: fit-content;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.choose-logo-btn:focus-within {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+.logo-file-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-hint {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+.logo-file-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-remove-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #2563eb;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.upload-error {
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+/* --- Store Details Form (Reused) --- */
+.store-details-card {
+  padding: 32px;
+}
+
+.form-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 8px;
+}
+
+.form-desc-small {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-bottom: 24px;
+}
+
+.section-subtitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #000;
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+
+.mb-4 {
+  margin-bottom: 24px;
+}
+
+.store-details-form textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+/* Checkbox styling */
+.store-details-form .checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.store-details-form .checkbox-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #000;
+  cursor: pointer;
+}
+
+.store-details-form .checkbox-group label {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+/* Custom Select */
+.select-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px top 50%;
+  background-size: 10px auto;
+}
+
+/* --- Right Side Cards --- */
+.company-summary-card {
+  padding: 24px;
+}
+
+.cipc-link {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: #2563eb;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+
+.cipc-link:hover {
+  text-decoration: underline;
+}
+
+.company-name-small {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 24px;
+}
+
+.company-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.meta-label {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.meta-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #000;
+}
+
+.company-disclaimer {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  line-height: 1.4;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Info Help Card */
+.info-help-card {
+  padding: 24px;
+  background-color: #f9fafb;
+}
+
+.info-help-text {
+  font-size: 0.9rem;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.info-help-text:last-child {
+  margin-bottom: 0;
+}
+
+/* Location Info Card */
+.location-info-card {
+  padding: 24px;
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.w-full {
+  width: 100%;
+  margin-top: 8px;
+  justify-content: center;
+}
+
+/* --- Bottom Actions --- */
+.bottom-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 40px;
+}
+
+.bottom-actions-row .btn-outline {
+  padding: 12px 32px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+}
+
+.bottom-actions-row .btn-primary {
+  padding: 12px 32px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+}
+
+.edit-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background-color: rgba(17, 24, 39, 0.5);
+}
+
+.edit-popup {
+  width: min(100%, 480px);
+  padding: 28px;
+  border-radius: 12px;
+  background-color: #fff;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+}
+
+.edit-popup h2 {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+}
+
+.edit-popup p {
+  margin: 0 0 24px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.edit-popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+  .store-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}

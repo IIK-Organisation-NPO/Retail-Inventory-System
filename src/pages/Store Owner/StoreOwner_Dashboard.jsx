@@ -22,7 +22,7 @@ const Dashboard = () => {
   return (
     <div className="app-layout">
       {/* Sidebar Component */}
-      <StoreOwnerSidebar />
+      <StoreOwnerSidebar notificationCount={3} />
 
       {/* Main Content Area */}
       <main className="main-content">
@@ -152,7 +152,13 @@ const Dashboard = () => {
           <div className="card">
             <div className="card-header">
               <h3>Low stock</h3>
-              <button className="btn-outline">Open inventory</button>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => navigate("/store-owner/inventory")}
+              >
+                Open inventory
+              </button>
             </div>
             <table className="data-table">
               <thead>

@@ -1,0 +1,196 @@
+/* =========================================
+   REGISTER A STORE PAGE STYLES
+   ========================================= */
+
+/* --- Progress Stepper --- */
+.stepper-card {
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #9ca3af; /* Default inactive color */
+}
+
+.step-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.step-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Active Step Styling */
+.step.active .step-circle {
+  background-color: #000;
+  color: #fff;
+}
+
+.step.active .step-label {
+  color: #000;
+  font-weight: 600;
+}
+
+/* Divider line between steps */
+.step-divider {
+  flex: 1;
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 0 20px;
+}
+
+/* --- Main Layout Grid --- */
+.register-layout-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* Left side wider than right */
+  gap: 24px;
+  align-items: start;
+}
+
+/* --- Left Side: Verify Form --- */
+.verify-form-card {
+  padding: 32px;
+}
+
+.form-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 8px;
+}
+
+.form-desc {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.verification-tag {
+  display: inline-block;
+  background-color: #f3f4f6;
+  color: #374151;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-bottom: 32px;
+}
+
+.verify-form .input-group {
+  margin-bottom: 12px;
+}
+
+.verify-form .form-input {
+  font-size: 1rem;
+  padding: 12px 16px;
+}
+
+.input-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 8px;
+}
+
+.form-note {
+  font-size: 0.9rem;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-top: 24px;
+  margin-bottom: 40px;
+}
+
+/* Form Buttons */
+.form-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 24px;
+}
+
+.form-actions-row .btn-outline {
+  padding: 12px 24px;
+  font-size: 0.95rem;
+}
+
+.form-actions-row .btn-primary {
+  padding: 12px 32px;
+  font-size: 0.95rem;
+}
+
+/* --- Right Side: Info Sidebar --- */
+.info-sidebar-card {
+  padding: 24px;
+  background-color: #f9fafb; /* Very light grey background */
+}
+
+.info-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 16px;
+}
+
+.info-list {
+  list-style: none;
+  counter-reset: custom-counter;
+  padding: 0;
+  margin: 0;
+}
+
+.info-list li {
+  position: relative;
+  padding-left: 24px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  color: #4b5563;
+  line-height: 1.4;
+  counter-increment: custom-counter;
+}
+
+/* Custom numbered list */
+.info-list li::before {
+  content: counter(custom-counter);
+  position: absolute;
+  left: 0;
+  top: 2px;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 900px) {
+  .register-layout-grid {
+    grid-template-columns: 1fr; /* Stack vertically on smaller screens */
+  }
+  
+  .stepper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .step-divider {
+    display: none; /* Hide dividers on mobile */
+  }
+}

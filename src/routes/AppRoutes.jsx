@@ -9,6 +9,13 @@ import LoginSupplier from '../pages/auth/LoginSupplier';
 import SignupSupplier from '../pages/auth/SignupSupplier';
 import StoreOwner_Dashboard from "../pages/Store Owner/StoreOwner_Dashboard";
 import Products from "../pages/Store Owner/Products";
+import StoreOwnerNotifications from "../pages/Store Owner/StoreOwnerNotifications";
+import StoreOwnerStores from "../pages/Store Owner/StoreOwnerStores";
+import RegisterStore from "../pages/Store Owner/RegisterStore";
+import CompanyInformation from "../pages/Store Owner/CompanyInformation";
+import StoreProfile from "../pages/Store Owner/StoreProfile";
+import ReviewStore from "../pages/Store Owner/ReviewStore";
+import EditStore from "../pages/Store Owner/EditStore";
 
 // Store Owner pages
 import StoreOwnerInventory from '../pages/Store Owner/StoreOwnerInventory';
@@ -32,7 +39,13 @@ const AppRoutes = () => {
         <Route path="/store-owner/products" element={<Products />} />
         <Route path="/store-owner/inventory" element={<StoreOwnerInventory />} />
         <Route path="/store-owner/inventory/movement-history" element={<StoreOwner_MovementHistory />} />
-        
+        <Route path="/store-owner/notifications" element={<StoreOwnerNotifications />} />
+        <Route path="/store-owner/stores" element={<StoreOwnerStores />} />
+        <Route path="/store-owner/stores/register" element={<RegisterStore />} />
+        <Route path="/store-owner/stores/register/company-information" element={<CompanyInformation />} />
+        <Route path="/store-owner/stores/register/store-profile" element={<StoreProfile />} />
+        <Route path="/store-owner/stores/register/review" element={<ReviewStore />} />
+        <Route path="/store-owner/stores/edit/:storeId" element={<EditStore />} />
       </Routes>
     </Router>
   );
