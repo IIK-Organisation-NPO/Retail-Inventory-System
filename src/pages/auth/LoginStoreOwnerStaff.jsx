@@ -10,7 +10,6 @@ import Logo from "../../assets/images/IIK logo.png";
 const LoginStoreOwnerStaff = () => {
   const navigate = useNavigate();
   
-  // State for form and UI feedback
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
@@ -30,14 +29,13 @@ const LoginStoreOwnerStaff = () => {
         body: JSON.stringify({
           email: email,
           password: password,
-          role: "OWNER" // Hardcoded because this is the Store Owner/Staff page
+          role: "STORE" // Changed from OWNER to STORE to allow Staff to log in too
         })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        // This will catch the "Invalid email or password" message from your backend
         throw new Error(data.message || "Login failed");
       }
 
@@ -48,9 +46,13 @@ const LoginStoreOwnerStaff = () => {
 
       alert(`Welcome back, ${data.user.name}!`);
       
-      // Redirect to the Owner Dashboard
-      // Once you build the dashboard page, uncomment the line below:
-      // navigate("/dashboard/owner"); 
+      // Redirect to the Dashboard
+      // Note: Make sure this route exists in AppRoutes.jsx to avoid a blank screen!
+      if (data.role === "STAFF") {
+        navigate("/dashboard/staff"); // Or whatever your staff dashboard route is
+      } else {
+        navigate("/dashboard/owner");
+      }
       
     } catch (err) {
       setError(err.message);
@@ -63,7 +65,6 @@ const LoginStoreOwnerStaff = () => {
     <div className="login-page-wrapper">
       <div className="login-content">
         
-        {/* LEFT SIDE: HERO SECTION */}
         <div className="login-left">
           <div className="hero-background">
             <img src={BackgroundImage} alt="Store background" className="bg-image" />
@@ -83,7 +84,6 @@ const LoginStoreOwnerStaff = () => {
           </div>
         </div>
 
-        {/* RIGHT SIDE: LOGIN FORM */}
         <div className="login-right">
           <div className="form-wrapper">
             
@@ -91,16 +91,12 @@ const LoginStoreOwnerStaff = () => {
             <p className="subtitle">Sign in as a store owner or a staff member to continue.</p>
 
             <div className="role-toggle">
- 
-              {/* 'active' class highlights the currently selected role */}
-              <button className="role-btn active">Store</button>
+              <button type="button" className="role-btn active">Store</button>
               <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
-            {/* Form starts here */}
             <form onSubmit={handleSubmit}>
               
-              {/* Error Message Display */}
               {error && (
                 <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px' }}>
                   {error}
@@ -120,11 +116,13 @@ const LoginStoreOwnerStaff = () => {
               </div>
 
               <div className="input-group">
-                <label>Password or user code( for Staff)</label>
+                <label>Password or user code (for Staff)</label>
                 <PasswordInput
-                  defaultValue="••••••••" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="form-input" 
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                   required
                 />
               </div>
@@ -158,9 +156,9 @@ const LoginStoreOwnerStaff = () => {
 
       <Footer />
 
-     {showForgotPassword && (
-  <ForgotPasswordModal role="OWNER" onClose={() => setShowForgotPassword(false)} />
-)}
+      {showForgotPassword && (
+        <ForgotPasswordModal role="OWNER" onClose={() => setShowForgotPassword(false)} />
+      )}
     
     </div>
   );

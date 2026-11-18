@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
 import PasswordInput from "../../components/common/PasswordInput";
+import PasswordRequirements from "../../components/common/PasswordRequirements";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png";
+
+const OTP_LENGTH = 6;
+const OTP_RESEND_SECONDS = 30;
 
 const SignupSupplier = () => {
   const navigate = useNavigate();
   
-  // 1. State for all form data
+  // --- Form State ---
   const [formData, setFormData] = useState({
     companyName: "",
     name: "",
@@ -24,30 +28,44 @@ const SignupSupplier = () => {
     acceptTerms: false
   });
   
-  // 2. State for Validation Errors
+  // --- Validation Errors State ---
   const [validationErrors, setValidationErrors] = useState({});
   
-  const [error, setError] = useState(""); // For backend errors
+  // --- UI State ---
+  const [error, setError] = useState(""); 
   const [loading, setLoading] = useState(false);
 
-  // 3. Universal handler for all inputs
+  // --- Verification Modal State ---
+  const [showPopup, setShowPopup] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
+  const [otpError, setOtpError] = useState("");
+  const [resendSeconds, setResendSeconds] = useState(OTP_RESEND_SECONDS);
+
+  const emailInputRef = useRef(null);
+  const otpInputRefs = useRef([]);
+
+  // Countdown before a new code can be requested
+  useEffect(() => {
+    if (!showPopup || resendSeconds === 0) return undefined;
+    const timer = setTimeout(() => {
+      setResendSeconds((seconds) => seconds - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [showPopup, resendSeconds]);
+
+  // Universal change handler
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
       [name]: type === "checkbox" || type === "radio" ? checked : value
     });
-
-    // Clear the specific error message as the user types/selects
     if (validationErrors[name]) {
-      setValidationErrors({
-        ...validationErrors,
-        [name]: ""
-      });
+      setValidationErrors({ ...validationErrors, [name]: "" });
     }
   };
 
-  // 4. Handler for Disability toggle
   const handleDisabilityChange = (isDisabled) => {
     setFormData({
       ...formData,
@@ -56,71 +74,42 @@ const SignupSupplier = () => {
     });
   };
 
-  // 5. The Validation Logic
+  // --- Validation Function ---
   const validateForm = () => {
     const errors = {};
 
-    // Company Name Validation
-    if (!formData.companyName.trim()) {
-      errors.companyName = "Please enter a company name";
-    }
+    if (!formData.companyName.trim()) errors.companyName = "Please enter a company name";
 
-    // Name & Surname Validation
     const nameRegex = /^[A-Za-z\s\-']+$/;
-    if (!formData.name.trim()) {
-      errors.name = "Name is required";
-    } else if (!nameRegex.test(formData.name)) {
-      errors.name = "Name can only contain letters, spaces, hyphens, and apostrophes";
-    }
+    if (!formData.name.trim()) errors.name = "Name is required";
+    else if (!nameRegex.test(formData.name)) errors.name = "Name can only contain letters, spaces, hyphens, and apostrophes";
 
-    if (!formData.surname.trim()) {
-      errors.surname = "Surname is required";
-    } else if (!nameRegex.test(formData.surname)) {
-      errors.surname = "Surname can only contain letters, spaces, hyphens, and apostrophes";
-    }
+    if (!formData.surname.trim()) errors.surname = "Surname is required";
+    else if (!nameRegex.test(formData.surname)) errors.surname = "Surname can only contain letters, spaces, hyphens, and apostrophes";
 
-    // Email Validation
-    if (!formData.email.trim()) {
-      errors.email = "Email address is required";
-    }
+    if (!formData.email.trim()) errors.email = "Email address is required";
 
-    // Mobile Number Validation (SA format)
     const mobileRegex = /^(?:\+27|0)[6-8][0-9]{8}$/;
-    if (!formData.mobileNumber.trim()) {
-      errors.mobileNumber = "Mobile number is required";
-    } else if (!mobileRegex.test(formData.mobileNumber.replace(/\s/g, ''))) {
-      errors.mobileNumber = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567)";
-    }
+    if (!formData.mobileNumber.trim()) errors.mobileNumber = "Mobile number is required";
+    else if (!mobileRegex.test(formData.mobileNumber.replace(/\s/g, ''))) errors.mobileNumber = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567)";
 
-    // Gender Validation
-    if (!formData.gender) {
-      errors.gender = "Please select a gender in the list";
-    }
+    if (!formData.gender) errors.gender = "Please select a gender in the list";
 
-    // Password Validation
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
-    if (!passwordRegex.test(formData.password)) {
-      errors.password = "use atleast 8 characters, including Uppercase and lowercase letters, a number and a special character";
-    }
+    if (!passwordRegex.test(formData.password)) errors.password = "Use at least 8 characters, including UpperCase and lowerCase letters, a number and a special character";
 
-    if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = "Passwords do not match";
-    }
-
-    // Terms Validation
-    if (!formData.acceptTerms) {
-      errors.acceptTerms = "You must agree to the Terms of Service and Privacy Policy to continue.";
-    }
+    if (formData.password !== formData.confirmPassword) errors.confirmPassword = "Passwords do not match";
+    
+    if (!formData.acceptTerms) errors.acceptTerms = "You must agree to the Terms of Service and Privacy Policy to continue.";
 
     return errors;
   };
 
-  // 6. Form Submission
+  // --- API Call: Register Supplier ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    // Run frontend validation
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -148,13 +137,13 @@ const SignupSupplier = () => {
       });
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Registration failed");
 
-      if (!response.ok) {
-        throw new Error(data.message || "Registration failed");
-      }
-
-      alert("Supplier account created successfully! Please log in.");
-      navigate("/login/supplier");
+      // Success! Show the verification popup
+      setOtp(Array(OTP_LENGTH).fill(""));
+      setOtpError("");
+      setResendSeconds(OTP_RESEND_SECONDS);
+      setShowPopup(true);
 
     } catch (err) {
       setError(err.message);
@@ -163,11 +152,88 @@ const SignupSupplier = () => {
     }
   };
 
+  // --- API Call: Verify Email ---
+  const handleVerifyEmail = async () => {
+    if (otp.some((digit) => !digit)) {
+      setOtpError("Enter all six digits to verify your email.");
+      return;
+    }
+
+    setOtpError("");
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email: formData.email, 
+          otp: otp.join(""), 
+          role: "SUPPLIER" 
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Verification failed");
+
+      setShowPopup(false);
+      setAccountCreated(true);
+    } catch (err) {
+      setOtpError(err.message);
+    }
+  };
+
+  const handleResendCode = () => {
+    setOtp(Array(OTP_LENGTH).fill(""));
+    setOtpError("");
+    setResendSeconds(OTP_RESEND_SECONDS);
+    otpInputRefs.current[0]?.focus();
+  };
+
+  const handleOtpChange = (index, value) => {
+    const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH - index);
+    setOtpError("");
+    if (!digits) {
+      setOtp((currentOtp) => currentOtp.map((digit, position) => (
+        position === index ? "" : digit
+      )));
+      return;
+    }
+
+    setOtp((currentOtp) => {
+      const nextOtp = [...currentOtp];
+      digits.split("").forEach((digit, offset) => {
+        nextOtp[index + offset] = digit;
+      });
+      return nextOtp;
+    });
+
+    const nextIndex = index + digits.length;
+    otpInputRefs.current[Math.min(nextIndex, OTP_LENGTH - 1)]?.focus();
+  };
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    } else if (event.key === "ArrowLeft" && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    } else if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleChangeEmail = () => {
+    setShowPopup(false);
+    requestAnimationFrame(() => {
+      emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      emailInputRef.current?.focus();
+    });
+  };
+
+  const maskedEmail = formData.email.replace(/^(.).+(@.*)$/, "$1***$2");
+
   return (
     <div className="login-page-wrapper">
       <div className="login-content signup-content">
 
-        {/* LEFT SIDE: HERO SECTION */}
         <div className="login-left">
           <div className="hero-background">
             <img src={BackgroundImage} alt="Store background" className="bg-image" />
@@ -186,27 +252,20 @@ const SignupSupplier = () => {
           </div>
         </div>
 
-        {/* RIGHT SIDE: SIGN UP FORM */}
         <div className="login-right signup-right">
           <div className="form-wrapper registration-wrapper">
 
             <h2>Create account</h2>
 
             <div className="role-toggle">
-              <button
-                type="button"
-                className="role-btn"
-                onClick={() => navigate("/signupstoreowner")}
-              >
+              <button type="button" className="role-btn" onClick={() => navigate("/signupstoreowner")}>
                 Store
               </button>
               <button type="button" className="role-btn active">Supplier</button>
             </div>
 
-            {/* noValidate prevents the browser's default popups */}
             <form onSubmit={handleSubmit} noValidate>
               
-              {/* Backend Error Message */}
               {error && (
                 <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px', fontWeight: 'bold' }}>
                   {error}
@@ -215,14 +274,12 @@ const SignupSupplier = () => {
 
               <h3 className="section-title">Your details</h3>
 
-              {/* Company Name */}
               <div className="input-group">
                 <label>Company name</label>
                 <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="form-input" />
                 {validationErrors.companyName && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.companyName}</span>}
               </div>
 
-              {/* Name & Surname */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Name</label>
@@ -236,21 +293,25 @@ const SignupSupplier = () => {
                 </div>
               </div>
 
-              {/* Email */}
               <div className="input-group">
                 <label>Email address</label>
-                <input type="email" name="email" value={formData.email} onChange={handleChange} className="form-input" />
+                <input
+                  ref={emailInputRef}
+                  type="email"
+                  name="email"
+                  className="form-input"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
                 {validationErrors.email && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.email}</span>}
               </div>
 
-              {/* Mobile */}
               <div className="input-group">
                 <label>Mobile number</label>
                 <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} className="form-input" placeholder="e.g., 0821234567 or +27821234567" />
                 {validationErrors.mobileNumber && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.mobileNumber}</span>}
               </div>
 
-              {/* Gender & Disability */}
               <div className="form-row">
                 <div className="input-group">
                   <label>Gender</label>
@@ -285,7 +346,6 @@ const SignupSupplier = () => {
                 </div>
               </div>
 
-              {/* Disability Description */}
               {formData.disability && (
                 <div className="input-group disability-details" style={{marginBottom: '15px'}}>
                   <label htmlFor="disability-type">What type of disability?</label>
@@ -300,7 +360,6 @@ const SignupSupplier = () => {
                 </div>
               )}
 
-              {/* Passwords */}
               <div className="input-group">
                 <label>Password</label>
                 <PasswordInput
@@ -310,16 +369,8 @@ const SignupSupplier = () => {
                   className="form-input"
                   autoComplete="new-password"
                 />
+                <PasswordRequirements password={formData.password} />
                 {validationErrors.password && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.password}</span>}
-                <ul className="password-requirements">
-                  <li>At least 8 characters</li>
-                  <li>At least one uppercase letter</li>
-                  <li>At least one lowercase letter</li>
-                  <li>At least one number</li>
-                  <li className="special-character-requirement">
-                    At least one special character (e.g. ! @ # $ % ^ &amp; *)
-                  </li>
-                </ul>
               </div>
               
               <div className="input-group">
@@ -334,7 +385,6 @@ const SignupSupplier = () => {
                 {validationErrors.confirmPassword && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.confirmPassword}</span>}
               </div>
 
-              {/* Terms */}
               <div className="terms-group">
                 <input
                   type="checkbox"
@@ -349,7 +399,6 @@ const SignupSupplier = () => {
               </div>
               {validationErrors.acceptTerms && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block', width: '100%' }}>{validationErrors.acceptTerms}</span>}
 
-              {/* Submit */}
               <button type="submit" className="submit-btn" disabled={loading}>
                 {loading ? "Creating account..." : "Create account"}
               </button>
@@ -363,6 +412,78 @@ const SignupSupplier = () => {
 
       </div>
       <Footer />
+
+      {/* VERIFICATION POPUP MODAL */}
+      {showPopup && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-header">
+              <h2>Verify your email</h2>
+              <button type="button" className="modal-close-btn" onClick={() => setShowPopup(false)} aria-label="Close modal">✕</button>
+            </div>
+
+            <p className="modal-subtitle">
+              We sent a 6-digit code to <strong>{maskedEmail}</strong>. Enter it below to activate your account.
+            </p>
+
+            <div className="otp-input-group">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(element) => { otpInputRefs.current[index] = element; }}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength="1"
+                  className="otp-box"
+                  value={digit}
+                  onChange={(event) => handleOtpChange(index, event.target.value)}
+                  onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                  onPaste={(event) => {
+                    event.preventDefault();
+                    handleOtpChange(index, event.clipboardData.getData("text"));
+                  }}
+                  aria-label={`Verification digit ${index + 1}`}
+                  autoFocus={index === 0}
+                />
+              ))}
+            </div>
+
+            <div className="modal-info-box">
+              <p>
+                Didn't get an email? Check your spam folder.{" "}
+                {resendSeconds > 0 ? (
+                  <>You can request a new code in 0:{String(resendSeconds).padStart(2, "0")}.</>
+                ) : (
+                  <button type="button" className="resend-btn" onClick={handleResendCode}>Resend code</button>
+                )}
+              </p>
+            </div>
+
+            {otpError && <p className="field-error" role="alert">{otpError}</p>}
+            <button type="button" className="modal-submit-btn" onClick={handleVerifyEmail}>Verify email</button>
+            <button type="button" className="modal-secondary-btn" onClick={handleChangeEmail}>Change email address</button>
+          </div>
+        </div>
+      )}
+
+      {/* ACCOUNT CREATED MESSAGE */}
+      {accountCreated && (
+        <div className="modal-overlay">
+          <div className="modal-card" role="status" aria-live="polite">
+            <div className="modal-header">
+              <h2>Account successfully created</h2>
+            </div>
+            <p className="modal-subtitle">
+              Your email has been verified and your supplier account is ready. Sign in to continue.
+            </p>
+            <button type="button" className="modal-submit-btn" onClick={() => navigate("/login/supplier")}>
+              Continue to sign in
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

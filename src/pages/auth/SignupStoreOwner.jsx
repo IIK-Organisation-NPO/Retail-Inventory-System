@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
 import PasswordInput from "../../components/common/PasswordInput";
+import PasswordRequirements from "../../components/common/PasswordRequirements";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
 import Logo from "../../assets/images/IIK logo.png"; 
 
@@ -32,7 +33,6 @@ const SignupStoreOwner = () => {
   // --- UI State ---
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(""); // For backend errors
-  const [hasDisability, setHasDisability] = useState(false);
 
   // --- Verification Modal State ---
   const [showPopup, setShowPopup] = useState(false);
@@ -99,7 +99,6 @@ const SignupStoreOwner = () => {
     }
 
     // Mobile validation (South African format)
-    // Allows 0821234567 or +27821234567
     const mobileRegex = /^(?:\+27|0)[6-8][0-9]{8}$/;
     if (!formData.mobileNumber.trim()) {
       errors.mobileNumber = "Mobile number is required.";
@@ -413,18 +412,11 @@ const SignupStoreOwner = () => {
                   className="form-input"
                   autoComplete="new-password"
                 />
+                <PasswordRequirements password={formData.password} />
                 {validationErrors.password && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.password}</span>}
-                <ul className="password-requirements">
-                  <li>At least 8 characters</li>
-                  <li>At least one uppercase letter</li>
-                  <li>At least one lowercase letter</li>
-                  <li>At least one number</li>
-                  <li className="special-character-requirement">
-                    At least one special character (e.g. ! @ # $ % ^ &amp; *)
-                  </li>
-                </ul>
               </div>
 
+              {/* NOTE: I deleted the duplicate Confirm Password block here */}
               <div className="input-group">
                 <label>Confirm password</label>
                 <PasswordInput

@@ -1,0 +1,242 @@
+/* ============================================
+   Inventory Popups Stylesheet
+   Stock in / Stock out / Stock adjustment
+   ============================================ */
+
+/* =========================================================
+   SHARED: BACKDROP, CARD AND HEADER (all three popups)
+   ========================================================= */
+
+/* Dark backdrop covering the page */
+.sp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* Popup card — same size as the Forgot password popup */
+.sp-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 24px 28px 28px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  color: #111;
+  text-align: left;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  animation: spFadeIn 0.18s ease-out;
+}
+
+.sp-modal *,
+.sp-modal *::before,
+.sp-modal *::after {
+  box-sizing: border-box;
+}
+
+@keyframes spFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.sp-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  color: #000;
+}
+
+/* Small square close (×) button */
+.sp-close {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sp-close:hover {
+  background: #f2f2f2;
+}
+
+/* =========================================================
+   SHARED: FORM FIELDS (all three popups)
+   ========================================================= */
+.sp-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+  min-width: 0;
+}
+
+.sp-field label {
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.sp-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #c4c4c8;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #111;
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.sp-input:focus {
+  border-color: #000;
+}
+
+/* Read-only field (Quantity before) */
+.sp-input[readonly] {
+  background-color: #f5f5f6;
+  color: #555;
+  cursor: default;
+}
+
+/* Dropdowns with a small chevron on the right */
+.sp-select {
+  padding-right: 34px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+/* Date — locked to today: can't be clicked, typed in or selected */
+.sp-date-wrapper {
+  position: relative;
+}
+
+.sp-date {
+  padding-right: 40px;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sp-date-icon {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  color: #999;
+  pointer-events: none;
+}
+
+.sp-error {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #c62828;
+}
+
+/* =========================================================
+   SHARED: SAVE + CANCEL BUTTONS (all three popups)
+   ========================================================= */
+.sp-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.sp-btn {
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.sp-btn-primary {
+  background-color: #000;
+  color: #fff;
+  border: 1px solid #000;
+}
+
+.sp-btn-primary:hover {
+  opacity: 0.85;
+}
+
+.sp-btn-outline {
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #000;
+}
+
+.sp-btn-outline:hover {
+  background-color: #f2f2f2;
+}
+
+/* =========================================================
+   1. STOCK IN POPUP
+   Uses only the shared styles above.
+   ========================================================= */
+
+/* =========================================================
+   2. STOCK OUT POPUP
+   Uses only the shared styles above.
+   ========================================================= */
+
+/* =========================================================
+   3. STOCK ADJUSTMENT POPUP
+   ========================================================= */
+
+/* Quantity before / Quantity after side by side */
+.sp-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width: 400px) {
+  .sp-modal {
+    padding: 20px;
+  }
+
+  .sp-title {
+    font-size: 1.3rem;
+  }
+}
