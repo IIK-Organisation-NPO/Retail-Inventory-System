@@ -3,16 +3,7 @@
 import { useState } from "react";
 import useDropdown from "../../hooks/useDropdown";
 import "../../Style/Store Owner/StoreOwner_HeaderMenus.css";
-
-// Mock data — replace with the owner's stores from the API
-const DEFAULT_STORES = [
-  { id: "mseleku", name: "Mseleku Tuckshop" },
-  { id: "ezakheni", name: "Ezakheni Spaza" },
-  { id: "nquthu", name: "Nquthu Corner Shop" },
-];
-
-// Remembers the chosen store when moving between pages
-const STORAGE_KEY = "spazanet.selectedStoreId";
+import { STORES as DEFAULT_STORES, readSavedStoreId, saveStoreId } from "../../data/stores";
 
 const StoreLogo = ({ store }) => (
   <svg
@@ -46,13 +37,8 @@ const StoreOwner_StoreSwitcher = ({ stores = DEFAULT_STORES, onChange }) => {
   if (!selected) return null;
 
   const handleSelect = (store) => {
-    const storeId = String(store.id);
-    setSelectedId(storeId);
-    try {
-      localStorage.setItem(STORAGE_KEY, storeId);
-    } catch {
-      // Ignore — the choice just won't be remembered
-    }
+    setSelectedId(store.id);
+    saveStoreId(store.id);
     close();
     onChange?.(store);
   };

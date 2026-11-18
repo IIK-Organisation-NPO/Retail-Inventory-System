@@ -20,6 +20,10 @@ import EditStore from "../pages/Store Owner/EditStore";
 // Store Owner pages
 import StoreOwnerInventory from '../pages/Store Owner/StoreOwnerInventory';
 import StoreOwner_MovementHistory from '../pages/Store Owner/StoreOwner_MovementHistory';
+import StoreOwner_Sales from '../pages/Store Owner/StoreOwner_Sales';
+import StoreOwner_Staff from '../pages/Store Owner/StoreOwner_Staff';
+import StoreOwner_Profile from '../pages/Store Owner/StoreOwner_Profile';
+import StoreOwner_Settings from '../pages/Store Owner/StoreOwner_Settings';
 
 const AppRoutes = () => {
   return (
@@ -39,13 +43,11 @@ const AppRoutes = () => {
         <Route path="/store-owner/products" element={<Products />} />
         <Route path="/store-owner/inventory" element={<StoreOwnerInventory />} />
         <Route path="/store-owner/inventory/movement-history" element={<StoreOwner_MovementHistory />} />
-        <Route path="/store-owner/notifications" element={<StoreOwnerNotifications />} />
-        <Route path="/store-owner/stores" element={<StoreOwnerStores />} />
-        <Route path="/store-owner/stores/register" element={<RegisterStore />} />
-        <Route path="/store-owner/stores/register/company-information" element={<CompanyInformation />} />
-        <Route path="/store-owner/stores/register/store-profile" element={<StoreProfile />} />
-        <Route path="/store-owner/stores/register/review" element={<ReviewStore />} />
-        <Route path="/store-owner/stores/edit/:storeId" element={<EditStore />} />
+        <Route path="/store-owner/sales" element={<StoreOwner_Sales />} />
+        <Route path="/store-owner/staff" element={<StoreOwner_Staff />} />
+        <Route path="/store-owner/profile" element={<StoreOwner_Profile />} />
+        <Route path="/store-owner/settings" element={<StoreOwner_Settings />} />
+        
       </Routes>
     </Router>
   );
