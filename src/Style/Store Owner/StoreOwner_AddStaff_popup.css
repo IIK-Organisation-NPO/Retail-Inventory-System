@@ -1,0 +1,52 @@
+/* ============================================
+   Add / Edit Staff Popup Stylesheet
+   Backdrop, card, fields and buttons come from
+   StoreOwner_StockIn_popup.css (sp-* classes).
+   ============================================ */
+
+/* Grey text while "Select your gender" is showing */
+.as-placeholder {
+  color: #8a8a90;
+}
+
+.as-placeholder option {
+  color: #111;
+}
+
+/* Disability Yes / No */
+.as-fieldset {
+  margin: 0 0 14px;
+  padding: 0;
+  border: none;
+}
+
+.as-fieldset legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.as-radios {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 42px;
+}
+
+.as-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: #111;
+  cursor: pointer;
+}
+
+.as-radio input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #111;
+  cursor: pointer;
+}
