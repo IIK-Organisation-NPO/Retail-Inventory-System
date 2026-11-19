@@ -16,7 +16,7 @@ import CompanyInformation from "../pages/Store Owner/CompanyInformation";
 import StoreProfile from "../pages/Store Owner/StoreProfile";
 import ReviewStore from "../pages/Store Owner/ReviewStore";
 import EditStore from "../pages/Store Owner/EditStore";
-
+import Reports from "../pages/Store Owner/Reports";
 // Store Owner pages
 import StoreOwnerInventory from '../pages/Store Owner/StoreOwnerInventory';
 import StoreOwner_MovementHistory from '../pages/Store Owner/StoreOwner_MovementHistory';
@@ -54,7 +54,7 @@ const AppRoutes = () => {
         <Route path="/store-owner/staff" element={<StoreOwner_Staff />} />
         <Route path="/store-owner/profile" element={<StoreOwner_Profile />} />
         <Route path="/store-owner/settings" element={<StoreOwner_Settings />} />
-        
+        <Route path="/store-owner/reports" element={<Reports />} />
       </Routes>
     </Router>
   );
