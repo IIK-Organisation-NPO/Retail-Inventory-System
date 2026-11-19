@@ -36,8 +36,9 @@ const findProduct = (products, productId) =>
 /* =========================================================
    SHARED: POPUP SHELL
    Backdrop, card, header and close button used by all three
+   (also used by Staff_PeriodPopup)
    ========================================================= */
-const PopupShell = ({ title, onClose, children }) => {
+export const PopupShell =({ title, onClose, children }) => {
   // Close on Escape and stop the page behind the popup from scrolling
   useEffect(() => {
     const handleKeyDown = (e) => {
