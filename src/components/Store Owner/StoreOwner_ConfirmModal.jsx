@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import "../../Style/Store Owner/StoreOwner_ConfirmModal.css";
 
 /**
- * variant:      "danger" (red, e.g. disable) or "primary" (blue, e.g. enable)
+ * variant:      "danger" (red, e.g. disable) or "primary" (green confirm button, e.g. enable)
  * title:        "Disable staff member?"
  * question:     "Are you sure you want to disable Lindiwe Ngcobo?"
  * message:      extra explanation shown in the coloured box
