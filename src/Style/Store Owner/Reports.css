@@ -1,0 +1,682 @@
+/* =========================================
+   REPORTS PAGE STYLES
+   ========================================= */
+
+/* --- Toolbar (Tabs & Filters) --- */
+.reports-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.reports-tabs {
+  display: flex;
+  gap: 8px;
+  background-color: #fff;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.report-tab-btn {
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.report-tab-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.report-tab-btn.active {
+  background-color: #000;
+  color: #fff;
+}
+
+.reports-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.period-dropdown {
+  position: relative;
+}
+
+.date-select {
+  width: 140px;
+  padding: 8px 16px;
+  border-radius: 6px;
+}
+
+.period-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 250px;
+  max-width: 100%;
+  gap: 10px;
+  border: 1px solid #dfe3e8;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.period-trigger::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid #111827;
+  border-bottom: 1.5px solid #111827;
+  transform: rotate(45deg) translateY(-2px);
+}
+
+.inventory-report {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inventory-report-stats {
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+.inventory-report .stat-card {
+  min-width: 0;
+  padding: 14px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.inventory-report .stat-label {
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #60636a;
+}
+
+.inventory-report .stat-value {
+  margin: 0 0 2px;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.inventory-report .stat-sub {
+  font-size: 11px;
+  color: #737780;
+}
+
+.inventory-danger {
+  color: #cf1234;
+}
+
+.inventory-report-middle {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 12px;
+}
+
+.inventory-report .card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.inventory-card-title {
+  margin: 0 0 14px;
+  color: #111;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.inventory-status-bar {
+  display: flex;
+  height: 18px;
+  margin: 0 3px 12px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #efeff0;
+}
+
+.inventory-status-in-stock {
+  background: #0b0b0b;
+}
+
+.inventory-status-low {
+  background: #cf1234;
+}
+
+.inventory-status-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.inventory-status-item,
+.inventory-status-item > span {
+  display: flex;
+  align-items: center;
+}
+
+.inventory-status-item {
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.inventory-status-item > span {
+  gap: 8px;
+}
+
+.inventory-status-item strong {
+  font-size: 12px;
+}
+
+.inventory-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.inventory-status-dot.in-stock {
+  background: #0b0b0b;
+}
+
+.inventory-status-dot.low-stock {
+  background: #cf1234;
+}
+
+.inventory-status-dot.out-stock {
+  background: #bdbfc3;
+}
+
+.inventory-insights-card p {
+  margin: 0;
+  padding: 0 0 10px;
+  border-bottom: 1px solid #ececee;
+  color: #333;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.inventory-insights-card p + p {
+  padding-top: 10px;
+}
+
+.inventory-insights-card a {
+  display: inline-block;
+  margin-top: 10px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.inventory-low-stock-card {
+  min-height: 310px;
+}
+
+.inventory-low-stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inventory-low-stock-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.inventory-low-stock-heading strong {
+  font-size: 12px;
+}
+
+.inventory-low-stock-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #efeff0;
+}
+
+.inventory-low-stock-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #cf1234;
+}
+
+.procurement-report {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.procurement-report-stats {
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+.procurement-report .stat-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.procurement-report .stat-label {
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #60636a;
+}
+
+.procurement-report .stat-value {
+  margin: 0 0 3px;
+  font-size: 25px;
+  line-height: 1.15;
+}
+
+.procurement-report .stat-sub {
+  font-size: 12px;
+  color: #737780;
+}
+
+.procurement-report-main {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 16px;
+}
+
+.procurement-report-secondary {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 16px;
+}
+
+.procurement-report .card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.procurement-card-title {
+  margin: 0 0 20px;
+  color: #111;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.procurement-demand-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.procurement-demand-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 4px 4px;
+  font-size: 13px;
+}
+
+.procurement-demand-heading strong {
+  white-space: nowrap;
+}
+
+.procurement-demand-bar {
+  display: flex;
+  height: 18px;
+  overflow: hidden;
+  margin: 0 4px;
+  border-radius: 5px;
+  background: #efeff0;
+}
+
+.procurement-demand-own {
+  background: #0b0b0b;
+}
+
+.procurement-demand-others {
+  background: #bdbdbd;
+}
+
+.procurement-demand-item p {
+  margin: 3px 4px 0;
+  color: #666;
+  font-size: 12px;
+}
+
+.procurement-demand-legend {
+  display: flex;
+  gap: 18px;
+  margin: 18px 4px 0;
+  color: #666;
+  font-size: 12px;
+}
+
+.procurement-demand-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.procurement-demand-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 1px;
+}
+
+.procurement-demand-dot.own {
+  background: #0b0b0b;
+}
+
+.procurement-demand-dot.others {
+  background: #bdbdbd;
+}
+
+.procurement-quotes-card .procurement-card-title {
+  margin-bottom: 12px;
+}
+
+.procurement-quotes-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.procurement-quotes-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #222;
+  font-size: 13px;
+  text-align: left;
+}
+
+.procurement-quotes-table th,
+.procurement-quotes-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #ececee;
+  white-space: nowrap;
+}
+
+.procurement-quotes-table th {
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.procurement-note-card .procurement-card-title {
+  margin-bottom: 14px;
+}
+
+.procurement-note-card p {
+  margin: 0;
+  padding: 12px 4px 0;
+  border-top: 1px solid #ececee;
+  color: #333;
+  font-size: 14px;
+}
+
+.export-btn {
+  padding: 8px 24px;
+  border-radius: 6px;
+}
+
+/* --- Summary Stat Cards --- */
+.report-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.report-stats-grid .stat-value {
+  font-size: 1.75rem;
+  margin-bottom: 4px;
+}
+
+/* --- 2-Column Rows --- */
+.reports-row-2-col {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* Chart is wider than side panel */
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* Chart Card */
+.chart-card {
+  padding: 24px;
+}
+
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 24px;
+}
+
+.chart-container {
+  height: 300px;
+  width: 100%;
+  position: relative;
+}
+
+/* Custom labels on top of bars */
+.chart-labels-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end; /* Align to bottom but we'll add padding */
+  pointer-events: none; /* Let clicks pass through */
+  padding-bottom: 40px; /* Space for X-axis */
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+/* Note: The overlay approach is tricky with Recharts. 
+   In the actual JSX above, I used a CSS hack to position labels. 
+   A cleaner way in Recharts is using a custom LabelList component. */
+.chart-label {
+  /* This is a simplified fallback */
+  display: none; /* Hidden by default, rely on Recharts tooltips for now */
+}
+
+/* Payment Card */
+.payment-card {
+  padding: 24px;
+}
+
+.payment-progress-bar {
+  display: flex;
+  height: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 32px;
+  background-color: #e5e7eb;
+}
+
+.progress-cash {
+  background-color: #000;
+}
+
+.progress-card {
+  background-color: #9ca3af;
+}
+
+.payment-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.legend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.legend-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4b5563;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.dot-cash { background-color: #000; }
+.dot-card { background-color: #9ca3af; }
+
+.legend-value {
+  font-weight: 600;
+  color: #000;
+}
+
+/* --- Top Products Card --- */
+.top-products-card {
+  padding: 24px;
+}
+
+.products-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.product-bar-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.product-name {
+  color: #374151;
+}
+
+.product-units {
+  font-weight: 600;
+  color: #000;
+}
+
+.product-bar-bg {
+  height: 8px;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.product-bar-fill {
+  height: 100%;
+  background-color: #000;
+  border-radius: 4px;
+}
+
+/* --- Insights Card --- */
+.insights-card {
+  padding: 24px;
+}
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.insight-text {
+  font-size: 0.95rem;
+  color: #4b5563;
+  line-height: 1.5;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.insight-text:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+  .reports-row-2-col {
+    grid-template-columns: 1fr;
+  }
+  
+  .report-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .inventory-report-middle {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .procurement-report-main,
+  .procurement-report-secondary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .reports-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .reports-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .period-dropdown {
+    flex: 0 0 250px;
+    max-width: 100%;
+  }
+  
+  .period-trigger {
+    width: 100%;
+  }
+  
+  .report-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-report-middle {
+    grid-template-columns: 1fr;
+  }
+
+  .procurement-report-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .procurement-report .card {
+    padding: 16px;
+  }
+}

@@ -6,6 +6,7 @@ import "../../Style/Store Owner/StoreOwner_MovementHistory.css";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
+import StoreOwner_PeriodPopup from "../../components/Store Owner/StoreOwner_PeriodPopup";
 import exportToExcel from "../../utils/exportToExcel";
 
 // Mock data — replace with API data once the backend is connected
@@ -43,6 +44,18 @@ const MOVEMENT_TYPES = ["Sale", "Stock in", "Stock out", "Adjustment"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const pad = (n) => String(n).padStart(2, "0");
+
+const formatDateRangeLabel = (from, to) => {
+  const formatDate = (date) => {
+    const [year, month, day] = date.split("-").map(Number);
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(year, month - 1, day));
+  };
+  return `${formatDate(from)} - ${formatDate(to)}`;
+};
 
 // "13 Nov, 16:42"
 const formatDateTime = (iso) => {
@@ -90,6 +103,8 @@ const exportMovements = (rows) =>
 
 const StoreOwner_MovementHistory = () => {
   const [dateRange, setDateRange] = useState("7");
+  const [customRange, setCustomRange] = useState(null);
+  const [isPeriodOpen, setIsPeriodOpen] = useState(false);
   const [product, setProduct] = useState("all");
   const [type, setType] = useState("all");
   const [person, setPerson] = useState("all");
@@ -98,19 +113,30 @@ const StoreOwner_MovementHistory = () => {
 
   // Apply the filters and sort newest first
   const filtered = useMemo(() => {
-    const cutoff =
-      dateRange === "all"
-        ? null
-        : new Date(REFERENCE_DATE.getTime() - Number(dateRange) * 24 * 60 * 60 * 1000);
+    let cutoff = null;
+    let customStart = null;
+    let customEnd = null;
+
+    if (dateRange === "today") {
+      cutoff = new Date(REFERENCE_DATE);
+      cutoff.setHours(0, 0, 0, 0);
+    } else if (dateRange === "custom" && customRange) {
+      customStart = new Date(`${customRange.from}T00:00:00`);
+      customEnd = new Date(`${customRange.to}T23:59:59`);
+    } else if (dateRange !== "all") {
+      cutoff = new Date(REFERENCE_DATE.getTime() - Number(dateRange) * 24 * 60 * 60 * 1000);
+    }
 
     return MOVEMENTS.filter((m) => {
-      if (cutoff && new Date(m.date) < cutoff) return false;
+      const movementDate = new Date(m.date);
+      if (cutoff && movementDate < cutoff) return false;
+      if (customStart && (movementDate < customStart || movementDate > customEnd)) return false;
       if (product !== "all" && m.product !== product) return false;
       if (type !== "all" && m.type !== type) return false;
       if (person !== "all" && m.by !== person) return false;
       return true;
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [dateRange, product, type, person]);
+  }, [dateRange, customRange, product, type, person]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -173,11 +199,37 @@ const StoreOwner_MovementHistory = () => {
 
         {/* Filters */}
         <div className="mh-filters">
-          <select className="mh-select" value={dateRange} onChange={handleFilter(setDateRange)} aria-label="Date range">
-            {DATE_RANGES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </select>
+          <div className="period-dropdown">
+            <button
+              type="button"
+              className="mh-select mh-period-trigger"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={() => setIsPeriodOpen((open) => !open)}
+              aria-label="Date range"
+              aria-haspopup="dialog"
+              aria-expanded={isPeriodOpen}
+            >
+              {dateRange === "custom" && customRange
+                ? formatDateRangeLabel(customRange.from, customRange.to)
+                : DATE_RANGES.find((range) => range.value === dateRange)?.label ||
+                  (dateRange === "today" ? "Today" : "Custom range")}
+            </button>
+            {isPeriodOpen && (
+              <StoreOwner_PeriodPopup
+                value={dateRange}
+                includeAllTime
+                customRange={customRange}
+                defaultRange={{ from: "2026-11-07", to: "2026-11-13" }}
+                onClose={() => setIsPeriodOpen(false)}
+                onApply={({ value, from, to }) => {
+                  setDateRange(value);
+                  setCustomRange(value === "custom" ? { from, to } : null);
+                  setPage(1);
+                  setIsPeriodOpen(false);
+                }}
+              />
+            )}
+          </div>
 
           <select className="mh-select" value={product} onChange={handleFilter(setProduct)} aria-label="Product">
             <option value="all">All products</option>
