@@ -1,7 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-// Shared Components (using StaffSidebar)
-import StaffSidebar from "../../components/Staff/StaffSidebar";
+import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import { STAFF_STORE } from "../../data/stores";
@@ -16,6 +16,7 @@ import {
 import "../../Style/Staff/StaffDashboard.css";
 
 const StaffDashboard = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([
     { id: 1, product: "Coca-Cola 500ml", price: 26.5, onHand: 89, barcode: "5449000000996" },
     { id: 2, product: "Simba Chips Original", price: 14.63, onHand: 38, barcode: "6001234500028" },
@@ -46,7 +47,7 @@ const StaffDashboard = () => {
 
   return (
     <div className="app-layout">
-      <StaffSidebar />
+      <Staff_Sidebar alertCount={3} />
 
       <main className="main-content">
         
@@ -126,7 +127,9 @@ const StaffDashboard = () => {
           <div className="card">
             <div className="card-header">
               <h3>Low stock</h3>
-              <button className="btn-outline">Open stock</button>
+              <button type="button" className="btn-outline" onClick={() => navigate("/staff/stock")}>
+                Open stock
+              </button>
             </div>
             <table className="data-table">
               <thead>
@@ -165,7 +168,9 @@ const StaffDashboard = () => {
         <div className="card recent-sales-card">
           <div className="card-header">
             <h3>My recent sales</h3>
-            <button className="btn-outline">Sales history</button>
+            <button type="button" className="btn-outline" onClick={() => navigate("/staff/sales-history")}>
+              Sales history
+            </button>
           </div>
           <table className="data-table">
             <thead>

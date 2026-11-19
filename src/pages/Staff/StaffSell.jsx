@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import StaffSidebar from "../../components/Staff/StaffSidebar";
+import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import StoreOwner_ScanBarcode_popup from "../../components/Store Owner/StoreOwner_ScanBarcode_popup";
@@ -137,7 +137,7 @@ const StaffSell = () => {
 
   return (
     <div className="staff-sell-layout">
-      <StaffSidebar />
+      <Staff_Sidebar alertCount={3} />
 
       <main className="staff-sell-main">
         <header className="staff-sell-header">

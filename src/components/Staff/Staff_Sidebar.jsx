@@ -4,7 +4,7 @@ import "../../Style/Staff/Staff_Sidebar.css";
 
 // Navigation items for the Store Staff area
 const NAV_ITEMS = [
-  { label: "Home", to: "/staff/home" },
+  { label: "Home", to: "/staff" },
   { label: "Sell", to: "/staff/sell" },
   { label: "Stock", to: "/staff/stock" },
   { label: "Sales history", to: "/staff/sales-history" },
@@ -26,6 +26,7 @@ const Staff_Sidebar = ({ alertCount = 0 }) => {
           <NavLink
             key={item.to}
             to={item.to}
+            end={item.to === "/staff"}
             className={({ isActive }) =>
               isActive ? "st-sidebar-link active" : "st-sidebar-link"
             }

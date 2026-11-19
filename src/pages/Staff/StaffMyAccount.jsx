@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import StaffSidebar from "../../components/Staff/StaffSidebar";
+import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import { STAFF_STORE } from "../../data/stores";
@@ -30,7 +30,7 @@ const StaffMyAccount = () => {
 
   return (
     <div className="app-layout staff-account-layout">
-      <StaffSidebar />
+      <Staff_Sidebar alertCount={3} />
 
       <main className="staff-account-main">
         <header className="staff-account-header">

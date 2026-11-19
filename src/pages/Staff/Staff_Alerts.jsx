@@ -3,9 +3,9 @@ import { useState } from "react";
 import "../../Style/Staff/Staff_Layout.css";
 import "../../Style/Staff/Staff_Alerts.css";
 import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
+import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 
 // Mock data — replace with API data once the backend is connected
-const STAFF_USER = { name: "Lindiwe Ngcobo" };
 const STORE = { name: "Mseleku Tuckshop" };
 const LAST_SYNCED = "2 min ago";
 
@@ -97,9 +97,13 @@ const Staff_Alerts = () => {
               <span>{STORE.name}</span>
             </div>
 
-            <span className="st-avatar" title={STAFF_USER.name} aria-label={STAFF_USER.name}>
-              {getInitials(STAFF_USER.name)}
-            </span>
+            <StoreOwner_UserMenu
+              name="Lindiwe Ngcobo"
+              role="Cashier"
+              accountPath="/staff/account"
+              accountLabel="My account"
+              showSettings={false}
+            />
           </div>
         </header>
 
