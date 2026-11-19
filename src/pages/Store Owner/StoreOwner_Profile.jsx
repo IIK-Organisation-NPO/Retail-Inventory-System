@@ -1,6 +1,7 @@
 // src/pages/Store Owner/StoreOwner_Profile.jsx
 // The signed-in store owner's personal details (opened from the avatar menu → Profile)
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 import "../../Style/Store Owner/StoreOwner_Profile.css";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
@@ -8,39 +9,86 @@ import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_St
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import StoreOwner_ChangePassword_popup from "../../components/Store Owner/StoreOwner_ChangePassword_popup";
 
-// Mock data — replace with the signed-in user from the API
-const OWNER = {
-  name: "Sipho",
-  surname: "Dlamini",
-  email: "sipho@gmail.com",
-  mobile: "0820000001",
-  role: "Store Owner",
-};
-
 const TOAST_MS = 3000;
 
 const digitsOnly = (value) => value.replace(/\D/g, "");
 
 // "0820000001" -> "082 000 0001"
-const formatMobile = (digits) => `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`.trim();
+const formatMobile = (digits) => {
+  if (!digits) return "";
+  const clean = digitsOnly(digits);
+  return `${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6)}`.trim();
+};
 
 // "Sipho", "Dlamini" -> "SD"
-const getInitials = (name, surname) => `${name.trim()[0] ?? ""}${surname.trim()[0] ?? ""}`.toUpperCase();
-
-// Saved details -> what the form fields show
-const toForm = (owner) => ({
-  name: owner.name,
-  surname: owner.surname,
-  email: owner.email,
-  mobile: formatMobile(owner.mobile),
-});
+const getInitials = (name = "", surname = "") => {
+  return `${name.trim()[0] || ""}${surname.trim()[0] || ""}`.toUpperCase();
+};
 
 const StoreOwner_Profile = () => {
-  const [owner, setOwner] = useState(OWNER);
-  const [form, setForm] = useState(() => toForm(OWNER));
+  const navigate = useNavigate();
+  
+  // State
+  const [owner, setOwner] = useState({ name: "", surname: "", email: "", mobile: "", role: "Store Owner" });
+  const [form, setForm] = useState({ name: "", surname: "", email: "", mobile: "" });
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [showPasswordPopup, setShowPasswordPopup] = useState(false);
   const [toast, setToast] = useState("");
+
+  // --- 1. FETCH PROFILE ON PAGE LOAD ---
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        navigate("/login/store-owner-staff");
+        return;
+      }
+
+      try {
+        const response = await fetch("http://localhost:5000/api/owner/profile", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem("token");
+          navigate("/login/store-owner-staff");
+          return;
+        }
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to load profile");
+
+        const fetchedOwner = {
+          name: data.Name,
+          surname: data.Surname,
+          email: data.Email,
+          mobile: data.MobileNumber,
+          role: "Store Owner"
+        };
+
+        setOwner(fetchedOwner);
+        setForm({
+          name: fetchedOwner.name,
+          surname: fetchedOwner.surname,
+          email: fetchedOwner.email,
+          mobile: formatMobile(fetchedOwner.mobile)
+        });
+
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [navigate]);
 
   // Only allow Save / Cancel once something has changed
   const isDirty =
@@ -71,7 +119,8 @@ const StoreOwner_Profile = () => {
     return "";
   };
 
-  const handleSubmit = (e) => {
+  // --- 2. SAVE PROFILE CHANGES ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const problem = validate();
     if (problem) {
@@ -79,23 +128,94 @@ const StoreOwner_Profile = () => {
       return;
     }
 
-    const saved = {
-      ...owner,
-      name: form.name.trim(),
-      surname: form.surname.trim(),
-      email: form.email.trim(),
-      mobile: digitsOnly(form.mobile),
-    };
-    // TODO: save the owner's details with the API
-    setOwner(saved);
-    setForm(toForm(saved));
-    setToast("Your profile was updated.");
+    setError("");
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await fetch("http://localhost:5000/api/owner/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          surname: form.surname.trim(),
+          email: form.email.trim(),
+          mobile: digitsOnly(form.mobile)
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to update profile");
+
+      // Update local state to reflect saved changes
+      const saved = {
+        ...owner,
+        name: form.name.trim(),
+        surname: form.surname.trim(),
+        email: form.email.trim(),
+        mobile: digitsOnly(form.mobile),
+      };
+      
+      setOwner(saved);
+      setForm({
+        name: saved.name,
+        surname: saved.surname,
+        email: saved.email,
+        mobile: formatMobile(saved.mobile)
+      });
+      
+      setToast("Your profile was updated successfully.");
+      
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleCancel = () => {
-    setForm(toForm(owner));
+    setForm({
+      name: owner.name,
+      surname: owner.surname,
+      email: owner.email,
+      mobile: formatMobile(owner.mobile)
+    });
     setError("");
   };
+
+  // --- 3. CHANGE PASSWORD ---
+  const handlePasswordSave = async (currentPassword, newPassword) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch("http://localhost:5000/api/owner/change-password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to change password");
+
+      setShowPasswordPopup(false);
+      setToast("Your password was changed successfully.");
+    } catch (err) {
+      alert(err.message); // Ideally, show this error inside the password popup itself
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="so-layout">
+        <StoreOwnerSidebar />
+        <main className="so-main" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <p>Loading your profile...</p>
+        </main>
+      </div>
+    );
+  }
 
   const fullName = `${owner.name} ${owner.surname}`;
 
@@ -212,7 +332,7 @@ const StoreOwner_Profile = () => {
           ========================================= */}
       {showPasswordPopup && (
         <StoreOwner_ChangePassword_popup
-          onSave={() => setToast("Your password was changed.")}
+          onSave={handlePasswordSave}
           onClose={closePasswordPopup}
         />
       )}

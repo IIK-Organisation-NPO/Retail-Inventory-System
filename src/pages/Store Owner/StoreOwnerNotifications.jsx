@@ -1,73 +1,103 @@
-import { useState } from "react";
+// src/pages/Store Owner/StoreOwnerNotifications.jsx
+import { useState, useEffect } from "react";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import "../../Style/Store Owner/StoreOwnerNotifications.css";
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const pad = (n) => String(n).padStart(2, "0");
+
+// "2023-11-13T08:00:00.000Z" -> "13 Nov, 08:00"
+const formatTimestamp = (isoString) => {
+  const d = new Date(isoString);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// Assign dot colors based on the notification type
+const getDotColor = (type) => {
+  if (type === "stock") return "red";
+  if (type === "quotes") return "blue";
+  return "black"; // system
+};
+
 const Notifications = () => {
   const [activeFilter, setActiveFilter] = useState("all");
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "stock",
-      title: "Low stock",
-      message: "Rama Margarine 500g is out of stock",
-      timestamp: "13 Nov, 08:00",
-      dotColor: "red",
-      read: false,
-    },
-    {
-      id: 2,
-      type: "stock",
-      title: "Low stock",
-      message: "Albany Superior White Bread is below reorder level (12 of 15)",
-      timestamp: "13 Nov, 08:00",
-      dotColor: "red",
-      read: false,
-    },
-    {
-      id: 3,
-      type: "quotes",
-      title: "New supplier quote",
-      message: "Tiger Brands Ltd quoted for Ace Maize Meal 2.5kg",
-      timestamp: "13 Nov, 07:30",
-      dotColor: "blue",
-      read: false,
-    },
-    {
-      id: 4,
-      type: "quotes",
-      title: "New supplier quote",
-      message: "Pioneer Foods quoted for Ace Maize Meal 2.5kg",
-      timestamp: "12 Nov, 16:10",
-      dotColor: "blue",
-      read: false,
-    },
-    {
-      id: 5,
-      type: "system",
-      title: "System announcement",
-      message: "Welcome to the pilot. Please record every sale.",
-      timestamp: "10 Nov, 09:00",
-      dotColor: "black",
-      read: false,
-    },
-  ]);
+  
+  // Real Data State
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const token = localStorage.getItem("token");
+
+  // --- 1. FETCH NOTIFICATIONS ON LOAD ---
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/notifications", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to load notifications");
+
+      // Map DB columns to the frontend's expected structure
+      const formatted = data.map((n) => ({
+        id: n.NotificationID,
+        type: n.Type,
+        title: n.Title,
+        message: n.Message,
+        timestamp: formatTimestamp(n.CreatedAt),
+        dotColor: getDotColor(n.Type),
+        read: Boolean(n.IsRead)
+      }));
+
+      setNotifications(formatted);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) fetchNotifications();
+  }, [token]);
+
+  // --- 2. MARK ALL AS READ ---
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/notifications/mark-read", {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        // Update local state instantly so the UI feels responsive
+        setNotifications((currentNotifications) =>
+          currentNotifications.map((notification) => ({ ...notification, read: true }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to mark as read", err);
+    }
+  };
+
+  // --- Helpers for UI ---
   const visibleNotifications =
     activeFilter === "all"
       ? notifications
       : notifications.filter((notification) => notification.type === activeFilter);
+      
   const hasUnreadNotifications = notifications.some((notification) => !notification.read);
+  const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllAsRead = () => {
-    setNotifications((currentNotifications) =>
-      currentNotifications.map((notification) => ({ ...notification, read: true }))
-    );
-  };
+  if (loading) return <div style={{ padding: '50px' }}>Loading notifications...</div>;
 
   return (
     <div className="app-layout">
-      <StoreOwnerSidebar notificationCount={3} />
+      {/* Pass the dynamic unread count to the sidebar badge */}
+      <StoreOwnerSidebar notificationCount={unreadCount} />
 
       <main className="main-content">
         
@@ -89,6 +119,12 @@ const Notifications = () => {
             <StoreOwner_UserMenu />
           </div>
         </header>
+
+        {error && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+            {error}
+          </div>
+        )}
 
         {/* Filter Tabs */}
         <div className="notification-tabs">
@@ -130,7 +166,9 @@ const Notifications = () => {
         <div className="card notifications-card">
           <div className="notifications-list">
             {visibleNotifications.length === 0 ? (
-              <p className="notifications-empty">No notifications in this category.</p>
+              <p className="notifications-empty" style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+                No notifications in this category.
+              </p>
             ) : (
               visibleNotifications.map((notification) => (
                 <div

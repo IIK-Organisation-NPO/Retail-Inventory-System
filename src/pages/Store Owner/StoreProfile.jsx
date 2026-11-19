@@ -33,6 +33,15 @@ const StoreProfile = () => {
   const [physicalAddress, setPhysicalAddress] = useState(REGISTERED_COMPANY_ADDRESS);
   const logoPreviewUrl = useRef("");
 
+  // Load existing draft data (if the user hit "Back" from the review page)
+  useEffect(() => {
+    const savedDraft = localStorage.getItem("draftStore");
+    if (savedDraft) {
+      const parsed = JSON.parse(savedDraft);
+      if (parsed.address) setPhysicalAddress(parsed.address);
+    }
+  }, []);
+
   useEffect(
     () => () => {
       if (logoPreviewUrl.current) URL.revokeObjectURL(logoPreviewUrl.current);
@@ -72,8 +81,37 @@ const StoreProfile = () => {
     setLogoError("");
   };
 
+  // --- SAVE FORM DATA TO LOCALSTORAGE ---
   const handleSubmit = (event) => {
     event.preventDefault();
+
+    // Extract all inputs from the form
+    const formData = new FormData(event.target);
+    
+    // Build the draft object (merging with any existing draft from earlier steps if needed)
+    const existingDraft = JSON.parse(localStorage.getItem("draftStore")) || {};
+    
+    const updatedDraft = {
+      ...existingDraft,
+      storeName: formData.get("storeName"),
+      category: formData.get("storeCategory"),
+      description: formData.get("storeDescription"),
+      contactPerson: formData.get("contactPerson"),
+      contactNumber: formData.get("contactNumber"),
+      email: formData.get("email"),
+      website: formData.get("website") || "Not provided",
+      address: physicalAddress,
+      postalAddress: formData.get("postalAddress"),
+      storeLocation: formData.get("storeLocation"),
+      province: formData.get("province"),
+      operatingHours: formData.get("operatingHours"),
+      // Note: We aren't uploading the logo to the DB yet, just keeping it in UI for now
+    };
+
+    // Save to localStorage so ReviewStore can read it
+    localStorage.setItem("draftStore", JSON.stringify(updatedDraft));
+
+    // Move to the final review step
     navigate("/store-owner/stores/register/review");
   };
 
@@ -100,7 +138,6 @@ const StoreProfile = () => {
         <div className="card stepper-card">
           <div className="stepper">
             
-            {/* Step 1: Completed */}
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -110,7 +147,6 @@ const StoreProfile = () => {
             
             <div className="step-divider"></div>
             
-            {/* Step 2: Completed */}
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -120,7 +156,6 @@ const StoreProfile = () => {
             
             <div className="step-divider"></div>
             
-            {/* Step 3: Active */}
             <div className="step active">
               <div className="step-circle">3</div>
               <span className="step-label">Store profile</span>
@@ -128,7 +163,6 @@ const StoreProfile = () => {
             
             <div className="step-divider"></div>
             
-            {/* Step 4 */}
             <div className="step">
               <div className="step-circle">4</div>
               <span className="step-label">Review</span>
@@ -189,11 +223,11 @@ const StoreProfile = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Store / trading name *</label>
-                    <input type="text" className="form-input" required />
+                    <input type="text" name="storeName" className="form-input" required />
                   </div>
                   <div className="input-group">
                     <label>Store category *</label>
-                    <select className="form-input select-input" defaultValue="" required>
+                    <select name="storeCategory" className="form-input select-input" defaultValue="" required>
                       <option value="" disabled>Select a store category</option>
                       <option>Grocery & essentials</option>
                       <option>General dealer</option>
@@ -205,18 +239,18 @@ const StoreProfile = () => {
                 {/* Store Description */}
                 <div className="input-group">
                   <label>Store description *</label>
-                  <textarea className="form-input" rows="2" required></textarea>
+                  <textarea name="storeDescription" className="form-input" rows="2" required></textarea>
                 </div>
 
                 {/* Row 2 */}
                 <div className="form-row">
                   <div className="input-group">
                     <label>Contact person *</label>
-                    <input type="text" className="form-input" required />
+                    <input type="text" name="contactPerson" className="form-input" required />
                   </div>
                   <div className="input-group">
                     <label>Store contact number *</label>
-                    <input type="tel" className="form-input" required />
+                    <input type="tel" name="contactNumber" className="form-input" required />
                   </div>
                 </div>
 
@@ -224,11 +258,11 @@ const StoreProfile = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Store email address *</label>
-                    <input type="email" className="form-input" required />
+                    <input type="email" name="email" className="form-input" required />
                   </div>
                   <div className="input-group">
                     <label>Website (optional)</label>
-                    <input type="text" className="form-input" />
+                    <input type="text" name="website" className="form-input" />
                   </div>
                 </div>
 
@@ -253,6 +287,7 @@ const StoreProfile = () => {
                   <label>Physical store address *</label>
                   <input
                     type="text"
+                    name="address"
                     className="form-input"
                     value={physicalAddress}
                     onChange={(event) => setPhysicalAddress(event.target.value)}
@@ -265,11 +300,11 @@ const StoreProfile = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Postal address</label>
-                    <input type="text" className="form-input" />
+                    <input type="text" name="postalAddress" className="form-input" />
                   </div>
                   <div className="input-group">
                     <label>Store location / area *</label>
-                    <input type="text" className="form-input" required />
+                    <input type="text" name="storeLocation" className="form-input" required />
                   </div>
                 </div>
 
@@ -277,7 +312,7 @@ const StoreProfile = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Province *</label>
-                    <select className="form-input select-input" defaultValue="" required>
+                    <select name="province" className="form-input select-input" defaultValue="" required>
                       <option value="" disabled>Select a province</option>
                       {SOUTH_AFRICAN_PROVINCES.map((province) => (
                         <option key={province}>{province}</option>
@@ -286,7 +321,7 @@ const StoreProfile = () => {
                   </div>
                   <div className="input-group">
                     <label>Operating hours *</label>
-                    <input type="text" className="form-input" required />
+                    <input type="text" name="operatingHours" className="form-input" required />
                   </div>
                 </div>
               </form>
@@ -357,4 +392,4 @@ const StoreProfile = () => {
   );
 };
 
-export default StoreProfile; 
+export default StoreProfile;

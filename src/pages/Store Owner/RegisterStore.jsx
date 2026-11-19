@@ -16,6 +16,11 @@ const RegisterStore = () => {
   // Handle form submit
   const handleVerify = (e) => {
     e.preventDefault();
+    
+    // 1. Save the CIPC number so the next steps can access it
+    localStorage.setItem("draftCipc", cipcNumber);
+    
+    // 2. Move to the next step (Company Information)
     navigate("/store-owner/stores/register/company-information");
   };
 
@@ -32,7 +37,7 @@ const RegisterStore = () => {
             <p className="page-subtitle">Verify your company before creating a store profile.</p>
           </div>
           
-          {/* Header Actions (Using your imported components) */}
+          {/* Header Actions */}
           <div className="header-actions">
             <StoreOwner_StoreSwitcher />
             <StoreOwner_UserMenu />
@@ -107,7 +112,6 @@ const RegisterStore = () => {
               </p>
 
               <div className="form-actions-row">
-                {/* Navigate back to the stores list */}
                 <Link
                   to="/store-owner/stores"
                   className="btn-outline"

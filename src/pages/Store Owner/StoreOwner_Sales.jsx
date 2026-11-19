@@ -1,5 +1,5 @@
 // src/pages/Store Owner/StoreOwner_Sales.jsx
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 import "../../Style/Store Owner/StoreOwner_Sales.css";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
@@ -8,39 +8,6 @@ import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMen
 import StoreOwner_RecordSale_popup from "../../components/Store Owner/StoreOwner_RecordSale_popup";
 import exportToExcel from "../../utils/exportToExcel";
 import formatRand from "../../utils/formatRand";
-
-// Mock data — replace with API data once the backend is connected
-const CURRENT_USER = "Sipho Dlamini";
-
-const PRODUCTS = [
-  { id: 1, product: "Coca-Cola 500ml", price: 26.5, onHand: 89, barcode: "5449000000996" },
-  { id: 2, product: "Simba Chips Original", price: 14.63, onHand: 38, barcode: "6001234500028" },
-  { id: 3, product: "Sprite 500ml", price: 21.45, onHand: 55, barcode: "6001234500035" },
-  { id: 4, product: "NikNaks Cheese", price: 15.0, onHand: 66, barcode: "6001234500042" },
-  { id: 5, product: "Fanta Orange 500ml", price: 20.55, onHand: 12, barcode: "6001234500059" },
-  { id: 6, product: "Ace Maize Meal 2.5kg", price: 64.03, onHand: 20, barcode: "6001234500066" },
-  { id: 7, product: "Lay's Salt & Vinegar", price: 18.99, onHand: 24, barcode: "6001234500073" },
-];
-
-const item = (productId, qty) => {
-  const p = PRODUCTS.find((x) => x.id === productId);
-  return { productId, name: p.product, price: p.price, qty };
-};
-
-const TRANSACTIONS = [
-  { id: 1, date: "2026-11-13", time: "16:42", cashier: "Lindiwe Ngcobo", items: [item(1, 2), item(2, 1)], payment: "Cash" },
-  { id: 2, date: "2026-11-13", time: "15:10", cashier: "Bheki Sithole", items: [item(6, 1)], payment: "Card" },
-  { id: 3, date: "2026-11-13", time: "13:55", cashier: "Lindiwe Ngcobo", items: [item(3, 3)], payment: "Cash" },
-  { id: 4, date: "2026-11-13", time: "11:20", cashier: "Bheki Sithole", items: [item(4, 4)], payment: "Mobile money" },
-  { id: 5, date: "2026-11-13", time: "09:05", cashier: "Lindiwe Ngcobo", items: [item(5, 2)], payment: "Cash" },
-  { id: 6, date: "2026-11-13", time: "08:40", cashier: "Sipho Dlamini", items: [item(7, 2), item(1, 1)], payment: "Cash" },
-  { id: 7, date: "2026-11-13", time: "08:15", cashier: "Bheki Sithole", items: [item(2, 3)], payment: "Card" },
-  { id: 8, date: "2026-11-13", time: "07:50", cashier: "Lindiwe Ngcobo", items: [item(6, 2)], payment: "Mobile money" },
-  { id: 9, date: "2026-11-12", time: "17:30", cashier: "Sipho Dlamini", items: [item(1, 4)], payment: "Cash" },
-  { id: 10, date: "2026-11-12", time: "14:20", cashier: "Lindiwe Ngcobo", items: [item(4, 2), item(3, 1)], payment: "Card" },
-  { id: 11, date: "2026-11-12", time: "10:05", cashier: "Bheki Sithole", items: [item(5, 1)], payment: "Cash" },
-  { id: 12, date: "2026-11-11", time: "12:45", cashier: "Lindiwe Ngcobo", items: [item(6, 1), item(2, 2)], payment: "Mobile money" },
-];
 
 const PAGE_SIZE = 5;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -51,71 +18,126 @@ const todayISO = () => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-const nowTime = () => {
-  const d = new Date();
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-
 // "2026-11-13" -> "13 Nov 2026"
 const formatDate = (iso) => {
+  if (!iso) return "";
   const [year, month, day] = iso.split("-").map(Number);
   return `${day} ${MONTHS[month - 1]} ${year}`;
 };
 
-const transactionTotal = (t) =>
-  Math.round(t.items.reduce((sum, i) => sum + i.price * i.qty, 0) * 100) / 100;
-
-// "Coca-Cola 500ml ×2, Simba Chips Original ×1"
-const itemsText = (t) => t.items.map((i) => `${i.name} ×${i.qty}`).join(", ");
-
 const StoreOwner_Sales = () => {
-  const [products, setProducts] = useState(PRODUCTS);
-  const [transactions, setTransactions] = useState(TRANSACTIONS);
-  const [date, setDate] = useState(() => TRANSACTIONS.map((t) => t.date).sort().at(-1));
+  // --- Real Data State ---
+  const [products, setProducts] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // --- Filters & UI State ---
+  const [date, setDate] = useState("");
   const [productFilter, setProductFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [showRecordSale, setShowRecordSale] = useState(false);
 
-  // Filter options
-  const dateOptions = useMemo(
-    () => [...new Set(transactions.map((t) => t.date))].sort().reverse(),
-    [transactions]
-  );
-  const cashiers = useMemo(
-    () => [...new Set(transactions.map((t) => t.cashier))].sort((a, b) => a.localeCompare(b)),
-    [transactions]
-  );
+  const storeId = localStorage.getItem("activeStoreId") || 1;
+  const token = localStorage.getItem("token");
 
-  // Apply the filters, newest first
-  const filtered = useMemo(
-    () =>
-      transactions
-        .filter((t) => t.date === date)
-        .filter((t) => productFilter === "all" || t.items.some((i) => String(i.productId) === productFilter))
-        .filter((t) => userFilter === "all" || t.cashier === userFilter)
-        .sort((a, b) => b.time.localeCompare(a.time)),
-    [transactions, date, productFilter, userFilter]
-  );
+  // --- 1. FETCH DATA FROM BACKEND ---
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const headers = { "Authorization": `Bearer ${token}` };
 
-  // Summary cards
-  const salesTotal = filtered.reduce((sum, t) => sum + transactionTotal(t), 0);
+      // Fetch products for the dropdown and the popup
+      const prodRes = await fetch(`http://localhost:5000/api/products?storeId=${storeId}`, { headers });
+      const prodData = await prodRes.json();
+      if (prodRes.ok) {
+        setProducts(prodData.map(p => ({
+          id: p.ProductID,
+          product: p.Name,
+          price: Number(p.SellingPrice),
+          onHand: p.OnHand,
+          barcode: p.Barcode
+        })));
+      }
+
+      // Fetch sales history
+      const salesRes = await fetch(`http://localhost:5000/api/sales/history?storeId=${storeId}`, { headers });
+      const salesData = await salesRes.json();
+      if (salesRes.ok) {
+        // Map backend response to what the table expects
+        const formattedSales = salesData.map(s => ({
+          id: s.id,
+          date: s.date, 
+          time: s.time, 
+          cashier: s.cashier || "Store Owner", 
+          itemsText: s.itemsText, // The backend sends the combined string
+          payment: s.payment,
+          total: Number(s.total)
+        }));
+        setTransactions(formattedSales);
+        
+        // Set default date to the most recent sale date, or today if none
+        if (formattedSales.length > 0 && !date) {
+          setDate(formattedSales[0].date);
+        } else if (formattedSales.length === 0) {
+          setDate(todayISO());
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load sales data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) fetchData();
+  }, [storeId, token]);
+
+  // --- 2. FILTER OPTIONS ---
+  const dateOptions = useMemo(() => {
+    const dates = [...new Set(transactions.map((t) => t.date))].sort().reverse();
+    // Ensure today is always an option even if no sales yet
+    if (!dates.includes(todayISO())) dates.unshift(todayISO());
+    return dates;
+  }, [transactions]);
+
+  const cashiers = useMemo(() => {
+    return [...new Set(transactions.map((t) => t.cashier))].sort((a, b) => a.localeCompare(b));
+  }, [transactions]);
+
+  // --- 3. APPLY FILTERS ---
+  const filtered = useMemo(() => {
+    return transactions
+      .filter((t) => t.date === date)
+      // Filter by searching the itemsText string for the selected product name
+      .filter((t) => {
+        if (productFilter === "all") return true;
+        const p = products.find(prod => String(prod.id) === productFilter);
+        return p ? t.itemsText.includes(p.product) : true;
+      })
+      .filter((t) => userFilter === "all" || t.cashier === userFilter)
+      .sort((a, b) => b.time.localeCompare(a.time));
+  }, [transactions, date, productFilter, userFilter, products]);
+
+  // --- 4. SUMMARY CALCULATIONS ---
+  const salesTotal = filtered.reduce((sum, t) => sum + t.total, 0);
   const averageSale = filtered.length ? salesTotal / filtered.length : 0;
   const salesLabel = date === todayISO() ? "Sales today" : `Sales on ${formatDate(date)}`;
 
-  // Pagination
+  // --- 5. PAGINATION ---
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const pageRows = filtered.slice(startIndex, startIndex + PAGE_SIZE);
 
-  // Change a filter and jump back to the first page
   const handleFilter = (setter) => (e) => {
     setter(e.target.value);
     setPage(1);
   };
 
+  // --- 6. EXPORT ---
   const handleExport = async () => {
     setIsExporting(true);
     try {
@@ -134,9 +156,9 @@ const StoreOwner_Sales = () => {
           date: formatDate(t.date),
           time: t.time,
           cashier: t.cashier,
-          items: itemsText(t),
+          items: t.itemsText,
           payment: t.payment,
-          total: transactionTotal(t),
+          total: t.total,
         })),
       });
     } catch (err) {
@@ -147,43 +169,52 @@ const StoreOwner_Sales = () => {
     }
   };
 
-  // Add the new sale to the history and take the items out of stock
-  const handleCompleteSale = (sale) => {
-    const newTransaction = {
-      id: Date.now(),
-      date: todayISO(),
-      time: nowTime(),
-      cashier: CURRENT_USER,
-      items: sale.items,
-      payment: sale.payment,
-    };
-    setTransactions((current) => [newTransaction, ...current]);
-    setProducts((current) =>
-      current.map((p) => {
-        const sold = sale.items.find((i) => i.productId === p.id);
-        return sold ? { ...p, onHand: p.onHand - sold.qty } : p;
-      })
-    );
+  // --- 7. COMPLETE SALE (Send to Backend) ---
+  const handleCompleteSale = async (sale) => {
+    try {
+      // Build payload for the backend
+      const payload = {
+        storeId: storeId,
+        paymentMethod: sale.payment,
+        items: sale.items.map(item => ({
+          productId: item.productId,
+          price: item.price,
+          quantity: item.qty
+        }))
+      };
 
-    // Show today's sales so the new one is visible
-    setDate(todayISO());
-    setProductFilter("all");
-    setUserFilter("all");
-    setPage(1);
+      const response = await fetch("http://localhost:5000/api/sales", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to record sale");
+
+      // Success! Close popup and refresh the page data
+      setShowRecordSale(false);
+      setDate(todayISO());
+      setProductFilter("all");
+      setUserFilter("all");
+      setPage(1);
+      fetchData(); // Reload from DB to show the new sale and updated totals
+
+    } catch (err) {
+      alert("Error recording sale: " + err.message);
+    }
   };
+
+  if (loading) return <div style={{ padding: '50px' }}>Loading sales data...</div>;
 
   return (
     <div className="so-layout">
-      {/* =========================================
-          SIDEBAR
-          ========================================= */}
       <StoreOwnerSidebar notificationCount={3} />
 
-      {/* =========================================
-          MAIN CONTENT
-          ========================================= */}
       <main className="so-main">
-        {/* Page header: title, store selector, record sale, user menu */}
         <header className="so-header">
           <h1 className="so-page-title">Sales</h1>
 
@@ -263,16 +294,18 @@ const StoreOwner_Sales = () => {
               <tbody>
                 {pageRows.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="sl-empty">No transactions match these filters.</td>
+                    <td colSpan={5} className="sl-empty" style={{ textAlign: "center", padding: "20px" }}>
+                      No transactions match these filters.
+                    </td>
                   </tr>
                 ) : (
                   pageRows.map((t) => (
                     <tr key={t.id}>
                       <td>{t.time}</td>
                       <td>{t.cashier}</td>
-                      <td className="sl-items">{itemsText(t)}</td>
+                      <td className="sl-items">{t.itemsText}</td>
                       <td>{t.payment}</td>
-                      <td>{formatRand(transactionTotal(t))}</td>
+                      <td>{formatRand(t.total)}</td>
                     </tr>
                   ))
                 )}
@@ -310,9 +343,7 @@ const StoreOwner_Sales = () => {
         </section>
       </main>
 
-      {/* =========================================
-          RECORD SALE POPUP
-          ========================================= */}
+      {/* RECORD SALE POPUP */}
       {showRecordSale && (
         <StoreOwner_RecordSale_popup
           products={products}
