@@ -25,6 +25,9 @@ import StoreOwner_Staff from '../pages/Store Owner/StoreOwner_Staff';
 import StoreOwner_Profile from '../pages/Store Owner/StoreOwner_Profile';
 import StoreOwner_Settings from '../pages/Store Owner/StoreOwner_Settings';
 
+// Staff pages
+import Staff_Stock from '../pages/Staff/Staff_Stock';
+
 const AppRoutes = () => {
   return (
     <Router>
@@ -54,7 +57,10 @@ const AppRoutes = () => {
         <Route path="/store-owner/staff" element={<StoreOwner_Staff />} />
         <Route path="/store-owner/profile" element={<StoreOwner_Profile />} />
         <Route path="/store-owner/settings" element={<StoreOwner_Settings />} />
-        
+
+        {/* Staff */}
+        <Route path="/staff/stock" element={<Staff_Stock />} />
+
       </Routes>
     </Router>
   );
