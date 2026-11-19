@@ -10,11 +10,11 @@ router.post('/login', login);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 
-// OTP Routes (NEW)
+// OTP Routes
 router.post('/send-otp', sendOTP);
 router.post('/verify-otp', verifyOTP);
 
-// Protected Test Routes (For Testing RBAC)
+// Protected Test Routes
 router.get('/admin-owner-route', protect, authorize('Admin', 'Owner'), (req, res) => {
     res.json({ message: `Hello ${req.user.role}, you have access to the Admin/Owner area.` });
 });

@@ -3,8 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import "../../Style/components/auth.css";
 import Footer from "../../components/common/Footer";
 import PasswordInput from "../../components/common/PasswordInput";
+import PasswordRequirements from "../../components/common/PasswordRequirements";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
-import Logo from "../../assets/images/IIK logo.png"; 
+import Logo from "../../assets/images/IIK logo.png";
 
 const OTP_LENGTH = 6;
 
@@ -13,40 +14,90 @@ const SignupSupplier = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [accountCreated, setAccountCreated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState("");
-  const [termsError, setTermsError] = useState("");
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [hasDisability, setHasDisability] = useState(false);
 
-  // Form State
   const [formData, setFormData] = useState({
     companyName: "", name: "", surname: "", email: "", mobileNumber: "", 
-    gender: "", disabilityDescription: "", password: "", confirmPassword: ""
+    gender: "", disability: false, disabilityDescription: "", 
+    password: "", confirmPassword: "", acceptTerms: false
   });
 
-  // OTP State
+  // Validation Errors State
+  const [errors, setErrors] = useState({});
+
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [otpError, setOtpError] = useState("");
   const otpInputRefs = useRef([]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setFormData({ 
+      ...formData, 
+      [name]: type === "checkbox" || type === "radio" ? checked : value 
+    });
+    
+    // Clear error for this specific field when the user starts typing again
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+    // Clear general API error if present
+    if (errors.api) {
+      setErrors((prev) => ({ ...prev, api: "" }));
+    }
+  };
+
+  const handleDisabilityChange = (isDisabled) => {
+    setFormData({
+      ...formData,
+      disability: isDisabled,
+      disabilityDescription: isDisabled ? formData.disabilityDescription : ""
+    });
   };
 
   const handleCreateAccount = async (event) => {
     event.preventDefault();
-    setApiError("");
+    setErrors({}); // Reset all errors before validating
 
-    if (!termsAccepted) {
-      setTermsError("You must agree to the Terms and Conditions to create an account.");
-      return;
+    // --- CLIENT-SIDE VALIDATION ---
+    const nameRegex = /^[A-Za-z\s\-']+$/;
+    const mobileRegex = /^(?:\+27|0)[6-8][0-9]{8}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
+    
+    let newErrors = {};
+
+    if (!formData.companyName.trim()) {
+      newErrors.companyName = "Company Name is required.";
     }
-    setTermsError("");
-
+    if (!formData.name.trim() || !nameRegex.test(formData.name)) {
+      newErrors.name = "Please enter a valid Name (letters only).";
+    }
+    if (!formData.surname.trim() || !nameRegex.test(formData.surname)) {
+      newErrors.surname = "Please enter a valid Surname (letters only).";
+    }
+    if (!formData.email.trim() || !formData.email.includes("@")) {
+      newErrors.email = "Please enter a valid Email address.";
+    }
+    if (!formData.mobileNumber.trim() || !mobileRegex.test(formData.mobileNumber.replace(/\s/g, ""))) {
+      newErrors.mobileNumber = "Please enter a valid SA Mobile number (e.g., 0821234567).";
+    }
+    if (!formData.gender) {
+      newErrors.gender = "Please select a Gender.";
+    }
+    if (!passwordRegex.test(formData.password)) {
+      newErrors.password = "Password does not meet the requirements below.";
+    }
     if (formData.password !== formData.confirmPassword) {
-      setApiError("Passwords do not match.");
+      newErrors.confirmPassword = "Passwords do not match.";
+    }
+    if (!formData.acceptTerms) {
+      newErrors.acceptTerms = "You must agree to the Terms and Conditions.";
+    }
+
+    // If validation fails, stop here and show errors
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    // ------------------------------
 
     setIsLoading(true);
 
@@ -63,8 +114,8 @@ const SignupSupplier = () => {
           mobileNumber: formData.mobileNumber,
           gender: formData.gender,
           password: formData.password,
-          disability: hasDisability,
-          disabilityDescription: hasDisability ? formData.disabilityDescription : null
+          disability: formData.disability,
+          disabilityDescription: formData.disability ? formData.disabilityDescription : null
         }),
       });
 
@@ -73,11 +124,20 @@ const SignupSupplier = () => {
       if (response.ok) {
         setShowPopup(true); 
       } else {
-        setApiError(data.message);
+        // Check if the backend explicitly says the email exists
+        if (data.message && data.message.toLowerCase().includes("already exists")) {
+          setErrors({ email: "This email is already registered. Please sign in." });
+        } else if (data.message && data.message.toLowerCase().includes("mobile")) {
+          // Catch mobile number duplicate error
+          setErrors({ mobileNumber: data.message });
+        } else {
+          // General API error banner
+          setErrors({ api: data.message || "An error occurred during signup." });
+        }
       }
     } catch (error) {
       console.error(error);
-      setApiError("Server is down. Please check your connection.");
+      setErrors({ api: "Server is down. Please check your connection." });
     } finally {
       setIsLoading(false);
     }
@@ -91,11 +151,16 @@ const SignupSupplier = () => {
     }
 
     setIsLoading(true);
+    setOtpError("");
     try {
       const response = await fetch('http://localhost:5000/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, otp: otpString }),
+        body: JSON.stringify({ 
+          email: formData.email, 
+          otp: otpString, 
+          roleName: "Supplier" 
+        }),
       });
 
       const data = await response.json();
@@ -135,11 +200,19 @@ const SignupSupplier = () => {
     navigate('/login/supplier');
   };
 
+  // Helper for inline error rendering
+  const renderError = (fieldName) => {
+    return errors[fieldName] ? (
+      <span style={{ color: '#d32f2f', fontSize: '12px', marginTop: '4px', display: 'block', fontWeight: '500' }}>
+        {errors[fieldName]}
+      </span>
+    ) : null;
+  };
+
   return (
     <div className="login-page-wrapper">
       <div className="login-content signup-content">
 
-        {/* LEFT SIDE */}
         <div className="login-left">
           <div className="hero-background">
             <img src={BackgroundImage} alt="Store background" className="bg-image" />
@@ -158,7 +231,6 @@ const SignupSupplier = () => {
           </div>
         </div>
 
-        {/* RIGHT SIDE */}
         <div className="login-right signup-right">
           <div className="form-wrapper registration-wrapper">
             <h2>Create account</h2>
@@ -168,10 +240,12 @@ const SignupSupplier = () => {
               <button type="button" className="role-btn active">Supplier</button>
             </div>
 
-            <form onSubmit={handleCreateAccount}>
-              {apiError && (
-                <div style={{ color: '#d32f2f', backgroundColor: '#fde8e8', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
-                  {apiError}
+            <form onSubmit={handleCreateAccount} noValidate>
+              
+              {/* GENERAL API ERROR BANNER (For unexpected server errors) */}
+              {errors.api && (
+                <div style={{ color: '#d32f2f', backgroundColor: '#fde8e8', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px', fontWeight: 'bold' }}>
+                  {errors.api}
                 </div>
               )}
 
@@ -179,121 +253,148 @@ const SignupSupplier = () => {
 
               <div className="input-group">
                 <label>Company name</label>
-                <input type="text" name="companyName" className="form-input" value={formData.companyName} onChange={handleChange} required />
+                <input 
+                  type="text" 
+                  name="companyName" 
+                  className="form-input" 
+                  value={formData.companyName} 
+                  onChange={handleChange} 
+                />
+                {renderError("companyName")}
               </div>
 
               <div className="form-row">
                 <div className="input-group">
                   <label>Name</label>
-                  <input type="text" name="name" className="form-input" value={formData.name} onChange={handleChange} required />
+                  <input 
+                    type="text" 
+                    name="name" 
+                    className="form-input" 
+                    value={formData.name} 
+                    onChange={handleChange} 
+                  />
+                  {renderError("name")}
                 </div>
                 <div className="input-group">
                   <label>Surname</label>
-                  <input type="text" name="surname" className="form-input" value={formData.surname} onChange={handleChange} required />
+                  <input 
+                    type="text" 
+                    name="surname" 
+                    className="form-input" 
+                    value={formData.surname} 
+                    onChange={handleChange} 
+                  />
+                  {renderError("surname")}
                 </div>
               </div>
 
               <div className="input-group">
                 <label>Email address</label>
-                <input type="email" name="email" className="form-input" value={formData.email} onChange={handleChange} required />
+                <input 
+                  type="email" 
+                  name="email" 
+                  className="form-input" 
+                  value={formData.email} 
+                  onChange={handleChange} 
+                />
+                {renderError("email")}
               </div>
 
               <div className="input-group">
                 <label>Mobile number</label>
-                <input type="tel" name="mobileNumber" className="form-input" value={formData.mobileNumber} onChange={handleChange} required />
+                <input 
+                  type="tel" 
+                  name="mobileNumber" 
+                  className="form-input" 
+                  value={formData.mobileNumber} 
+                  onChange={handleChange} 
+                  placeholder="e.g., 0821234567" 
+                />
+                {renderError("mobileNumber")}
               </div>
 
               <div className="form-row">
                 <div className="input-group">
                   <label>Gender</label>
-                  <select name="gender" className="form-input select-input" value={formData.gender} onChange={handleChange} required>
+                  <select 
+                    name="gender" 
+                    className="form-input select-input" 
+                    value={formData.gender} 
+                    onChange={handleChange}
+                  >
                     <option value="" disabled>Select your gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
                   </select>
-                  
-                  {/* Disability text field shows if YES */}
-                  {hasDisability && (
-                    <div className="disability-details" style={{ marginTop: '10px' }}>
-                      <label htmlFor="disability-type">What type of disability?</label>
-                      <input
-                        id="disability-type"
-                        type="text"
-                        name="disabilityDescription"
-                        className="form-input"
-                        value={formData.disabilityDescription}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-                  )}
+                  {renderError("gender")}
                 </div>
                 <div className="input-group">
                   <label>Disability</label>
                   <div className="radio-group">
                     <label className="radio-label">
-                      <input type="radio" name="disability" value="yes" checked={hasDisability} onChange={() => setHasDisability(true)} /> Yes
+                      <input type="radio" checked={formData.disability === true} onChange={() => handleDisabilityChange(true)} /> Yes
                     </label>
                     <label className="radio-label">
-                      <input type="radio" name="disability" value="no" checked={!hasDisability} onChange={() => setHasDisability(false)} /> No
+                      <input type="radio" checked={formData.disability === false} onChange={() => handleDisabilityChange(false)} /> No
                     </label>
                   </div>
                 </div>
               </div>
 
+              {formData.disability && (
+                <div className="input-group disability-details">
+                  <label>What type of disability?</label>
+                  <input 
+                    type="text" 
+                    name="disabilityDescription" 
+                    className="form-input" 
+                    value={formData.disabilityDescription} 
+                    onChange={handleChange} 
+                  />
+                </div>
+              )}
+
               <div className="input-group">
                 <label>Password</label>
-                <PasswordInput
-                  name="password"
-                  className="form-input"
-                  minLength={8}
-                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
-                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
-                  autoComplete="new-password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
+                <PasswordInput 
+                  name="password" 
+                  className="form-input" 
+                  autoComplete="new-password" 
+                  value={formData.password} 
+                  onChange={handleChange} 
                 />
-                <ul className="password-requirements">
-                  <li>At least 8 characters</li>
-                  <li>At least one uppercase letter</li>
-                  <li>At least one lowercase letter</li>
-                  <li>At least one number</li>
-                  <li className="special-character-requirement">At least one special character (e.g. ! @ # $ % ^ &amp; *)</li>
-                </ul>
+                <PasswordRequirements password={formData.password} />
+                {renderError("password")}
               </div>
 
               <div className="input-group">
                 <label>Confirm password</label>
-                <PasswordInput
-                  name="confirmPassword"
-                  className="form-input"
-                  minLength={8}
-                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}"
-                  title="Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
-                  autoComplete="new-password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
+                <PasswordInput 
+                  name="confirmPassword" 
+                  className="form-input" 
+                  autoComplete="new-password" 
+                  value={formData.confirmPassword} 
+                  onChange={handleChange} 
                 />
+                {renderError("confirmPassword")}
               </div>
 
-              <div className="terms-group">
-                <input
-                  type="checkbox"
-                  id="supplier-terms"
-                  checked={termsAccepted}
-                  onChange={(event) => {
-                    setTermsAccepted(event.target.checked);
-                    if (event.target.checked) setTermsError("");
-                  }}
-                />
-                <label htmlFor="supplier-terms">
-                  I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
-                </label>
+              <div className="terms-group" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <input 
+                    type="checkbox" 
+                    name="acceptTerms" 
+                    id="supplier-terms" 
+                    checked={formData.acceptTerms} 
+                    onChange={handleChange} 
+                  />
+                  <label htmlFor="supplier-terms" style={{ marginLeft: '8px' }}>
+                    I agree to the <a href="#" className="terms-link">Terms and Conditions</a> (POPIA compliant).
+                  </label>
+                </div>
+                {renderError("acceptTerms")}
               </div>
-              {termsError && <p id="supplier-terms-error" className="field-error" style={{color: 'red'}} role="alert">{termsError}</p>}
 
               <button type="submit" className="submit-btn" disabled={isLoading}>
                 {isLoading ? "Sending OTP..." : "Create account"}
@@ -305,12 +406,10 @@ const SignupSupplier = () => {
             </p>
           </div>
         </div>
-
       </div>
 
       <Footer />
 
-      {/* OTP MODAL */}
       {showPopup && (
         <div className="modal-overlay">
           <div className="modal-card">
@@ -318,27 +417,21 @@ const SignupSupplier = () => {
               <h2>Verify your email</h2>
               <button className="modal-close-btn" onClick={() => setShowPopup(false)}>✕</button>
             </div>
-            
-            <p className="modal-subtitle">
-              We sent a 6-digit code to <strong>{formData.email}</strong>.
-            </p>
-
+            <p className="modal-subtitle">We sent a 6-digit code to <strong>{formData.email}</strong>.</p>
             <div className="otp-input-group">
               {otp.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(el) => { otpInputRefs.current[index] = el; }}
-                  type="text"
-                  maxLength="1"
-                  className="otp-box"
-                  value={digit}
-                  onChange={(e) => handleOtpChange(index, e.target.value)}
+                <input 
+                  key={index} 
+                  ref={(el) => { otpInputRefs.current[index] = el; }} 
+                  type="text" 
+                  maxLength="1" 
+                  className="otp-box" 
+                  value={digit} 
+                  onChange={(e) => handleOtpChange(index, e.target.value)} 
                 />
               ))}
             </div>
-
-            {otpError && <p className="field-error" style={{color: 'red'}}>{otpError}</p>}
-            
+            {otpError && <p className="field-error" style={{color: '#d32f2f', fontSize: '12px', marginTop: '4px'}}>{otpError}</p>}
             <button type="button" className="modal-submit-btn" onClick={handleVerifyEmail} disabled={isLoading}>
               {isLoading ? "Verifying..." : "Verify email"}
             </button>
@@ -346,19 +439,15 @@ const SignupSupplier = () => {
         </div>
       )}
 
-      {/* SUCCESS MODAL */}
       {accountCreated && (
         <div className="modal-overlay">
           <div className="modal-card">
             <h2>Account successfully created</h2>
             <p>Your supplier account is ready. You can now sign in.</p>
-            <button type="button" className="modal-submit-btn" onClick={handleSuccessContinue}>
-              Continue to Login
-            </button>
+            <button type="button" className="modal-submit-btn" onClick={handleSuccessContinue}>Continue to Login</button>
           </div>
         </div>
       )}
-
     </div>
   );
 };
