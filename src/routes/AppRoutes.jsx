@@ -29,6 +29,11 @@ import StaffDashboard from '../pages/Staff/StaffDashboard';
 import StaffMyAccount from '../pages/Staff/StaffMyAccount';
 import StaffSell from '../pages/Staff/StaffSell';
 
+// Staff pages
+import Staff_Stock from '../pages/Staff/Staff_Stock';
+import Staff_Alerts from '../pages/Staff/Staff_Alerts';
+import Staff_SalesHistory from '../pages/Staff/Staff_SalesHistory';
+
 const AppRoutes = () => {
   return (
     <Router>
@@ -64,6 +69,12 @@ const AppRoutes = () => {
        <Route path="/staff" element={<StaffDashboard />} />
        <Route path="/staff/account" element={<StaffMyAccount />} />
        <Route path="/staff/sell" element={<StaffSell />} />
+
+        {/* Staff */}
+        <Route path="/staff/stock" element={<Staff_Stock />} />
+        <Route path="/staff/sales-history" element={<Staff_SalesHistory />} />
+        <Route path="/staff/alerts" element={<Staff_Alerts />} />
+
       </Routes>
     </Router>
   );

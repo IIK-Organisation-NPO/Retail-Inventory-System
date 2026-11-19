@@ -1,0 +1,185 @@
+/* ============================================
+   Staff Sales History Page Stylesheet
+   (layout, header and buttons are in Staff_Layout.css)
+   ============================================ */
+
+/* --- Filters row --- */
+.sh-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sh-filter-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Product dropdown */
+.sh-select {
+  min-width: 160px;
+  height: 34px;
+  padding: 0 30px 0 10px;
+  border: 1px solid #c4c4c8;
+  border-radius: 6px;
+  background-color: #ececee;
+  color: #555;
+  font-family: inherit;
+  font-size: 13px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23555' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+  outline: none;
+}
+
+.sh-select:focus-visible {
+  border-color: #111;
+}
+
+/* Period button (opens "Choose a period") */
+.sh-period-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #8a8a90;
+  border-radius: 6px;
+  background-color: #ececee;
+  color: #333;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.sh-period-btn:hover {
+  background-color: #e2e2e5;
+}
+
+.sh-period-btn:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+/* "You see only the sales you recorded" */
+.sh-info {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background-color: #e0ebff;
+  color: #2b59c3;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* --- Summary Cards --- */
+.sh-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sh-stat-card {
+  background-color: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.sh-stat-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: #6b6b70;
+}
+
+.sh-stat-value {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+}
+
+/* --- Transactions Card --- */
+.sh-card {
+  background-color: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 6px;
+  padding: 16px 12px;
+}
+
+.sh-card-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #111;
+}
+
+.sh-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.sh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.sh-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b6b70;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e5e7;
+  white-space: nowrap;
+}
+
+.sh-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #f0f0f2;
+  color: #111;
+  white-space: nowrap;
+}
+
+/* Column widths to match the design */
+.sh-table th:nth-child(1) { width: 12%; }
+.sh-table th:nth-child(2) { width: 62%; }
+.sh-table th:nth-child(3) { width: 14%; }
+
+/* Long item lists wrap instead of stretching the table */
+.sh-table td.sh-items {
+  white-space: normal;
+  min-width: 220px;
+}
+
+.sh-table td.sh-empty {
+  padding: 24px 10px;
+  color: #6b6b70;
+  text-align: center;
+  white-space: normal;
+}
+
+.sh-footer {
+  margin: 10px 10px 0;
+  font-size: 11px;
+  color: #6b6b70;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .sh-stats {
+    grid-template-columns: 1fr;
+  }
+}
