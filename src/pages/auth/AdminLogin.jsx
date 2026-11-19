@@ -12,17 +12,69 @@ import Logo from "../../assets/images/IIK logo.png";
 const AdminLogin = () => {
   const navigate = useNavigate();
   
-  // State for form and UI feedback
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); // For network errors (backend offline)
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  
+  // State for field-specific validation errors
+  const [validationErrors, setValidationErrors] = useState({});
+
+  // Clear specific field error as the user types
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    if (validationErrors.email) {
+      setValidationErrors({ ...validationErrors, email: "" });
+    }
+    setError(""); // Clear network error if they start typing
+  };
+
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    if (validationErrors.password) {
+      setValidationErrors({ ...validationErrors, password: "" });
+    }
+    setError(""); 
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    const input = email.trim();
+
+    // 1. Validate Email or Mobile Number format
+    if (!input) {
+      errors.email = "Please enter a valid email address";
+    } else {
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+      const isPhone = /^(?:\+27|0)[6-8][0-9]{8}$/.test(input.replace(/\s/g, ''));
+
+      if (!isEmail && !isPhone) {
+        errors.email = "Please enter a valid email address or mobile number";
+      }
+    }
+
+    // 2. Validate Password is not empty
+    if (!password) {
+      errors.password = "Invalid password or passcode";
+    }
+
+    return errors;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(""); // Clear network errors
+
+    // Run custom frontend validations (format checks)
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return; // Stop submission
+    }
+
+    setValidationErrors({});
     setLoading(true);
 
     try {
@@ -38,22 +90,40 @@ const AdminLogin = () => {
 
       const data = await response.json();
 
+      // Handle specific errors based on backend status codes
       if (!response.ok) {
+        if (response.status === 404) {
+          setValidationErrors({ email: data.message });
+          setLoading(false);
+          return;
+        }
+        
+        if (response.status === 401) {
+          setValidationErrors({ password: data.message });
+          setLoading(false);
+          return;
+        }
+
         throw new Error(data.message || "Login failed");
       }
 
-      // Save the token and role to local storage
+      // Success! Save the token and role to local storage
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("userName", data.user.name);
 
       alert(`Welcome back, Admin ${data.user.name}!`);
       
-      // Redirect to the Admin Dashboard (You will build this next)
-      // navigate("/dashboard/admin"); 
+      // Redirect to the Admin Dashboard
+      // Make sure this route exists in your AppRoutes.jsx!
+      navigate("/admin/dashboard"); 
       
     } catch (err) {
-      setError(err.message);
+      if (err.message === "Failed to fetch") {
+        setError("Cannot connect to the server. Please ensure the backend is running.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -62,7 +132,6 @@ const AdminLogin = () => {
   return (
     <div className="login-page-wrapper admin-login-page">
       
-      {/* MAIN CONTENT ROW (Left Image + Right Form) */}
       <div className="login-content">
         
         {/* LEFT SIDE - HERO SECTION */}
@@ -74,12 +143,10 @@ const AdminLogin = () => {
 
           <div className="left-content">
             <div className="logo-top">SpazaNet</div>
-            
             <div className="welcome-text">
               <h1>Welcome back</h1>
               <p>Stock, sales and group buying for rural stores.</p>
             </div>
-
             <div className="partner-logo">
               <img src={Logo} alt="IIK Organisation Logo" className="partner-logo-img" />
               <span>IIK Organisation</span>
@@ -98,9 +165,9 @@ const AdminLogin = () => {
               <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               
-              {/* Error Message Display */}
+              {/* Network Error Banner (Only shows if backend is offline) */}
               {error && (
                 <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px' }}>
                   {error}
@@ -112,21 +179,31 @@ const AdminLogin = () => {
                 <input 
                   type="text" 
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   className="form-input" 
                   placeholder="Enter admin email"
-                  required
                 />
+                {validationErrors.email && (
+                  <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                    {validationErrors.email}
+                  </span>
+                )}
               </div>
 
               <div className="input-group">
                 <label>Password</label>
                 <PasswordInput
-                  defaultValue="••••••••" 
+                  value={password}
+                  onChange={handlePasswordChange}
                   className="form-input" 
                   placeholder="Enter password"
-                  required
+                  autoComplete="current-password"
                 />
+                {validationErrors.password && (
+                  <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                    {validationErrors.password}
+                  </span>
+                )}
               </div>
 
               <div className="form-actions">
@@ -160,8 +237,8 @@ const AdminLogin = () => {
       <Footer />
 
       {showForgotPassword && (
-  <ForgotPasswordModal role="ADMIN" onClose={() => setShowForgotPassword(false)} />
-)}
+        <ForgotPasswordModal role="ADMIN" onClose={() => setShowForgotPassword(false)} />
+      )}
       
     </div>
   );
