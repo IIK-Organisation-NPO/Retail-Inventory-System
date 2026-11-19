@@ -1,0 +1,283 @@
+.staff-account-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f7f7f7;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.staff-account-main {
+  flex: 1;
+  min-width: 0;
+  padding: 28px;
+}
+
+.staff-account-header,
+.staff-account-header-actions,
+.staff-profile-heading,
+.staff-account-card-heading,
+.staff-account-detail-row,
+.staff-account-save-row,
+.staff-account-notifications button {
+  display: flex;
+  align-items: center;
+}
+
+.staff-account-header {
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.staff-account-header > h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.staff-account-header-actions {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.staff-account-header-actions .sync-status {
+  margin: 0 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.staff-account-signout,
+.staff-account-save-row button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #111;
+  border-radius: 9px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.staff-account-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.staff-account-card {
+  padding: 20px;
+  border: 1px solid #d8d8d8;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.staff-profile-card {
+  min-height: 474px;
+}
+
+.staff-profile-heading {
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.staff-account-avatar {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  place-items: center;
+  border-radius: 50%;
+  background: #090909;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.staff-profile-name {
+  flex: 1;
+}
+
+.staff-profile-name h2,
+.staff-account-form h3,
+.staff-account-card h2 {
+  margin: 0;
+  color: #111;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.staff-profile-name p {
+  margin-top: 3px;
+  color: #666;
+  font-size: 12px;
+}
+
+.staff-account-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.staff-account-form {
+  padding-top: 16px;
+}
+
+.staff-account-form h3 {
+  margin-bottom: 16px;
+}
+
+.staff-account-name-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.staff-account-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #666;
+  font-size: 12px;
+}
+
+.staff-account-form input {
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #c9c9c9;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 14px;
+}
+
+.staff-account-mobile {
+  margin-top: 16px;
+}
+
+.staff-account-detail-row {
+  justify-content: space-between;
+  margin-top: 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+.staff-account-detail-row strong {
+  color: #111;
+}
+
+.staff-account-save-row {
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  color: #666;
+  font-size: 12px;
+}
+
+.staff-account-save-row button {
+  min-height: 42px;
+  border-color: #090909;
+  background: #090909;
+  color: #fff;
+}
+
+.staff-account-side {
+  display: grid;
+  gap: 16px;
+}
+
+.staff-account-card-heading {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.staff-account-card-heading > span,
+.staff-account-toggle {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #f0f0f0;
+  color: #111;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.staff-account-secret p,
+.staff-account-sync p {
+  margin-top: 14px;
+  color: #111;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.staff-account-secret .staff-account-muted,
+.staff-account-sync p {
+  color: #666;
+}
+
+.staff-account-notifications h2 {
+  margin-bottom: 12px;
+}
+
+.staff-account-notifications button {
+  width: 100%;
+  justify-content: space-between;
+  padding: 7px 0;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.staff-account-toggle.is-on {
+  background: #efefef;
+}
+
+@media (max-width: 900px) {
+  .staff-account-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .staff-account-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .staff-account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-profile-card {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .staff-account-main {
+    padding: 20px 16px;
+  }
+
+  .staff-account-name-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-account-save-row {
+    align-items: flex-start;
+  }
+}

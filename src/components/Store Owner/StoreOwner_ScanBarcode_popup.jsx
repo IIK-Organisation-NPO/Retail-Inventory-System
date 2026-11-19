@@ -25,13 +25,28 @@ const cameraErrorMessage = (err) => {
 
 /**
  * products:  [{ id, product, onHand, barcode }]
+ * initialScanned: optional items to review before scanning more
  * qtyInSale: (productId) => quantity already in the Record sale popup
  * onDone:    called with [{ productId, qty }]
  * onCancel:  go back to the Record sale popup without adding anything
  */
-const StoreOwner_ScanBarcode_popup = ({ products, qtyInSale, onDone, onCancel }) => {
-  const [scanned, setScanned] = useState([]); // [{ productId, name, qty }]
-  const [lastAdded, setLastAdded] = useState("");
+const StoreOwner_ScanBarcode_popup = ({
+  products,
+  initialScanned = [],
+  qtyInSale,
+  onDone,
+  onCancel,
+}) => {
+  const [scanned, setScanned] = useState(() =>
+    initialScanned.flatMap(({ productId, qty }) => {
+      const product = products.find((entry) => entry.id === productId);
+      return product ? [{ productId, name: product.product, qty }] : [];
+    })
+  );
+  const [lastAdded, setLastAdded] = useState(() => {
+    const firstItem = initialScanned[0];
+    return products.find((product) => product.id === firstItem?.productId)?.product ?? "";
+  });
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [cameraOn, setCameraOn] = useState(false);

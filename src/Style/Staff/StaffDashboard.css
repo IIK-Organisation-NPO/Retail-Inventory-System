@@ -1,0 +1,131 @@
+/* =========================================
+   STAFF DASHBOARD PAGE STYLES
+   ========================================= */
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 32px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* --- Action Buttons Row --- */
+.staff-action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.staff-action-buttons .btn-primary {
+  padding: 10px 24px;
+  font-size: 0.95rem;
+}
+
+.staff-action-buttons .btn-outline {
+  padding: 10px 24px;
+  font-size: 0.95rem;
+}
+
+/* --- Alert Banner --- */
+.alert-banner-danger {
+  background-color: #fef2f2;
+  color: #991b1b;
+  padding: 14px 20px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: 24px;
+}
+
+/* --- Top Stat Cards --- */
+.staff-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Adjusting the size for Staff dashboard */
+.staff-stats-grid .stat-value {
+  font-size: 1.75rem;
+  margin-bottom: 0; /* No subtext in these cards */
+}
+
+/* --- Layout Rows --- */
+.staff-row-2-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* --- Top Selling List --- */
+.top-selling-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.top-selling-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.95rem;
+}
+
+.top-selling-list li:last-child {
+  border-bottom: none;
+}
+
+.top-selling-list span {
+  color: #374151;
+}
+
+.top-selling-list strong {
+  color: #000;
+}
+
+/* --- Recent Sales Table --- */
+.recent-sales-card {
+  padding: 24px;
+}
+
+.recent-sales-card .data-table td:first-child {
+  color: #6b7280; /* Time column slightly muted */
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .staff-row-2-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .staff-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .staff-action-buttons {
+    flex-wrap: wrap;
+  }
+}

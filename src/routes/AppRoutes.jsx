@@ -24,6 +24,10 @@ import StoreOwner_Sales from '../pages/Store Owner/StoreOwner_Sales';
 import StoreOwner_Staff from '../pages/Store Owner/StoreOwner_Staff';
 import StoreOwner_Profile from '../pages/Store Owner/StoreOwner_Profile';
 import StoreOwner_Settings from '../pages/Store Owner/StoreOwner_Settings';
+//Staff pages
+import StaffDashboard from '../pages/Staff/StaffDashboard';
+import StaffMyAccount from '../pages/Staff/StaffMyAccount';
+import StaffSell from '../pages/Staff/StaffSell';
 
 const AppRoutes = () => {
   return (
@@ -55,6 +59,11 @@ const AppRoutes = () => {
         <Route path="/store-owner/profile" element={<StoreOwner_Profile />} />
         <Route path="/store-owner/settings" element={<StoreOwner_Settings />} />
         <Route path="/store-owner/reports" element={<Reports />} />
+     
+       {/* Staff Routes */}
+       <Route path="/staff" element={<StaffDashboard />} />
+       <Route path="/staff/account" element={<StaffMyAccount />} />
+       <Route path="/staff/sell" element={<StaffSell />} />
       </Routes>
     </Router>
   );

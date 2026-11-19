@@ -8,6 +8,8 @@ export const STORES = [
   { id: "nquthu", name: "Nquthu Corner Shop" },
 ];
 
+export const STAFF_STORE = STORES[0];
+
 // Remembers the chosen store when moving between pages
 const STORAGE_KEY = "spazanet.selectedStoreId";
 

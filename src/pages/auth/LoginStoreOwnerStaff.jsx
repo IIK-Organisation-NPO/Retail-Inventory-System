@@ -13,7 +13,7 @@ const LoginStoreOwnerStaff = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    navigate("/dashboard");
+    navigate("/staff");
   };
 
   return (

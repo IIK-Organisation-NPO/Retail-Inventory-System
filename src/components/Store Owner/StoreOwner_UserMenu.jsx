@@ -14,7 +14,13 @@ const getInitials = (name) =>
     .join("");
 
 // Mock user — replace with the signed-in user from the API
-const StoreOwner_UserMenu = ({ name = "Sipho Dlamini", role = "Store Owner" }) => {
+const StoreOwner_UserMenu = ({
+  name = "Sipho Dlamini",
+  role = "Store Owner",
+  accountPath = "/store-owner/profile",
+  accountLabel = "Profile",
+  showSettings = true,
+}) => {
   const navigate = useNavigate();
   const { ref, isOpen, toggle, close } = useDropdown();
 
@@ -53,14 +59,16 @@ const StoreOwner_UserMenu = ({ name = "Sipho Dlamini", role = "Store Owner" }) =
 
           <div className="hm-divider" />
 
-          <button type="button" role="menuitem" className="hm-item" onClick={() => goTo("/store-owner/settings")}>
-            <span className="hm-item-title">Settings</span>
-            <span className="hm-item-sub">Notification preferences</span>
-          </button>
+          {showSettings && (
+            <button type="button" role="menuitem" className="hm-item" onClick={() => goTo("/store-owner/settings")}>
+              <span className="hm-item-title">Settings</span>
+              <span className="hm-item-sub">Notification preferences</span>
+            </button>
+          )}
 
-          <button type="button" role="menuitem" className="hm-item" onClick={() => goTo("/store-owner/profile")}>
-            <span className="hm-item-title">Profile</span>
-            <span className="hm-item-sub">Your details and password</span>
+          <button type="button" role="menuitem" className="hm-item" onClick={() => goTo(accountPath)}>
+            <span className="hm-item-title">{accountLabel}</span>
+            <span className="hm-item-sub">Your details and account</span>
           </button>
 
           <div className="hm-divider" />
