@@ -1,5 +1,6 @@
 // src/pages/Staff/Staff_Stock.jsx
 import { useCallback, useState } from "react";
+import "../../Style/Staff/Staff_Layout.css";
 import "../../Style/Staff/Staff_Stock.css";
 import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
 import {
