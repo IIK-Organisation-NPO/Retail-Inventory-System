@@ -6,6 +6,7 @@ import "../../Style/Store Owner/StoreOwner_MovementHistory.css";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
+import exportToExcel from "../../utils/exportToExcel";
 
 // Mock data — replace with API data once the backend is connected
 const MOVEMENTS = [
@@ -70,46 +71,22 @@ const unique = (values) => [...new Set(values)].sort((a, b) => a.localeCompare(b
 const PRODUCTS = unique(MOVEMENTS.map((m) => m.product));
 const PEOPLE = unique(MOVEMENTS.map((m) => m.by));
 
-// Build an .xlsx file from the given movements and download it
-const exportToExcel = async (rows) => {
-  const { default: ExcelJS } = await import("exceljs");
-
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Movement history");
-
-  sheet.columns = [
-    { header: "Date and time", key: "date", width: 20 },
-    { header: "Product", key: "product", width: 24 },
-    { header: "Type", key: "type", width: 14 },
-    { header: "Change", key: "change", width: 10 },
-    { header: "On hand after", key: "onHandAfter", width: 14 },
-    { header: "By", key: "by", width: 20 },
-    { header: "Details", key: "details", width: 26 },
-  ];
-  sheet.getRow(1).font = { bold: true };
-
-  rows.forEach((m) => {
-    sheet.addRow({ ...m, date: formatDateTimeWithYear(m.date) });
+// Export the given movements to an .xlsx file
+const exportMovements = (rows) =>
+  exportToExcel({
+    fileBaseName: "movement-history",
+    sheetName: "Movement history",
+    columns: [
+      { header: "Date and time", key: "date", width: 20 },
+      { header: "Product", key: "product", width: 24 },
+      { header: "Type", key: "type", width: 14 },
+      { header: "Change", key: "change", width: 10, numFmt: "+0;-0;0" },
+      { header: "On hand after", key: "onHandAfter", width: 14 },
+      { header: "By", key: "by", width: 20 },
+      { header: "Details", key: "details", width: 26 },
+    ],
+    rows: rows.map((m) => ({ ...m, date: formatDateTimeWithYear(m.date) })),
   });
-  sheet.getColumn("change").numFmt = "+0;-0;0";
-
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-
-  const today = new Date();
-  const fileName = `movement-history-${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.xlsx`;
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
 
 const StoreOwner_MovementHistory = () => {
   const [dateRange, setDateRange] = useState("7");
@@ -149,7 +126,7 @@ const StoreOwner_MovementHistory = () => {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      await exportToExcel(filtered);
+      await exportMovements(filtered);
     } catch (err) {
       console.error("Export failed:", err);
       alert("Sorry, the export failed. Please try again.");

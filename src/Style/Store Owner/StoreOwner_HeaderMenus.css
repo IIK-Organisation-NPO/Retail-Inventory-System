@@ -47,6 +47,12 @@
   font-family: inherit;
 }
 
+.so-store-logo {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+}
+
 .hm-chevron {
   color: #111;
   transition: transform 0.15s ease;

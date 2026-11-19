@@ -22,7 +22,7 @@ const Dashboard = () => {
   return (
     <div className="app-layout">
       {/* Sidebar Component */}
-      <StoreOwnerSidebar />
+      <StoreOwnerSidebar notificationCount={3} />
 
       {/* Main Content Area */}
       <main className="main-content">
@@ -99,7 +99,13 @@ const Dashboard = () => {
           <div className="card chart-card">
             <div className="card-header">
               <h3>Sales, last 7 days</h3>
-              <button className="btn-outline">View sales report</button>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => navigate("/store-owner/sales")}
+              >
+                View sales report
+              </button>
             </div>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height="100%">
@@ -152,7 +158,13 @@ const Dashboard = () => {
           <div className="card">
             <div className="card-header">
               <h3>Low stock</h3>
-              <button className="btn-outline">Open inventory</button>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => navigate("/store-owner/inventory")}
+              >
+                Open inventory
+              </button>
             </div>
             <table className="data-table">
               <thead>

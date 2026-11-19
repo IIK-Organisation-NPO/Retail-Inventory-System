@@ -94,7 +94,7 @@ const Products = () => {
 
   return (
     <div className="app-layout">
-      <StoreOwnerSidebar />
+      <StoreOwnerSidebar notificationCount={3} />
 
       <main className="main-content">
         
