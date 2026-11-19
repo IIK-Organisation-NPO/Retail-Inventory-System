@@ -25,6 +25,10 @@
   gap: 8px;
 }
 
+.period-dropdown {
+  position: relative;
+}
+
 .mh-select {
   min-width: 150px;
   padding: 8px 32px 8px 10px;
@@ -45,6 +49,16 @@
 .mh-select:focus {
   outline: 2px solid #111;
   outline-offset: 1px;
+}
+
+.mh-period-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 250px;
+  max-width: 100%;
+  text-align: left;
+  white-space: nowrap;
 }
 
 /* --- Table card --- */
@@ -133,10 +147,22 @@
     flex: 1 1 calc(50% - 8px);
     min-width: 0;
   }
+
+  .mh-filters > .period-dropdown {
+    flex: 1 1 100%;
+  }
+
+  .mh-period-trigger {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
   .mh-select {
+    flex-basis: 100%;
+  }
+
+  .mh-filters > .period-dropdown {
     flex-basis: 100%;
   }
 }

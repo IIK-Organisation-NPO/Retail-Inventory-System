@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList } from "recharts";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
+import StoreOwner_RecordSale_popup from "../../components/Store Owner/StoreOwner_RecordSale_popup";
+import StoreOwner_AddStaff_popup from "../../components/Store Owner/StoreOwner_AddStaff_popup";
+import { STORES, readSavedStoreId } from "../../data/stores";
 import Logo from "../../assets/images/IIK logo.png";
 import "../../Style/Store Owner/StoreOwner_Dashboard.css";
 
@@ -16,8 +20,30 @@ const salesData = [
   { day: "Fri", amount: 1842 },
 ];
 
+const DASHBOARD_PRODUCTS = [
+  { id: 1, product: "Coca-Cola 500ml", price: 26.5, onHand: 89, barcode: "5449000000996" },
+  { id: 2, product: "Simba Chips Original", price: 14.63, onHand: 38, barcode: "6001234500028" },
+  { id: 3, product: "Sprite 500ml", price: 21.45, onHand: 55, barcode: "6001234500035" },
+  { id: 4, product: "NikNaks Cheese", price: 15, onHand: 66, barcode: "6001234500042" },
+  { id: 5, product: "Fanta Orange 500ml", price: 20.55, onHand: 12, barcode: "6001234500059" },
+  { id: 6, product: "Ace Maize Meal 2.5kg", price: 64.03, onHand: 20, barcode: "6001234500066" },
+  { id: 7, product: "Lay's Salt & Vinegar", price: 18.99, onHand: 24, barcode: "6001234500073" },
+];
+
+const INITIAL_STAFF = [
+  { id: 1, name: "Sipho", surname: "Dlamini", mobile: "0820000001", gender: "male", role: "Cashier", storeId: "mseleku", status: "Active" },
+  { id: 2, name: "Nomsa", surname: "Zulu", mobile: "0820000002", gender: "female", role: "Stock clerk", storeId: "mseleku", status: "Active" },
+  { id: 3, name: "Thabo", surname: "Mkhize", mobile: "0820000003", gender: "male", role: "Cashier", storeId: "mseleku", status: "Disabled" },
+];
+
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [showRecordSale, setShowRecordSale] = useState(false);
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [staff, setStaff] = useState(INITIAL_STAFF);
+  const [storeId] = useState(() => readSavedStoreId(STORES));
+
+  const isMobileTaken = (mobile) => staff.some((member) => member.mobile === mobile);
 
   return (
     <div className="app-layout">
@@ -41,7 +67,9 @@ const Dashboard = () => {
           
           <div className="header-right">
             <span className="sync-status">Synced 2 min ago</span>
-            <button className="btn-primary">Record sale</button>
+            <button type="button" className="btn-primary" onClick={() => setShowRecordSale(true)}>
+              Record sale
+            </button>
             <button
               type="button"
               className="btn-secondary"
@@ -202,7 +230,9 @@ const Dashboard = () => {
           <div className="card">
             <div className="card-header">
               <h3>Staff</h3>
-              <button className="btn-outline">Add staff</button>
+              <button type="button" className="btn-outline" onClick={() => setShowAddStaff(true)}>
+                Add staff
+              </button>
             </div>
             <table className="data-table">
               <thead>
@@ -213,21 +243,17 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Sipho Dlamini</td>
-                  <td>Cashier</td>
-                  <td><span className="status-pill status-neutral">Active</span></td>
-                </tr>
-                <tr>
-                  <td>Nomsa Zulu</td>
-                  <td>Stock clerk</td>
-                  <td><span className="status-pill status-neutral">Active</span></td>
-                </tr>
-                <tr>
-                  <td>Thabo Mkhize</td>
-                  <td>Cashier</td>
-                  <td><span className="status-pill status-danger">Disabled</span></td>
-                </tr>
+                {staff.map((member) => (
+                  <tr key={member.id}>
+                    <td>{member.name} {member.surname}</td>
+                    <td>{member.role}</td>
+                    <td>
+                      <span className={`status-pill ${member.status === "Active" ? "status-neutral" : "status-danger"}`}>
+                        {member.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -266,6 +292,24 @@ const Dashboard = () => {
         </div>
 
       </main>
+      {showRecordSale && (
+        <StoreOwner_RecordSale_popup
+          products={DASHBOARD_PRODUCTS}
+          onClose={() => setShowRecordSale(false)}
+        />
+      )}
+      {showAddStaff && (
+        <StoreOwner_AddStaff_popup
+          stores={STORES}
+          defaultStoreId={storeId}
+          isMobileTaken={isMobileTaken}
+          onSave={(member) => setStaff((current) => [
+            ...current,
+            { ...member, id: Date.now(), status: "Active" },
+          ])}
+          onClose={() => setShowAddStaff(false)}
+        />
+      )}
     </div>
   );
 };
