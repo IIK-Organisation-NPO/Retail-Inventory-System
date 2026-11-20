@@ -1,0 +1,25 @@
+$kind: http-request
+name: http://localhost:5000/api/auth/register
+description: ""
+url: http://localhost:5000/api/auth/register
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"roleName\": \"Admin\",\r
+
+    \  \"name\": \"System\",\r
+
+    \  \"surname\": \"Admin\",\r
+
+    \  \"email\": \"admin@test.com\",\r
+
+    \  \"mobileNumber\": \"0821112222\",\r
+
+    \  \"gender\": \"Male\",\r
+
+    \  \"password\": \"Password123!\"\r
+
+    }"
+order: 9000
