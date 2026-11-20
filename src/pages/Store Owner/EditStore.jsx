@@ -35,6 +35,15 @@ const EditStore = () => {
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const logoPreviewUrl = useRef("");
 
+  // Load any previously saved draft data on mount (in case they hit "Back")
+  useEffect(() => {
+    const savedDraft = localStorage.getItem("draftStore");
+    if (savedDraft) {
+      const parsed = JSON.parse(savedDraft);
+      if (parsed.address) setPhysicalAddress(parsed.address);
+    }
+  }, []);
+
   useEffect(
     () => () => {
       if (logoPreviewUrl.current) URL.revokeObjectURL(logoPreviewUrl.current);
@@ -76,6 +85,32 @@ const EditStore = () => {
 
   const handleSaveChanges = (event) => {
     event.preventDefault();
+    
+    // 1. Gather all form data
+    const formData = new FormData(event.target);
+    
+    // 2. Build the draft object
+    const draftStore = {
+      storeName: formData.get("storeName") || "Mseleku Tuckshop",
+      registrationNumber: "2024/123456/07", // Hardcoded for now based on the sidebar text
+      contactNumber: formData.get("contactNumber") || "",
+      email: formData.get("email") || "",
+      province: formData.get("province") || "",
+      municipality: formData.get("municipality") || "",
+      address: physicalAddress || "",
+      // Optional fields we capture for the review page
+      category: formData.get("storeCategory") || "",
+      description: formData.get("storeDescription") || "",
+      contactPerson: formData.get("contactPerson") || "",
+      postalAddress: formData.get("postalAddress") || "",
+      storeLocation: formData.get("storeLocation") || "",
+      operatingHours: formData.get("operatingHours") || "",
+      gpsCoordinates: formData.get("gpsCoordinates") || "",
+    };
+
+    // 3. Save to localStorage for the Review page
+    localStorage.setItem("draftStore", JSON.stringify(draftStore));
+    
     setShowSaveConfirmation(true);
   };
 
@@ -85,7 +120,8 @@ const EditStore = () => {
   };
 
   const closeSaveSuccess = () => {
-    navigate("/store-owner/stores");
+    // Navigate to the final step (Review)
+    navigate("/store-owner/stores/register/review");
   };
 
   return (
@@ -159,11 +195,11 @@ const EditStore = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Store / trading name *</label>
-                    <input type="text" className="form-input" defaultValue="Mseleku Tuckshop" required />
+                    <input type="text" name="storeName" className="form-input" defaultValue="Mseleku Tuckshop" required />
                   </div>
                   <div className="input-group">
                     <label>Store category *</label>
-                    <select className="form-input select-input" defaultValue="Grocery & essentials" required>
+                    <select name="storeCategory" className="form-input select-input" defaultValue="Grocery & essentials" required>
                       <option>Grocery & essentials</option>
                       <option>General dealer</option>
                       <option>Spaza shop</option>
@@ -174,18 +210,18 @@ const EditStore = () => {
                 {/* Store Description */}
                 <div className="input-group">
                   <label>Store description *</label>
-                  <textarea className="form-input" rows="2" defaultValue="Everyday groceries and household essentials." required></textarea>
+                  <textarea name="storeDescription" className="form-input" rows="2" defaultValue="Everyday groceries and household essentials." required></textarea>
                 </div>
 
                 {/* Row 2 */}
                 <div className="form-row">
                   <div className="input-group">
                     <label>Contact person *</label>
-                    <input type="text" className="form-input" defaultValue="Sipho Dlamini" required />
+                    <input type="text" name="contactPerson" className="form-input" defaultValue="Sipho Dlamini" required />
                   </div>
                   <div className="input-group">
                     <label>Store contact number *</label>
-                    <input type="tel" className="form-input" defaultValue="082 000 0001" required />
+                    <input type="tel" name="contactNumber" className="form-input" defaultValue="082 000 0001" required />
                   </div>
                 </div>
 
@@ -193,11 +229,11 @@ const EditStore = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Store email address *</label>
-                    <input type="email" className="form-input" defaultValue="sipho@example.co.za" required />
+                    <input type="email" name="email" className="form-input" defaultValue="sipho@example.co.za" required />
                   </div>
                   <div className="input-group">
                     <label>Website (optional)</label>
-                    <input type="text" className="form-input" defaultValue="Not provided" />
+                    <input type="text" name="website" className="form-input" defaultValue="Not provided" />
                   </div>
                 </div>
 
@@ -222,6 +258,7 @@ const EditStore = () => {
                   <label>Physical store address *</label>
                   <input
                     type="text"
+                    name="address"
                     className="form-input"
                     value={physicalAddress}
                     onChange={(event) => setPhysicalAddress(event.target.value)}
@@ -234,11 +271,11 @@ const EditStore = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Postal address</label>
-                    <input type="text" className="form-input" defaultValue="Pietermaritzburg" />
+                    <input type="text" name="postalAddress" className="form-input" defaultValue="Pietermaritzburg" />
                   </div>
                   <div className="input-group">
                     <label>Store location / area *</label>
-                    <input type="text" className="form-input" defaultValue="Pietermaritzburg" required />
+                    <input type="text" name="storeLocation" className="form-input" defaultValue="Pietermaritzburg" required />
                   </div>
                 </div>
 
@@ -246,7 +283,7 @@ const EditStore = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Province *</label>
-                    <select className="form-input select-input" defaultValue="KwaZulu-Natal" required>
+                    <select name="province" className="form-input select-input" defaultValue="KwaZulu-Natal" required>
                       {SOUTH_AFRICAN_PROVINCES.map((province) => (
                         <option key={province}>{province}</option>
                       ))}
@@ -254,7 +291,7 @@ const EditStore = () => {
                   </div>
                   <div className="input-group">
                     <label>Operating hours *</label>
-                    <input type="text" className="form-input" defaultValue="Mon–Fri, 08:00–17:00" required />
+                    <input type="text" name="operatingHours" className="form-input" defaultValue="Mon–Fri, 08:00–17:00" required />
                   </div>
                 </div>
               </form>
@@ -303,12 +340,12 @@ const EditStore = () => {
               
               <div className="input-group mt-4">
                 <label>Municipality</label>
-                <input type="text" className="form-input" defaultValue="Msunduzi Local Municipality" />
+                <input type="text" name="municipality" className="form-input" defaultValue="Msunduzi Local Municipality" />
               </div>
               
               <div className="input-group">
                 <label>GPS coordinates</label>
-                <input type="text" className="form-input" defaultValue="-29.6008, 30.3794" />
+                <input type="text" name="gpsCoordinates" className="form-input" defaultValue="-29.6008, 30.3794" />
               </div>
               
               <button className="btn-outline w-full">Use my location</button>
@@ -322,9 +359,9 @@ const EditStore = () => {
           <button 
             type="button"
             className="btn-outline" 
-            onClick={() => navigate("/store-owner/stores")}
+            onClick={() => navigate("/store-owner/stores/register/company-information")}
           >
-            Cancel
+            Back
           </button>
           
           <button 
@@ -332,7 +369,7 @@ const EditStore = () => {
             form="edit-store-form"
             className="btn-primary"
           >
-            Save changes
+            Save and Continue
           </button>
         </div>
 
@@ -369,7 +406,7 @@ const EditStore = () => {
                   </>
                 ) : (
                   <button type="button" className="btn-primary" autoFocus onClick={closeSaveSuccess}>
-                    Close
+                    Continue to Review
                   </button>
                 )}
               </div>

@@ -1,5 +1,5 @@
 // src/pages/Store Owner/StoreOwner_MovementHistory.jsx
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 import "../../Style/Store Owner/StoreOwner_MovementHistory.css";
@@ -8,28 +8,6 @@ import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_St
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import StoreOwner_PeriodPopup from "../../components/Store Owner/StoreOwner_PeriodPopup";
 import exportToExcel from "../../utils/exportToExcel";
-
-// Mock data — replace with API data once the backend is connected
-const MOVEMENTS = [
-  { id: 1, date: "2026-11-13T16:42", product: "Coca-Cola 500ml", type: "Sale", change: -2, onHandAfter: 89, by: "Lindiwe Ngcobo", details: "Cash" },
-  { id: 2, date: "2026-11-13T16:42", product: "Simba Chips Original", type: "Sale", change: -1, onHandAfter: 38, by: "Lindiwe Ngcobo", details: "Cash" },
-  { id: 3, date: "2026-11-13T13:55", product: "Sprite 500ml", type: "Sale", change: -3, onHandAfter: 55, by: "Lindiwe Ngcobo", details: "Cash" },
-  { id: 4, date: "2026-11-12T17:40", product: "Sprite 500ml", type: "Adjustment", change: -2, onHandAfter: 58, by: "Sipho Dlamini", details: "Stock count (was 60)" },
-  { id: 5, date: "2026-11-12T11:20", product: "NikNaks Cheese", type: "Sale", change: -4, onHandAfter: 66, by: "Bheki Sithole", details: "Mobile money" },
-  { id: 6, date: "2026-11-11T09:30", product: "Coca-Cola 500ml", type: "Stock in", change: 24, onHandAfter: 91, by: "Sipho Dlamini", details: "Tiger Brands Ltd" },
-  { id: 7, date: "2026-11-10T14:05", product: "Fanta Orange 500ml", type: "Stock out", change: -1, onHandAfter: 12, by: "Sipho Dlamini", details: "Damaged" },
-  { id: 8, date: "2026-11-10T09:00", product: "Lay's Salt & Vinegar", type: "Stock in", change: 24, onHandAfter: 24, by: "Sipho Dlamini", details: "Tiger Brands Ltd" },
-  { id: 9, date: "2026-11-09T15:10", product: "Fanta Orange 500ml", type: "Sale", change: -3, onHandAfter: 13, by: "Lindiwe Ngcobo", details: "Cash" },
-  { id: 10, date: "2026-11-08T10:45", product: "NikNaks Cheese", type: "Stock in", change: 36, onHandAfter: 70, by: "Sipho Dlamini", details: "Tiger Brands Ltd" },
-  { id: 11, date: "2026-11-07T16:20", product: "Simba Chips Original", type: "Sale", change: -2, onHandAfter: 39, by: "Bheki Sithole", details: "Cash" },
-  { id: 12, date: "2026-11-06T12:00", product: "Coca-Cola 500ml", type: "Sale", change: -5, onHandAfter: 67, by: "Lindiwe Ngcobo", details: "Mobile money" },
-  { id: 13, date: "2026-11-05T09:15", product: "Sprite 500ml", type: "Stock in", change: 24, onHandAfter: 60, by: "Sipho Dlamini", details: "Coca-Cola Beverages SA" },
-  { id: 14, date: "2026-11-04T18:30", product: "Fanta Orange 500ml", type: "Stock out", change: -2, onHandAfter: 16, by: "Bheki Sithole", details: "Expired" },
-  { id: 15, date: "2026-11-03T11:40", product: "Simba Chips Original", type: "Sale", change: -4, onHandAfter: 41, by: "Lindiwe Ngcobo", details: "Cash" },
-  { id: 16, date: "2026-11-01T08:30", product: "Coca-Cola 500ml", type: "Adjustment", change: 1, onHandAfter: 72, by: "Sipho Dlamini", details: "Stock count (was 71)" },
-  { id: 17, date: "2026-10-28T14:00", product: "Lay's Salt & Vinegar", type: "Sale", change: -6, onHandAfter: 0, by: "Bheki Sithole", details: "Cash" },
-  { id: 18, date: "2026-10-20T10:10", product: "Fanta Orange 500ml", type: "Stock in", change: 18, onHandAfter: 18, by: "Sipho Dlamini", details: "Coca-Cola Beverages SA" },
-];
 
 const PAGE_SIZE = 8;
 
@@ -40,9 +18,7 @@ const DATE_RANGES = [
 ];
 
 const MOVEMENT_TYPES = ["Sale", "Stock in", "Stock out", "Adjustment"];
-
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 const pad = (n) => String(n).padStart(2, "0");
 
 const formatDateRangeLabel = (from, to) => {
@@ -59,12 +35,14 @@ const formatDateRangeLabel = (from, to) => {
 
 // "13 Nov, 16:42"
 const formatDateTime = (iso) => {
+  if (!iso) return "";
   const d = new Date(iso);
   return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 // "13 Nov 2026, 16:42" — includes the year for the exported file
 const formatDateTimeWithYear = (iso) => {
+  if (!iso) return "";
   const d = new Date(iso);
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
@@ -73,16 +51,6 @@ const formatDateTimeWithYear = (iso) => {
 const formatChange = (change) => (change > 0 ? `+${change}` : `−${Math.abs(change)}`);
 
 const typeClassName = (type) => `mh-type mh-type-${type.toLowerCase().replace(/\s+/g, "-")}`;
-
-// Date ranges are measured back from the newest movement, so the mock data
-// stays visible. Switch this to `new Date()` once real data is connected.
-const REFERENCE_DATE = new Date(
-  Math.max(...MOVEMENTS.map((m) => new Date(m.date).getTime()))
-);
-
-const unique = (values) => [...new Set(values)].sort((a, b) => a.localeCompare(b));
-const PRODUCTS = unique(MOVEMENTS.map((m) => m.product));
-const PEOPLE = unique(MOVEMENTS.map((m) => m.by));
 
 // Export the given movements to an .xlsx file
 const exportMovements = (rows) =>
@@ -102,6 +70,10 @@ const exportMovements = (rows) =>
   });
 
 const StoreOwner_MovementHistory = () => {
+  const [movements, setMovements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  
   const [dateRange, setDateRange] = useState("7");
   const [customRange, setCustomRange] = useState(null);
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
@@ -111,39 +83,79 @@ const StoreOwner_MovementHistory = () => {
   const [page, setPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Apply the filters and sort newest first
+  const storeId = localStorage.getItem("activeStoreId") || 1;
+  const token = localStorage.getItem("token");
+
+  // --- 1. FETCH DATA FROM BACKEND ---
+  useEffect(() => {
+    const fetchMovements = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/inventory/history?storeId=${storeId}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to load history");
+        
+        setMovements(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMovements();
+  }, [storeId, token]);
+
+  // --- 2. DERIVE FILTER OPTIONS ---
+  const PRODUCTS = useMemo(
+    () => [...new Set(movements.map((m) => m.product))].sort((a, b) => a.localeCompare(b)),
+    [movements]
+  );
+  
+  const PEOPLE = useMemo(
+    () => [...new Set(movements.map((m) => m.by))].sort((a, b) => a.localeCompare(b)),
+    [movements]
+  );
+
+  // --- 3. APPLY FILTERS ---
   const filtered = useMemo(() => {
     let cutoff = null;
     let customStart = null;
     let customEnd = null;
+    const today = new Date();
 
     if (dateRange === "today") {
-      cutoff = new Date(REFERENCE_DATE);
+      cutoff = new Date(today);
       cutoff.setHours(0, 0, 0, 0);
     } else if (dateRange === "custom" && customRange) {
       customStart = new Date(`${customRange.from}T00:00:00`);
       customEnd = new Date(`${customRange.to}T23:59:59`);
     } else if (dateRange !== "all") {
-      cutoff = new Date(REFERENCE_DATE.getTime() - Number(dateRange) * 24 * 60 * 60 * 1000);
+      cutoff = new Date(today.getTime() - Number(dateRange) * 24 * 60 * 60 * 1000);
     }
 
-    return MOVEMENTS.filter((m) => {
+    return movements.filter((m) => {
       const movementDate = new Date(m.date);
+      
+      // Date filter
       if (cutoff && movementDate < cutoff) return false;
       if (customStart && (movementDate < customStart || movementDate > customEnd)) return false;
+      
+      // Dropdown filters
       if (product !== "all" && m.product !== product) return false;
       if (type !== "all" && m.type !== type) return false;
       if (person !== "all" && m.by !== person) return false;
+      
       return true;
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [dateRange, customRange, product, type, person]);
+  }, [movements, dateRange, customRange, product, type, person]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const pageRows = filtered.slice(startIndex, startIndex + PAGE_SIZE);
 
-  // Change a filter and jump back to the first page
   const handleFilter = (setter) => (e) => {
     setter(e.target.value);
     setPage(1);
@@ -161,18 +173,22 @@ const StoreOwner_MovementHistory = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="so-layout">
+        <StoreOwnerSidebar />
+        <main className="so-main" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <p>Loading movement history...</p>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="so-layout">
-      {/* =========================================
-          SIDEBAR
-          ========================================= */}
       <StoreOwnerSidebar notificationCount={3} />
 
-      {/* =========================================
-          MAIN CONTENT
-          ========================================= */}
       <main className="so-main">
-        {/* Page header: title, store selector, export, user avatar */}
         <header className="so-header">
           <h1 className="so-page-title">Movement history</h1>
 
@@ -192,7 +208,12 @@ const StoreOwner_MovementHistory = () => {
           </div>
         </header>
 
-        {/* Back link */}
+        {error && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+            {error}
+          </div>
+        )}
+
         <Link to="/store-owner/inventory" className="mh-back-link">
           ← Back to Inventory
         </Link>
@@ -275,7 +296,7 @@ const StoreOwner_MovementHistory = () => {
               <tbody>
                 {pageRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="mh-empty">
+                    <td colSpan={7} className="mh-empty" style={{ textAlign: "center", padding: "20px" }}>
                       No movements match these filters.
                     </td>
                   </tr>
@@ -287,7 +308,9 @@ const StoreOwner_MovementHistory = () => {
                       <td>
                         <span className={typeClassName(m.type)}>{m.type}</span>
                       </td>
-                      <td className="mh-change">{formatChange(m.change)}</td>
+                      <td className="mh-change" style={{ color: m.change > 0 ? 'green' : 'inherit' }}>
+                        {formatChange(m.change)}
+                      </td>
                       <td>{m.onHandAfter}</td>
                       <td>{m.by}</td>
                       <td>{m.details}</td>

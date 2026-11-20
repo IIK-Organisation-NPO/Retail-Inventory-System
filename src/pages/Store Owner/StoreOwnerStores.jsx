@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
@@ -10,37 +10,53 @@ const Stores = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Dummy data for the stores
-  const stores = [
-    {
-      id: 1,
-      name: "Mseleku Tuckshop",
-      location: "Pietermaritzburg, KwaZulu-Natal",
-      type: "Grocery & essentials",
-      staffCount: 6,
-      phone: "082 000 0001",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Riverside General Dealer",
-      location: "Durban, KwaZulu-Natal",
-      type: "General dealer",
-      staffCount: 2,
-      phone: "082 000 0003",
-      status: "Active",
-    },
-    {
-      id: 3,
-      name: "KwaMashu Corner Store",
-      location: "KwaMashu, KwaZulu-Natal",
-      type: "Grocery & essentials",
-      staffCount: 4,
-      phone: "082 000 0002",
-      status: "Active",
-    },
-  ];
+  // Real Data State
+  const [stores, setStores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
+  const token = localStorage.getItem("token");
+
+  // --- 1. FETCH STORES FROM BACKEND ---
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/stores/my-stores", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to load stores");
+
+        // Map the database response to the frontend's expected structure
+        const formattedStores = data.map(store => ({
+          id: store.StoreID,
+          name: store.StoreName,
+          // Cleanly join address parts, ignoring any that are null/empty
+          location: [store.Address, store.Municipality, store.Province].filter(Boolean).join(", "),
+          type: "Grocery & essentials", // Default type for now
+          staffCount: store.staffCount || 0,
+          phone: store.ContactNumber,
+          status: store.Status || "Active",
+        }));
+
+        setStores(formattedStores);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) fetchStores();
+  }, [token]);
+
+  // --- 2. DYNAMIC STAT CALCULATIONS ---
+  const totalStores = stores.length;
+  const totalStaff = stores.reduce((sum, store) => sum + store.staffCount, 0);
+  const activeStores = stores.filter(store => store.status === "Active").length;
+
+  // --- 3. FILTERING ---
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
   const filteredStores = stores.filter((store) => {
     const matchesSearch =
@@ -51,6 +67,24 @@ const Stores = () => {
 
     return matchesSearch && matchesStatus;
   });
+
+  // Status Pill Color Helper
+  const getStatusClass = (status) => {
+    if (status === "Active") return "status-success";
+    if (status === "Pending") return "status-warning";
+    return "status-danger";
+  };
+
+  if (loading) {
+    return (
+      <div className="app-layout">
+        <StoreOwnerSidebar />
+        <main className="main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <p>Loading your stores...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app-layout">
@@ -71,26 +105,32 @@ const Stores = () => {
           </div>
         </header>
 
+        {error && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+            {error}
+          </div>
+        )}
+
         {/* Stat Cards Row */}
         <div className="stat-cards-grid stores-stats-grid">
           <div className="stat-card">
             <span className="stat-label">Total stores</span>
             <div className="stat-value-row">
-              <h3 className="stat-value">3</h3>
+              <h3 className="stat-value">{totalStores}</h3>
               <span className="stat-sub">All your locations</span>
             </div>
           </div>
           <div className="stat-card">
             <span className="stat-label">Total staff</span>
             <div className="stat-value-row">
-              <h3 className="stat-value">12</h3>
+              <h3 className="stat-value">{totalStaff}</h3>
               <span className="stat-sub">Across all stores</span>
             </div>
           </div>
           <div className="stat-card">
             <span className="stat-label">Active stores</span>
             <div className="stat-value-row">
-              <h3 className="stat-value">3</h3>
+              <h3 className="stat-value">{activeStores}</h3>
               <span className="stat-sub">Ready to trade</span>
             </div>
           </div>
@@ -121,7 +161,8 @@ const Stores = () => {
           >
             <option value="all">All statuses</option>
             <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
+            <option value="Pending">Pending</option>
+            <option value="Rejected">Rejected</option>
           </select>
         </div>
 
@@ -130,14 +171,18 @@ const Stores = () => {
           
           {/* Map through existing stores */}
           {filteredStores.length === 0 ? (
-            <p className="stores-empty">No stores match your filters.</p>
+            <p className="stores-empty" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#666' }}>
+              No stores match your filters.
+            </p>
           ) : filteredStores.map((store) => (
             <div key={store.id} className="card store-card">
               
               {/* Card Header */}
               <div className="store-card-header">
                 <h3 className="store-name">{store.name}</h3>
-                <span className="status-pill status-neutral">{store.status}</span>
+                <span className={`status-pill ${getStatusClass(store.status)}`}>
+                  {store.status}
+                </span>
               </div>
               
               <p className="store-location">{store.location}</p>

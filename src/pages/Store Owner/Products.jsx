@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+// Reusing the Sidebar component
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
+// Importing the stylesheet
 import "../../Style/Store Owner/Products.css";
 
 const Products = () => {
@@ -11,14 +13,54 @@ const Products = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const [products, setProducts] = useState([
-    { id: "seed-1", name: "Simba Chips Original", category: "Snacks", barcode: "6001240200018", cost: "R12.99", price: "R14.63", onHand: 38, reorder: 15, status: "OK" },
-    { id: "seed-2", name: "Lay's Salt & Vinegar", category: "Snacks", barcode: "6001240200025", cost: "R14.99", price: "R20.39", onHand: 24, reorder: 15, status: "OK" },
-    { id: "seed-3", name: "NikNaks Cheese", category: "Snacks", barcode: "6001240200032", cost: "R11.99", price: "R15.00", onHand: 66, reorder: 15, status: "OK" },
-    { id: "seed-4", name: "Coca-Cola 500ml", category: "Drinks", barcode: "5449000000996", cost: "R18.99", price: "R26.50", onHand: 89, reorder: 15, status: "OK" },
-    { id: "seed-5", name: "Fanta Orange 500ml", category: "Drinks", barcode: "5449000050205", cost: "R17.99", price: "R20.55", onHand: 12, reorder: 15, status: "Low" },
-    { id: "seed-6", name: "Sprite 500ml", category: "Drinks", barcode: "5449000014535", cost: "R17.99", price: "R21.45", onHand: 55, reorder: 15, status: "OK" },
-  ]);
+  // --- Real Data State ---
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  
+  // Get the active store ID (Falls back to 1 if not set yet by Store Switcher)
+  const [storeId] = useState(localStorage.getItem("activeStoreId") || 1);
+
+  // --- 1. FETCH PRODUCTS FROM DATABASE ---
+  const fetchProducts = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/products?storeId=${storeId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to load products");
+
+      // Map database columns to the format the UI expects
+      const formattedProducts = data.map((p) => ({
+        id: p.ProductID,
+        name: p.Name,
+        category: p.Category,
+        barcode: p.Barcode,
+        unit: p.Unit,
+        cost: `R${Number(p.CostPrice).toFixed(2)}`,
+        price: `R${Number(p.SellingPrice).toFixed(2)}`,
+        onHand: p.OnHand,
+        reorder: p.ReorderLevel,
+        status: p.OnHand <= p.ReorderLevel ? "Low" : "OK",
+        rawCost: p.CostPrice, // Keep raw numbers for editing
+        rawPrice: p.SellingPrice
+      }));
+
+      setProducts(formattedProducts);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, [storeId]);
 
   const openAddProductModal = () => {
     setEditingProduct(null);
@@ -37,80 +79,127 @@ const Products = () => {
     setEditingProduct(null);
   };
 
-  const handleSaveProduct = (event) => {
+  // --- 2. SAVE PRODUCT TO DATABASE ---
+  const handleSaveProduct = async (event) => {
     event.preventDefault();
+    const token = localStorage.getItem("token");
 
     const formData = new FormData(event.currentTarget);
-    // Null-safe: get() can return null if the field is missing/unchecked
-    const name = (formData.get("name") ?? "").toString().trim();
-    const category = formData.get("category") ?? "Groceries";
-    const barcode = (formData.get("barcode") ?? "").toString().trim();
-    const onHand = Number(formData.get("onHand") ?? 0);
-    const reorder = Number(formData.get("reorder") ?? 0);
-    const cost = Number(formData.get("cost") ?? 0);
-    const price = Number(formData.get("price") ?? 0);
-
-    const savedProduct = {
-      id: editingProduct?.id ?? `product-${Date.now()}`,
-      name,
-      category,
-      barcode,
-      unit: (formData.get("unit") ?? "").toString().trim(),
-      cost: `R${cost.toFixed(2)}`,
-      price: `R${price.toFixed(2)}`,
-      onHand,
-      reorder,
-      status: onHand <= reorder ? "Low" : "OK",
+    
+    // Construct the payload exactly as the backend expects it
+    const productData = {
+      storeId: storeId,
+      name: formData.get("name").trim(),
+      category: formData.get("category"),
+      barcode: formData.get("barcode")?.trim() || null,
+      unit: formData.get("unit")?.trim() || null,
+      costPrice: Number(formData.get("cost")),
+      sellingPrice: Number(formData.get("price")),
+      onHand: Number(formData.get("onHand")),
+      reorderLevel: Number(formData.get("reorder"))
     };
 
-    if (editingProduct) {
-      setProducts((currentProducts) =>
-        currentProducts.map((product) =>
-          product.id === editingProduct.id ? savedProduct : product
-        )
-      );
-      setSuccessMessage(`${name} updated in the product catalogue.`);
-    } else {
-      setProducts((currentProducts) => [savedProduct, ...currentProducts]);
-      setSuccessMessage(`${name} saved and added to the product catalogue.`);
-    }
+    try {
+      let response;
+      
+      if (editingProduct) {
+        // Update Existing Product (PUT)
+        response = await fetch(`http://localhost:5000/api/products/${editingProduct.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(productData)
+        });
+      } else {
+        // Add New Product (POST)
+        response = await fetch("http://localhost:5000/api/products", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(productData)
+        });
+      }
 
-    setSearchTerm("");
-    setSelectedCategory("All categories");
-    setIsModalOpen(false);
-    setEditingProduct(null);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to save product");
+
+      // Success!
+      setSuccessMessage(
+        editingProduct 
+          ? `${productData.name} updated in the product catalogue.` 
+          : `${productData.name} saved and added to the product catalogue.`
+      );
+      
+      // Reset filters and close modal
+      setSearchTerm("");
+      setSelectedCategory("All categories");
+      closeProductModal();
+      
+      // Refresh the data from the DB
+      fetchProducts();
+
+    } catch (err) {
+      alert(err.message); // Show error message
+    }
   };
 
+  // --- Filtering Logic ---
   const categories = [...new Set(products.map((product) => product.category))];
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  
   const filteredProducts = products.filter((product) => {
-    // Null-safe search across all searchable fields
     const matchesSearch = [product.name, product.barcode, product.category]
-      .some((value) => (value ?? "").toString().toLowerCase().includes(normalizedSearchTerm));
+      .some((value) => value && value.toLowerCase().includes(normalizedSearchTerm));
     const matchesCategory =
       selectedCategory === "All categories" || product.category === selectedCategory;
 
     return matchesSearch && matchesCategory;
   });
 
+  if (loading) {
+    return (
+      <div className="app-layout">
+        <StoreOwnerSidebar />
+        <main className="main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <p>Loading products...</p>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app-layout">
       <StoreOwnerSidebar notificationCount={3} />
 
       <main className="main-content">
+        
+        {/* Page Header */}
         <header className="page-header">
           <h1 className="page-title">Products</h1>
+          
           <div className="header-actions">
             <StoreOwner_StoreSwitcher />
             <StoreOwner_UserMenu />
           </div>
         </header>
 
+        {/* Error Banner */}
+        {error && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+            {error}
+          </div>
+        )}
+
+        {/* Filters Row */}
         <div className="filters-row">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search by name, barcode or category"
+          <input 
+            type="text" 
+            className="search-input" 
+            placeholder="Search by name, barcode or category" 
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
@@ -126,13 +215,19 @@ const Products = () => {
           </select>
         </div>
 
+        {/* Product Catalogue Card */}
         <div className="card products-card">
           <div className="card-header">
             <h3>Product catalogue</h3>
-            <button type="button" className="btn-primary" onClick={openAddProductModal}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={openAddProductModal}
+            >
               Add product
             </button>
           </div>
+          
           {successMessage && (
             <p className="product-save-notice" role="status" aria-live="polite">
               {successMessage}
@@ -164,7 +259,7 @@ const Products = () => {
                   <td>{product.onHand}</td>
                   <td>{product.reorder}</td>
                   <td>
-                    <span className={`status-pill ${product.status === "Low" ? "status-warning" : "status-neutral"}`}>
+                    <span className={`status-pill ${product.status === 'Low' ? 'status-warning' : 'status-neutral'}`}>
                       {product.status}
                     </span>
                   </td>
@@ -181,24 +276,30 @@ const Products = () => {
               ))}
               {filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="empty-products">
-                    No products match your search and category filter.
+                  <td colSpan={9} className="empty-products" style={{ textAlign: "center", padding: "20px" }}>
+                    No products found. Add your first product to get started!
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
       </main>
 
+      {/* =========================================
+          ADD / EDIT PRODUCT MODAL
+          ========================================= */}
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content add-product-modal">
+            
+            {/* Modal Header */}
             <div className="modal-header">
               <h2>{editingProduct ? "Edit Product" : "Add Product"}</h2>
-              <button
+              <button 
                 type="button"
-                className="modal-close-btn"
+                className="modal-close-btn" 
                 onClick={closeProductModal}
                 aria-label="Close modal"
               >
@@ -206,12 +307,16 @@ const Products = () => {
               </button>
             </div>
 
+            {/* Modal Form */}
             <form key={editingProduct?.id ?? "new-product"} onSubmit={handleSaveProduct}>
+              
+              {/* Product Name */}
               <div className="input-group">
                 <label htmlFor="product-name">Product name</label>
                 <input id="product-name" name="name" type="text" className="form-input" defaultValue={editingProduct?.name ?? ""} required />
               </div>
 
+              {/* Category & Barcode Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-category">Category</label>
@@ -227,10 +332,11 @@ const Products = () => {
                 </div>
               </div>
 
+              {/* Unit of Measure & Reorder Level Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-unit">Unit of measure</label>
-                  <input id="product-unit" name="unit" type="text" className="form-input" defaultValue={editingProduct?.unit ?? ""} required />
+                  <input id="product-unit" name="unit" type="text" className="form-input" placeholder="e.g. 500ml, 1kg" defaultValue={editingProduct?.unit ?? ""} required />
                 </div>
                 <div className="input-group">
                   <label htmlFor="product-reorder">Reorder level</label>
@@ -238,34 +344,44 @@ const Products = () => {
                 </div>
               </div>
 
+              {/* Unit Cost & Selling Price Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-cost">Unit cost (R)</label>
-                  <input id="product-cost" name="cost" type="number" min="0" step="0.01" className="form-input" defaultValue={editingProduct ? Number(editingProduct.cost.replace(/[^\d.]/g, "")) : ""} required />
+                  {/* We use rawCost for editing so the input gets a plain number like 12.99 instead of R12.99 */}
+                  <input id="product-cost" name="cost" type="number" min="0" step="0.01" className="form-input" defaultValue={editingProduct ? editingProduct.rawCost : ""} required />
                 </div>
                 <div className="input-group">
                   <label htmlFor="product-price">Selling price (R)</label>
-                  <input id="product-price" name="price" type="number" min="0" step="0.01" className="form-input" defaultValue={editingProduct ? Number(editingProduct.price.replace(/[^\d.]/g, "")) : ""} required />
+                  <input id="product-price" name="price" type="number" min="0" step="0.01" className="form-input" defaultValue={editingProduct ? editingProduct.rawPrice : ""} required />
                 </div>
               </div>
 
+              {/* Current Quantity */}
               <div className="input-group">
                 <label htmlFor="product-on-hand">Current quantity</label>
                 <input id="product-on-hand" name="onHand" type="number" min="0" step="1" className="form-input" defaultValue={editingProduct?.onHand ?? ""} required />
               </div>
 
+              {/* Form Actions (Buttons) */}
               <div className="modal-actions">
                 <button type="submit" className="btn-primary save-btn">
                   {editingProduct ? "Save changes" : "Save product"}
                 </button>
-                <button type="button" className="btn-outline cancel-btn" onClick={closeProductModal}>
+                <button 
+                  type="button" 
+                  className="btn-outline cancel-btn"
+                  onClick={closeProductModal}
+                >
                   Cancel
                 </button>
               </div>
             </form>
+
           </div>
         </div>
       )}
+      
     </div>
   );
 };

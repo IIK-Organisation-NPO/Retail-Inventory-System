@@ -7,31 +7,66 @@ import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_St
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import StoreOwner_AddStaff_popup from "../../components/Store Owner/StoreOwner_AddStaff_popup";
 import StoreOwner_ConfirmModal from "../../components/Store Owner/StoreOwner_ConfirmModal";
-import { STORES, readSavedStoreId, saveStoreId } from "../../data/stores";
-
-// Mock data — replace with API data once the backend is connected
-const STAFF = [
-  { id: 1, name: "Lindiwe", surname: "Ngcobo", email: "", mobile: "0820000011", gender: "female", hasDisability: false, disabilityType: "", role: "Cashier", storeId: "mseleku", status: "Active" },
-  { id: 2, name: "Bheki", surname: "Sithole", email: "", mobile: "0820000012", gender: "male", hasDisability: false, disabilityType: "", role: "Cashier", storeId: "mseleku", status: "Active" },
-  { id: 3, name: "Zanele", surname: "Cele", email: "", mobile: "0820000013", gender: "female", hasDisability: false, disabilityType: "", role: "Stock clerk", storeId: "mseleku", status: "Disabled" },
-  { id: 4, name: "Thabo", surname: "Mkhize", email: "", mobile: "0820000014", gender: "male", hasDisability: false, disabilityType: "", role: "Cashier", storeId: "ezakheni", status: "Active" },
-];
+import { STORES } from "../../data/stores";
 
 const TOAST_MS = 3000;
 
 // "0820000011" -> "082 000 0011"
-const formatMobile = (digits) => `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+const formatMobile = (digits) => {
+  if (!digits) return "N/A";
+  const clean = digits.replace(/\D/g, "");
+  return `${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6)}`;
+};
 
 const fullName = (s) => `${s.name} ${s.surname}`;
 
 const StoreOwner_Staff = () => {
-  const [staff, setStaff] = useState(STAFF);
-  const [storeId, setStoreId] = useState(() => readSavedStoreId());
+  // --- State ---
+  const [staff, setStaff] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  
+  const [storeId, setStoreId] = useState(() => localStorage.getItem("activeStoreId") || 1);
   const [popup, setPopup] = useState(null); // { mode: "add" } | { mode: "edit", member }
   const [confirm, setConfirm] = useState(null); // { member, action: "disable" | "enable" }
   const [toast, setToast] = useState("");
 
-  const storeStaff = staff.filter((s) => s.storeId === storeId);
+  const token = localStorage.getItem("token");
+
+  // --- 1. FETCH STAFF FROM BACKEND ---
+  const fetchStaff = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/staff?storeId=${storeId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to load staff");
+
+      // Map DB columns to match the frontend's expected structure
+      const formatted = data.map((s) => ({
+        id: s.id,
+        name: s.name,
+        surname: s.surname,
+        email: s.email,
+        mobile: s.mobile,
+        role: s.role,
+        status: s.IsActive ? "Active" : "Disabled",
+        storeId: storeId // Local reference
+      }));
+
+      setStaff(formatted);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStaff();
+  }, [storeId]);
 
   // Hide the success message after a few seconds
   useEffect(() => {
@@ -46,47 +81,94 @@ const StoreOwner_Staff = () => {
   const isMobileTaken = (mobile, staffId) =>
     staff.some((s) => s.mobile === mobile && s.id !== staffId);
 
-  const handleSave = (member) => {
-    if (member.id) {
-      setStaff((current) => current.map((s) => (s.id === member.id ? member : s)));
-      setToast(`${fullName(member)}'s details were updated.`);
-    } else {
-      setStaff((current) => [...current, { ...member, id: Date.now(), status: "Active" }]);
-      setToast(`${fullName(member)} was added as a ${member.role.toLowerCase()}.`);
-    }
-    // Show the store the staff member was saved to
-    if (member.storeId !== storeId) {
-      saveStoreId(member.storeId);
-      setStoreId(member.storeId);
+  // --- 2. HANDLE ADD / EDIT STAFF ---
+  const handleSave = async (member) => {
+    try {
+      let response;
+      
+      const payload = {
+        storeId: storeId,
+        name: member.name,
+        surname: member.surname,
+        email: member.email,
+        mobile: member.mobile,
+        role: member.role
+      };
+
+      if (member.id) {
+        // Edit existing staff
+        response = await fetch(`http://localhost:5000/api/staff/${member.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        // Add new staff
+        response = await fetch("http://localhost:5000/api/staff", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to save staff");
+
+      setToast(member.id ? `${fullName(member)}'s details were updated.` : `${fullName(member)} was added.`);
+      closePopup();
+      fetchStaff(); // Refresh the table from the DB
+
+    } catch (err) {
+      alert(err.message); // Ideally, show this inside the popup
     }
   };
 
-  const handleConfirm = () => {
+  // --- 3. HANDLE DISABLE / ENABLE ---
+  const handleConfirm = async () => {
     const { member, action } = confirm;
-    const status = action === "disable" ? "Disabled" : "Active";
-    // TODO: update the staff member's status with the API
-    setStaff((current) => current.map((s) => (s.id === member.id ? { ...s, status } : s)));
-    setToast(`${fullName(member)} was ${action === "disable" ? "disabled" : "enabled"}.`);
-    setConfirm(null);
+    const isActive = action === "enable";
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/staff/${member.id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to update status");
+
+      setToast(`${fullName(member)} was ${action}d successfully.`);
+      closeConfirm();
+      fetchStaff(); // Refresh the table
+
+    } catch (err) {
+      alert(err.message);
+      closeConfirm();
+    }
   };
+
+  if (loading && staff.length === 0) return <div style={{ padding: '50px' }}>Loading staff...</div>;
 
   return (
     <div className="so-layout">
-      {/* =========================================
-          SIDEBAR
-          ========================================= */}
       <StoreOwnerSidebar notificationCount={3} />
 
-      {/* =========================================
-          MAIN CONTENT
-          ========================================= */}
       <main className="so-main">
-        {/* Page header: title, store selector, add staff, user menu */}
+        {/* Page header */}
         <header className="so-header">
           <h1 className="so-page-title">Staff</h1>
 
           <div className="so-header-actions">
-            {/* key makes the switcher show the store chosen after saving */}
             <StoreOwner_StoreSwitcher key={storeId} onChange={(store) => setStoreId(store.id)} />
             <button type="button" className="so-btn so-btn-primary" onClick={() => setPopup({ mode: "add" })}>
               Add staff
@@ -94,6 +176,12 @@ const StoreOwner_Staff = () => {
             <StoreOwner_UserMenu />
           </div>
         </header>
+
+        {error && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+            {error}
+          </div>
+        )}
 
         {/* Store staff table */}
         <section className="so-card st-card">
@@ -113,14 +201,14 @@ const StoreOwner_Staff = () => {
                 </tr>
               </thead>
               <tbody>
-                {storeStaff.length === 0 ? (
+                {staff.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="st-empty">
+                    <td colSpan={5} className="st-empty" style={{ textAlign: "center", padding: "20px" }}>
                       No staff at this store yet. Use <strong>Add staff</strong> to add someone.
                     </td>
                   </tr>
                 ) : (
-                  storeStaff.map((member) => {
+                  staff.map((member) => {
                     const isActive = member.status === "Active";
                     return (
                       <tr key={member.id}>
@@ -138,7 +226,6 @@ const StoreOwner_Staff = () => {
                               type="button"
                               className="st-btn st-btn-edit"
                               onClick={() => setPopup({ mode: "edit", member })}
-                              aria-label={`Edit ${fullName(member)}`}
                             >
                               Edit
                             </button>
@@ -147,7 +234,6 @@ const StoreOwner_Staff = () => {
                                 type="button"
                                 className="st-btn st-btn-disable"
                                 onClick={() => setConfirm({ member, action: "disable" })}
-                                aria-label={`Disable ${fullName(member)}`}
                               >
                                 Disable
                               </button>
@@ -156,7 +242,6 @@ const StoreOwner_Staff = () => {
                                 type="button"
                                 className="st-btn st-btn-enable"
                                 onClick={() => setConfirm({ member, action: "enable" })}
-                                aria-label={`Enable ${fullName(member)}`}
                               >
                                 Enable
                               </button>
@@ -173,9 +258,7 @@ const StoreOwner_Staff = () => {
         </section>
       </main>
 
-      {/* =========================================
-          ADD / EDIT STAFF POPUP
-          ========================================= */}
+      {/* ADD / EDIT STAFF POPUP */}
       {popup && (
         <StoreOwner_AddStaff_popup
           stores={STORES}
@@ -187,9 +270,7 @@ const StoreOwner_Staff = () => {
         />
       )}
 
-      {/* =========================================
-          DISABLE / ENABLE CONFIRMATION
-          ========================================= */}
+      {/* DISABLE / ENABLE CONFIRMATION */}
       {confirm?.action === "disable" && (
         <StoreOwner_ConfirmModal
           variant="danger"

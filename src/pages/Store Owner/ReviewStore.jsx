@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Shared Components
@@ -11,12 +11,65 @@ import "../../Style/Store Owner/ReviewStore.css";
 
 const ReviewStore = () => {
   const navigate = useNavigate();
+  
+  // State
+  const [draftStore, setDraftStore] = useState(null);
   const [showSubmittedMessage, setShowSubmittedMessage] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (event) => {
+  // Load draft data on mount, or redirect back if there's no data
+  useEffect(() => {
+    const savedDraft = localStorage.getItem("draftStore");
+    if (savedDraft) {
+      setDraftStore(JSON.parse(savedDraft));
+    } else {
+      // If someone navigates here directly without filling out the form
+      navigate("/store-owner/stores/register/store-profile");
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setShowSubmittedMessage(true);
+    setError("");
+    setLoading(true);
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login/store-owner-staff");
+      return;
+    }
+
+    try {
+      // Send the draft data to the backend API
+      const response = await fetch("http://localhost:5000/api/stores", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(draftStore)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit store application");
+      }
+
+      // Success! Clear the draft from localStorage
+      localStorage.removeItem("draftStore");
+      setShowSubmittedMessage(true);
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // If draftStore is still loading/null, show a blank screen
+  if (!draftStore) return null;
 
   return (
     <div className="app-layout">
@@ -41,7 +94,6 @@ const ReviewStore = () => {
         <div className="card stepper-card">
           <div className="stepper">
             
-            {/* Step 1: Completed */}
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -51,7 +103,6 @@ const ReviewStore = () => {
             
             <div className="step-divider"></div>
             
-            {/* Step 2: Completed */}
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -61,7 +112,6 @@ const ReviewStore = () => {
             
             <div className="step-divider"></div>
             
-            {/* Step 3: Completed */}
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -71,7 +121,6 @@ const ReviewStore = () => {
             
             <div className="step-divider"></div>
             
-            {/* Step 4: Active */}
             <div className="step active">
               <div className="step-circle">4</div>
               <span className="step-label">Review</span>
@@ -85,6 +134,12 @@ const ReviewStore = () => {
           <span className="status-tag">Ready to submit</span>
         </div>
 
+        {error && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '15px', borderRadius: '5px', marginBottom: '20px', fontWeight: 'bold' }}>
+            {error}
+          </div>
+        )}
+
         {/* Review Grid */}
         <div className="review-grid">
           
@@ -97,7 +152,7 @@ const ReviewStore = () => {
             <div className="review-list">
               <div className="review-row">
                 <span className="review-label">Registration number</span>
-                <span className="review-value">2024/123456/07</span>
+                <span className="review-value">{draftStore.registrationNumber}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Registered name</span>
@@ -123,19 +178,19 @@ const ReviewStore = () => {
             <div className="review-list">
               <div className="review-row">
                 <span className="review-label">Trading name</span>
-                <span className="review-value">Umhlanga Coast Store</span>
+                <span className="review-value">{draftStore.storeName}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Category</span>
-                <span className="review-value">Grocery & essentials</span>
+                <span className="review-value">{draftStore.category || "Not provided"}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Description</span>
-                <span className="review-value">Everyday groceries and household essentials.</span>
+                <span className="review-value">{draftStore.description || "Not provided"}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Operating hours</span>
-                <span className="review-value">Mon–Fri, 08:00–17:00</span>
+                <span className="review-value">{draftStore.operatingHours}</span>
               </div>
             </div>
           </div>
@@ -149,15 +204,15 @@ const ReviewStore = () => {
             <div className="review-list">
               <div className="review-row">
                 <span className="review-label">Contact person</span>
-                <span className="review-value">Sipho Dlamini</span>
+                <span className="review-value">{draftStore.contactPerson}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Telephone</span>
-                <span className="review-value">082 000 0004</span>
+                <span className="review-value">{draftStore.contactNumber}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Email</span>
-                <span className="review-value">hello@umhlangacoast.co.za</span>
+                <span className="review-value">{draftStore.email}</span>
               </div>
             </div>
           </div>
@@ -175,11 +230,11 @@ const ReviewStore = () => {
               </div>
               <div className="review-row">
                 <span className="review-label">Store address</span>
-                <span className="review-value">Same as registered address</span>
+                <span className="review-value">{draftStore.address}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Location / area</span>
-                <span className="review-value">Umhlanga</span>
+                <span className="review-value">{draftStore.storeLocation}</span>
               </div>
             </div>
           </div>
@@ -192,9 +247,9 @@ const ReviewStore = () => {
           <div className="additional-info">
             <span>Company status: In Business</span>
             <span className="bullet-separator">•</span>
-            <span>Postal address: 4319</span>
+            <span>Postal address: {draftStore.postalAddress || "Not provided"}</span>
             <span className="bullet-separator">•</span>
-            <span>Website: Not provided</span>
+            <span>Website: {draftStore.website || "Not provided"}</span>
           </div>
           <p className="logo-note">Store logo: Not uploaded — you can add a logo after registration.</p>
         </div>
@@ -228,11 +283,12 @@ const ReviewStore = () => {
               type="button"
               className="btn-outline"
               onClick={() => navigate("/store-owner/stores/register/store-profile")}
+              disabled={loading}
             >
               Back
             </button>
-            <button type="submit" className="btn-primary">
-              Submit application
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? "Submitting..." : "Submit application"}
             </button>
           </div>
         </form>
@@ -248,7 +304,7 @@ const ReviewStore = () => {
             >
               <h2 id="submission-message-title">Application submitted</h2>
               <p id="submission-message-description">
-                Your application has been submitted. If your store has been approved, it will appear on the Stores page.
+                Your application has been submitted successfully. If your store has been approved, it will appear on the Stores page.
               </p>
               <button
                 type="button"

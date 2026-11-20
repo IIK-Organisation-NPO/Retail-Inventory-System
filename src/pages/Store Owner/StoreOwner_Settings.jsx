@@ -1,5 +1,4 @@
 // src/pages/Store Owner/StoreOwner_Settings.jsx
-// Notification preferences (opened from the avatar menu → Settings)
 import { useEffect, useState } from "react";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 import "../../Style/Store Owner/StoreOwner_Settings.css";
@@ -8,7 +7,6 @@ import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_St
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 
 // Events and the channels each one supports. A channel set to null is "Not available".
-// Mock data — replace with the owner's saved preferences from the API
 const EVENTS = [
   { id: "lowStock", label: "Low stock" },
   { id: "supplierQuote", label: "New supplier quote" },
@@ -21,6 +19,7 @@ const CHANNELS = [
   { id: "email", label: "By email" },
 ];
 
+// Used as a fallback if the database is empty or fails to load
 const DEFAULT_PREFERENCES = {
   lowStock: { app: true, email: true },
   supplierQuote: { app: true, email: false },
@@ -31,7 +30,7 @@ const DEFAULT_PREFERENCES = {
 const TOAST_MS = 3000;
 
 const samePreferences = (a, b) =>
-  EVENTS.every((event) => CHANNELS.every((channel) => a[event.id][channel.id] === b[event.id][channel.id]));
+  EVENTS.every((event) => CHANNELS.every((channel) => a[event.id]?.[channel.id] === b[event.id]?.[channel.id]));
 
 // On / Off pill switch
 const Toggle = ({ checked, onChange, label }) => (
@@ -51,6 +50,39 @@ const StoreOwner_Settings = () => {
   const [saved, setSaved] = useState(DEFAULT_PREFERENCES);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [toast, setToast] = useState("");
+  
+  // Network state
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const token = localStorage.getItem("token");
+
+  // --- 1. FETCH SETTINGS FROM BACKEND ---
+  useEffect(() => {
+    const fetchSettings = async () => {
+      if (!token) return;
+      
+      try {
+        const response = await fetch("http://localhost:5000/api/settings", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          setSaved(data);
+          setPreferences(data);
+        }
+      } catch (err) {
+        setError("Failed to connect to the server.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, [token]);
 
   const isDirty = !samePreferences(preferences, saved);
 
@@ -68,24 +100,49 @@ const StoreOwner_Settings = () => {
     }));
   };
 
-  const handleSave = () => {
-    // TODO: save the notification preferences with the API
-    setSaved(preferences);
-    setToast("Your notification preferences were saved.");
+  // --- 2. SAVE SETTINGS TO BACKEND ---
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+
+    try {
+      const response = await fetch("http://localhost:5000/api/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(preferences)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to save preferences");
+
+      setSaved(preferences);
+      setToast("Your notification preferences were saved.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="so-layout">
+        <StoreOwnerSidebar />
+        <main className="so-main" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <p>Loading settings...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="so-layout">
-      {/* =========================================
-          SIDEBAR
-          ========================================= */}
       <StoreOwnerSidebar notificationCount={3} />
 
-      {/* =========================================
-          MAIN CONTENT
-          ========================================= */}
       <main className="so-main">
-        {/* Page header: title, store selector, user menu */}
         <header className="so-header">
           <h1 className="so-page-title">Settings</h1>
 
@@ -95,10 +152,15 @@ const StoreOwner_Settings = () => {
           </div>
         </header>
 
-        {/* Notification preferences card */}
         <section className="ns-card" aria-labelledby="ns-title">
           <h2 id="ns-title" className="ns-title">Notification preferences</h2>
           <p className="ns-subtitle">Choose how you hear about each event.</p>
+
+          {error && (
+            <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px' }}>
+              {error}
+            </div>
+          )}
 
           <div className="ns-table-wrapper">
             <table className="ns-table">
@@ -115,14 +177,14 @@ const StoreOwner_Settings = () => {
                   <tr key={event.id}>
                     <th scope="row">{event.label}</th>
                     {CHANNELS.map((channel) => {
-                      const value = preferences[event.id][channel.id];
+                      const value = preferences[event.id]?.[channel.id];
                       return (
                         <td key={channel.id}>
                           {value === null ? (
                             <span className="ns-unavailable">Not available</span>
                           ) : (
                             <Toggle
-                              checked={value}
+                              checked={!!value}
                               label={`${event.label} ${channel.label.toLowerCase()}`}
                               onChange={(next) => setPreference(event.id, channel.id, next)}
                             />
@@ -136,13 +198,17 @@ const StoreOwner_Settings = () => {
             </table>
           </div>
 
-          <button type="button" className="ns-save" onClick={handleSave} disabled={!isDirty}>
-            Save preferences
+          <button 
+            type="button" 
+            className="ns-save" 
+            onClick={handleSave} 
+            disabled={!isDirty || saving}
+          >
+            {saving ? "Saving..." : "Save preferences"}
           </button>
         </section>
       </main>
 
-      {/* Success message */}
       {toast && (
         <div className="ns-toast" role="status" aria-live="polite">
           {toast}

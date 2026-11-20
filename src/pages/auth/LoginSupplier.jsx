@@ -5,89 +5,74 @@ import Footer from "../../components/common/Footer";
 import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
 import PasswordInput from "../../components/common/PasswordInput";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
-import Logo from "../../assets/images/IIK logo.png";
-
-// Maps raw backend error messages to user-friendly, non-revealing messages.
-const mapServerError = (message, expectedRole) => {
-  if (!message) return "An unknown error occurred.";
-  const msg = message.toLowerCase();
-
-  if (msg.includes("incorrect") || msg.includes("not found") || msg.includes("invalid") || msg.includes("failed")) {
-    return "Incorrect email or password.";
-  }
-  if (msg.includes("verify")) {
-    return "Please verify your email before signing in.";
-  }
-  if (msg.includes("deactivated") || msg.includes("suspended")) {
-    return "Your account has been deactivated. Contact support.";
-  }
-  if (msg.includes("too many")) {
-    return "Too many attempts. Try again in 15 minutes.";
-  }
-  if (msg.includes("role") || msg.includes("not registered as")) {
-    return `This account is not registered as a ${expectedRole}.`;
-  }
-
-  return "Server is down. Please check your connection.";
-};
+import Logo from "../../assets/images/IIK logo.png"; 
 
 const LoginSupplier = () => {
   const navigate = useNavigate();
-
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); // For network errors (backend offline)
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  
+  // State for field-specific validation errors
   const [validationErrors, setValidationErrors] = useState({});
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
+  // Clear specific field error as the user types
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    if (validationErrors.email) {
+      setValidationErrors({ ...validationErrors, email: "" });
+    }
+    setError(""); // Clear network error if they start typing
+  };
 
-    // --- START VALIDATION ---
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    if (validationErrors.password) {
+      setValidationErrors({ ...validationErrors, password: "" });
+    }
+    setError(""); 
+  };
+
+  const validateForm = () => {
     const errors = {};
-    const cleanEmail = email.trim(); // trim silently
+    const input = email.trim();
 
-    // Identifier validation (Email or SA Mobile)
-    if (!cleanEmail) {
-      errors.email = "Email is required.";
-    } else if (cleanEmail.length > 254) {
-      errors.email = "Email is too long.";
+    // 1. Validate Email or Mobile Number format
+    if (!input) {
+      errors.email = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567) or Email address is required";
     } else {
-      const isEmail = cleanEmail.includes("@");
-      const isPhone = /^[0-9+]+$/.test(cleanEmail);
+      const isPhone = /^(?:\+27|0)[6-8][0-9]{8}$/.test(input.replace(/\s/g, ''));
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
 
-      if (isEmail) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(cleanEmail)) {
-          errors.email = "Enter a valid email address.";
-        }
-      } else if (isPhone) {
-        const saPhoneRegex = /^(?:\+27|0)[6-8][0-9]{8}$/;
-        if (!saPhoneRegex.test(cleanEmail)) {
-          errors.email = "Enter a valid SA mobile number.";
-        }
-      } else {
-        errors.email = "Enter a valid email address or mobile number.";
+      if (!isPhone && !isEmail) {
+        errors.email = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567) or Email address is required";
       }
     }
 
-    // Password validation (login — no complexity rules)
-    if (!password || password.trim() === "") {
-      errors.password = "Password is required.";
-    } else if (password.length < 8) {
-      errors.password = "Password must be at least 8 characters.";
+    // 2. Validate Password is not empty
+    if (!password) {
+      errors.password = "Invalid password or passcode";
     }
 
+    return errors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(""); // Clear network errors
+
+    // Run custom frontend validations (format checks)
+    const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      return;
+      return; // Stop submission
     }
-    setValidationErrors({});
-    // --- END VALIDATION ---
 
+    setValidationErrors({});
     setLoading(true);
 
     try {
@@ -95,53 +80,59 @@ const LoginSupplier = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: cleanEmail, // trimmed
+          email: email,
           password: password,
-          roleName: "Supplier",
-          rememberMe: rememberMe
+          role: "SUPPLIER" // <-- Important: Role is SUPPLIER here
         })
       });
 
       const data = await response.json();
 
+      // Handle specific errors based on backend status codes
       if (!response.ok) {
-        // Pass "Supplier" as the expectedRole for the role mismatch error
-        const friendlyError = mapServerError(data.message, "Supplier");
-        throw new Error(friendlyError);
+        if (response.status === 404) {
+          // Email not found in database
+          setValidationErrors({ email: data.message });
+          setLoading(false);
+          return;
+        }
+        
+        if (response.status === 401) {
+          // Password incorrect
+          setValidationErrors({ password: data.message });
+          setLoading(false);
+          return;
+        }
+
+        throw new Error(data.message || "Login failed");
       }
 
-      const userName = data?.user?.name ?? "Supplier";
-      const storage = rememberMe ? localStorage : sessionStorage;
-      storage.setItem("token", data.token);
-      storage.setItem("role", data.user.role);
-      storage.setItem("userName", userName);
+      // Success! Save the token and role to local storage
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("userName", data.user.name);
 
-      navigate("/dashboard/supplier");
+      alert(`Welcome back, ${data.user.name}!`);
+      
+      // Redirect to the Supplier Dashboard
+      navigate("/supplier/dashboard"); 
+      
     } catch (err) {
-      setError(err.message);
-      setPassword(""); // clear password on failed attempt
+      // This ONLY catches network errors (e.g., if backend is not running)
+      if (err.message === "Failed to fetch") {
+        setError("Cannot connect to the server. Please ensure the backend is running.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Clear field error as the user types
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-    if (validationErrors.email) setValidationErrors({ ...validationErrors, email: "" });
-    if (error) setError("");
-  };
-
-  const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
-    if (validationErrors.password) setValidationErrors({ ...validationErrors, password: "" });
-    if (error) setError("");
-  };
-
   return (
     <div className="login-page-wrapper">
       <div className="login-content">
-        
+
         <div className="login-left">
           <div className="hero-background">
             <img src={BackgroundImage} alt="Store background" className="bg-image" />
@@ -162,31 +153,27 @@ const LoginSupplier = () => {
 
         <div className="login-right">
           <div className="form-wrapper">
+
             <h2>Sign in</h2>
             <p className="subtitle">Sign in as a supplier to continue.</p>
 
             <div className="role-toggle">
-              <Link to="/login/store-owner-staff" className="role-btn">
+              <button
+                type="button"
+                className="role-btn"
+                onClick={() => navigate("/login/store-owner-staff")}
+              >
                 Store
-              </Link>
-              <button type="button" className="role-btn active">
-                Supplier
               </button>
+              <button type="button" className="role-btn active">Supplier</button>
             </div>
 
+            {/* Added noValidate to prevent browser default popups */}
             <form onSubmit={handleSubmit} noValidate>
+              
+              {/* Network Error Banner (Only shows if backend is offline) */}
               {error && (
-                <div
-                  style={{
-                    color: '#d32f2f',
-                    backgroundColor: '#fde8e8',
-                    padding: '10px',
-                    borderRadius: '5px',
-                    marginBottom: '15px',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
-                >
+                <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px' }}>
                   {error}
                 </div>
               )}
@@ -198,10 +185,11 @@ const LoginSupplier = () => {
                   value={email}
                   onChange={handleEmailChange}
                   className="form-input"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email or phone"
                 />
+                {/* Email/Phone Validation Error */}
                 {validationErrors.email && (
-                  <span style={{ color: '#d32f2f', fontSize: '12px', marginTop: '5px', display: 'block', fontWeight: '500' }}>
+                  <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>
                     {validationErrors.email}
                   </span>
                 )}
@@ -210,15 +198,15 @@ const LoginSupplier = () => {
               <div className="input-group">
                 <label>Password</label>
                 <PasswordInput
-                  name="password"
                   value={password}
                   onChange={handlePasswordChange}
                   className="form-input"
                   placeholder="Enter your password"
                   autoComplete="current-password"
                 />
+                {/* Password Validation Error */}
                 {validationErrors.password && (
-                  <span style={{ color: '#d32f2f', fontSize: '12px', marginTop: '5px', display: 'block', fontWeight: '500' }}>
+                  <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>
                     {validationErrors.password}
                   </span>
                 )}
@@ -226,19 +214,15 @@ const LoginSupplier = () => {
 
               <div className="form-actions">
                 <div className="checkbox-group">
-                  <input
-                    type="checkbox"
-                    id="remember"
+                  <input 
+                    type="checkbox" 
+                    id="remember" 
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
                   <label htmlFor="remember">Remember me</label>
                 </div>
-                <button
-                  type="button"
-                  className="forgot-link"
-                  onClick={() => setShowForgotPassword(true)}
-                >
+                <button type="button" className="forgot-link" onClick={() => setShowForgotPassword(true)}>
                   Forgot password?
                 </button>
               </div>
@@ -253,16 +237,15 @@ const LoginSupplier = () => {
             </p>
           </div>
         </div>
+
       </div>
 
       <Footer />
 
       {showForgotPassword && (
-        <ForgotPasswordModal
-          roleName="Supplier"
-          onClose={() => setShowForgotPassword(false)}
-        />
+        <ForgotPasswordModal role="SUPPLIER" onClose={() => setShowForgotPassword(false)} />
       )}
+
     </div>
   );
 };

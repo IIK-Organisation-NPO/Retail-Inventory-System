@@ -1,26 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, forgotPassword, resetPassword, sendOTP, verifyOTP } = require('../controllers/authController');
-const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
+const authController = require('../controllers/authController');
 
-// Public Routes
-router.post('/register', register);
-router.post('/login', login);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/register/owner', authController.registerOwner);
+router.post('/register/supplier', authController.registerSupplier);
+router.post('/login', authController.login);
+router.post('/forgot-password/request-otp', authController.requestOTP);
+router.post('/forgot-password/reset', authController.resetPassword);
 
-// OTP Routes
-router.post('/send-otp', sendOTP);
-router.post('/verify-otp', verifyOTP);
-
-// Protected Test Routes
-router.get('/admin-owner-route', protect, authorize('Admin', 'Owner'), (req, res) => {
-    res.json({ message: `Hello ${req.user.role}, you have access to the Admin/Owner area.` });
-});
-
-router.get('/staff-route', protect, authorize('Staff'), (req, res) => {
-    res.json({ message: `Hello ${req.user.role}, you have access to the Staff area.` });
-});
+// NEW ROUTE:
+router.post('/verify-email', authController.verifyEmail); 
 
 module.exports = router;

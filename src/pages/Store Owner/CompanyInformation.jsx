@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
@@ -6,6 +7,33 @@ import "../../Style/Store Owner/CompanyInformation.css";
 
 const CompanyInformation = () => {
   const navigate = useNavigate();
+  const [cipcNumber, setCipcNumber] = useState("2024/123456/07");
+
+  // 1. Fetch the CIPC number entered in Step 1 (RegisterStore)
+  useEffect(() => {
+    const savedCipc = localStorage.getItem("draftCipc");
+    if (savedCipc) {
+      setCipcNumber(savedCipc);
+    }
+  }, []);
+
+  // 2. Save the mock company data to localStorage and proceed
+  const handleContinue = () => {
+    const companyData = {
+      registrationNumber: cipcNumber,
+      registeredName: "Mseleku Trading (Pty) Ltd",
+      companyType: "Public Company",
+      registrationDate: "12 March 2024",
+      status: "In Business",
+      registeredAddress: "18 Lagoon Drive, Umhlanga, KwaZulu-Natal, 4319"
+    };
+
+    // Save it so the Review page can show it
+    localStorage.setItem("draftCompany", JSON.stringify(companyData));
+    
+    // Move to Step 3
+    navigate("/store-owner/stores/register/store-profile");
+  };
 
   return (
     <div className="app-layout">
@@ -78,7 +106,7 @@ const CompanyInformation = () => {
             
             <div className="data-row">
               <span className="data-label">Registration number</span>
-              <span className="data-value">2024/123456/07</span>
+              <span className="data-value">{cipcNumber}</span>
             </div>
             
             <div className="data-row">
@@ -125,7 +153,7 @@ const CompanyInformation = () => {
           
           <button 
             className="btn-primary" 
-            onClick={() => navigate("/store-owner/stores/register/store-profile")}
+            onClick={handleContinue}
           >
             Continue to store profile
           </button>

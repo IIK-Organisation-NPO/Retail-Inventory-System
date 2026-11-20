@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList } from "recharts";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
@@ -42,6 +42,8 @@ const Dashboard = () => {
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [staff, setStaff] = useState(INITIAL_STAFF);
   const [storeId] = useState(() => readSavedStoreId(STORES));
+
+  
 
   const isMobileTaken = (mobile) => staff.some((member) => member.mobile === mobile);
 
