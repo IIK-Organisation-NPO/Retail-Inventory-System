@@ -237,8 +237,9 @@ const StoreOwnerInventory = () => {
         <StockInPopup
           products={stockItems}
           onClose={closePopup}
-          onSave={({ productId, quantity }) => 
-            handleSaveMovement(productId, quantity, "Stock in", "Stock received from supplier")
+          onSave={({ productId, quantity, supplier }) => 
+            // Pass the supplier as the details for the movement log
+            handleSaveMovement(productId, quantity, "Stock in", supplier) 
           }
         />
       )}
@@ -247,8 +248,9 @@ const StoreOwnerInventory = () => {
         <StockOutPopup
           products={stockItems}
           onClose={closePopup}
-          onSave={({ productId, quantity }) =>
-            handleSaveMovement(productId, -quantity, "Stock out", "Damaged or removed")
+          onSave={({ productId, quantity, reason }) =>
+            // Pass the reason (e.g., "Damaged") as the details for the log
+            handleSaveMovement(productId, -quantity, "Stock out", reason)
           }
         />
       )}
@@ -257,10 +259,10 @@ const StoreOwnerInventory = () => {
         <StockAdjustmentPopup
           products={stockItems}
           onClose={closePopup}
-          onSave={({ productId, quantityAfter }) => {
-            const currentItem = stockItems.find(i => i.id === productId);
-            const diff = quantityAfter - currentItem.onHand;
-            handleSaveMovement(productId, diff, "Adjustment", `Stock count (was ${currentItem.onHand})`);
+          onSave={({ productId, quantityBefore, quantityAfter, reason }) => {
+            const diff = quantityAfter - quantityBefore;
+            // Log the reason along with the difference
+            handleSaveMovement(productId, diff, "Adjustment", `${reason} (was ${quantityBefore})`);
           }}
         />
       )}

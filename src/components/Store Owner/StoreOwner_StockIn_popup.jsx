@@ -135,7 +135,6 @@ export const StockInPopup = ({ products, suppliers = DEFAULT_SUPPLIERS, onSave, 
       return;
     }
 
-    // TODO: save the stock in with the API
     onSave?.({
       productId: findProduct(products, productId)?.id,
       quantity: Number(quantity),
@@ -230,7 +229,6 @@ export const StockOutPopup = ({ products, onSave, onClose }) => {
       return;
     }
 
-    // TODO: save the stock out with the API
     onSave?.({
       productId: product?.id,
       quantity: Number(quantity),
@@ -308,7 +306,6 @@ export const StockAdjustmentPopup = ({ products, onSave, onClose }) => {
       return;
     }
 
-    // TODO: save the adjustment with the API
     onSave?.({
       productId: product?.id,
       quantityBefore: Number(quantityBefore),

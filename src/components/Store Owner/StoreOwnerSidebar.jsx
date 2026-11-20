@@ -1,5 +1,5 @@
 // src/components/Store Owner/StoreOwnerSidebar.jsx
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 
 // Navigation items for the Store Owner area
@@ -16,6 +16,19 @@ const NAV_ITEMS = [
 ];
 
 const StoreOwnerSidebar = ({ notificationCount = 0 }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // 1. Clear all authentication data
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("activeStoreId");
+    
+    // 2. Redirect to the login page
+    navigate("/login/store-owner-staff");
+  };
+
   return (
     <aside className="so-sidebar">
       {/* Brand */}
@@ -41,6 +54,28 @@ const StoreOwnerSidebar = ({ notificationCount = 0 }) => {
           </NavLink>
         ))}
       </nav>
+
+      {/* Logout Section (Pinned to the bottom) */}
+      <div style={{ marginTop: 'auto', padding: '20px', borderTop: '1px solid #eee' }}>
+        <button 
+          onClick={handleLogout}
+          style={{ 
+            width: '100%', 
+            padding: '10px', 
+            backgroundColor: 'transparent', 
+            color: '#cc0000', 
+            border: '1px solid #cc0000', 
+            borderRadius: '5px', 
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseOver={(e) => e.target.style.backgroundColor = '#ffebee'}
+          onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+        >
+          Sign Out
+        </button>
+      </div>
     </aside>
   );
 };

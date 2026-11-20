@@ -15,13 +15,10 @@ const isStrongPassword = (password) =>
   /\d/.test(password) &&
   /[^A-Za-z0-9]/.test(password);
 
-/**
- * onSave:  called after the password has been changed
- * onClose: closes the popup
- */
 const StoreOwner_ChangePassword_popup = ({ onSave, onClose }) => {
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const update = (field) => (e) => {
     setForm((current) => ({ ...current, [field]: e.target.value }));
@@ -36,7 +33,7 @@ const StoreOwner_ChangePassword_popup = ({ onSave, onClose }) => {
     return "";
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const problem = validate();
     if (problem) {
@@ -44,14 +41,43 @@ const StoreOwner_ChangePassword_popup = ({ onSave, onClose }) => {
       return;
     }
 
-    // TODO: send the current and new password to the API, which checks the
-    // current one and stores the new one securely (hashed).
-    onSave?.();
-    onClose();
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch("http://localhost:5000/api/owner/change-password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          currentPassword: form.current, 
+          newPassword: form.next 
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to change password");
+      }
+
+      // Success! Notify parent and close
+      onSave?.();
+      onClose();
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <PopupShell title="Change password" onClose={onClose}>
+    <PopupShell title="Change password" onClose={isSubmitting ? undefined : onClose}>
       <form className="cp-form" onSubmit={handleSubmit} noValidate>
         <div className="sp-field">
           <label htmlFor="cp-current">Current password</label>
@@ -62,6 +88,7 @@ const StoreOwner_ChangePassword_popup = ({ onSave, onClose }) => {
             onChange={update("current")}
             autoComplete="current-password"
             autoFocus
+            disabled={isSubmitting}
           />
         </div>
 
@@ -73,6 +100,7 @@ const StoreOwner_ChangePassword_popup = ({ onSave, onClose }) => {
             value={form.next}
             onChange={update("next")}
             autoComplete="new-password"
+            disabled={isSubmitting}
           />
           <PasswordRequirements password={form.next} />
         </div>
@@ -85,14 +113,19 @@ const StoreOwner_ChangePassword_popup = ({ onSave, onClose }) => {
             value={form.confirm}
             onChange={update("confirm")}
             autoComplete="new-password"
+            disabled={isSubmitting}
           />
         </div>
 
         {error && <p className="sp-error" role="alert">{error}</p>}
 
         <div className="sp-actions">
-          <button type="submit" className="sp-btn sp-btn-primary">Change password</button>
-          <button type="button" className="sp-btn sp-btn-outline" onClick={onClose}>Cancel</button>
+          <button type="submit" className="sp-btn sp-btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Change password"}
+          </button>
+          <button type="button" className="sp-btn sp-btn-outline" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </button>
         </div>
       </form>
     </PopupShell>

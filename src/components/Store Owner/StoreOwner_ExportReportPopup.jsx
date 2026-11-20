@@ -1,3 +1,4 @@
+// src/components/Store Owner/StoreOwner_ExportReportPopup.jsx
 import { useEffect, useRef, useState } from "react";
 import "../../Style/Store Owner/StoreOwner_ExportReportPopup.css";
 
@@ -27,6 +28,7 @@ const StoreOwner_ExportReportPopup = ({ reportName, periodLabel, onDownload, onC
     setIsDownloading(true);
     setError("");
     try {
+      // This calls the handleReportExport function in Reports.jsx
       await onDownload({ fileType, includeGraphs });
       onClose();
     } catch (downloadError) {

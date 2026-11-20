@@ -1,0 +1,394 @@
+.staff-sell-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f7f7f7;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.staff-sell-main {
+  flex: 1;
+  min-width: 0;
+  padding: 28px;
+}
+
+.staff-sell-header,
+.staff-sell-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.staff-sell-header {
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.staff-sell-header h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.staff-sell-header-actions {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.staff-sell-sync {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #efefef;
+  color: #333;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.staff-sell-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(400px, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.staff-sell-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.staff-sell-card h2 {
+  margin: 0 0 12px;
+  color: #111;
+  font-size: 16px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.staff-sell-search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.staff-sell-search-row input,
+.staff-sell-cash-fields input,
+.staff-sell-cash-fields output {
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #bdbdbd;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 15px;
+}
+
+.staff-sell-search-row input {
+  flex: 1;
+}
+
+.staff-sell-button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid #111;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.staff-sell-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.staff-sell-outline,
+.staff-sell-clear {
+  background: #fff;
+  color: #111;
+}
+
+.staff-sell-table-wrap {
+  overflow-x: auto;
+  margin: 0 -12px -8px;
+}
+
+.staff-sell-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+
+.staff-sell-table th {
+  height: 32px;
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.staff-sell-table td,
+.staff-sell-table th {
+  padding: 8px 12px;
+  border-bottom: 1px solid #ececec;
+  white-space: nowrap;
+}
+
+.staff-sell-table td:last-child,
+.staff-sell-table th:last-child {
+  text-align: right;
+}
+
+.staff-sell-add,
+.staff-sell-complete {
+  background: #090909;
+  color: #fff;
+}
+
+.staff-sell-low-stock {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #fff0f1;
+  color: #bb001b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.staff-sell-no-results {
+  padding: 20px 12px !important;
+  color: #666;
+  text-align: center;
+}
+
+.staff-sell-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.staff-sell-current {
+  padding: 18px;
+}
+
+.staff-sell-current > h2 {
+  margin: 0 -10px 8px;
+  padding: 0 10px 10px;
+  border-bottom: 1px solid #ececec;
+}
+
+.staff-sell-cart {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-sell-cart li {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  border-bottom: 1px solid #ececec;
+  font-size: 13px;
+}
+
+.staff-sell-cart-product {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.staff-sell-cart-product strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.staff-sell-cart-product span {
+  color: #666;
+  font-size: 12px;
+}
+
+.staff-sell-quantity {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+}
+
+.staff-sell-quantity button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #bbb;
+  border-radius: 9px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.staff-sell-quantity button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.staff-sell-line-total {
+  white-space: nowrap;
+}
+
+.staff-sell-remove {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #b00020;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.staff-sell-empty {
+  padding: 22px 0;
+  border-bottom: 1px solid #ececec;
+  color: #666;
+  font-size: 14px;
+}
+
+.staff-sell-total {
+  display: flex;
+  justify-content: space-between;
+  margin: 12px 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.staff-sell-payments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.staff-sell-payments button {
+  height: 48px;
+  border: 1px solid #111;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.staff-sell-payments button.is-selected {
+  background: #090909;
+  color: #fff;
+}
+
+.staff-sell-cash-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.staff-sell-cash-fields label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  color: #555;
+  font-size: 12px;
+}
+
+.staff-sell-cash-fields output {
+  display: flex;
+  align-items: center;
+  background: #f7f7f7;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.staff-sell-error,
+.staff-sell-success {
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.staff-sell-error {
+  color: #b00020;
+}
+
+.staff-sell-success {
+  color: #18753c;
+}
+
+.staff-sell-complete,
+.staff-sell-clear {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  font-size: 15px;
+}
+
+@media (max-width: 1100px) {
+  .staff-sell-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .staff-sell-main {
+    padding: 20px 16px;
+  }
+
+  .staff-sell-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .staff-sell-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .staff-sell-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .staff-sell-card {
+    padding: 14px;
+  }
+
+  .staff-sell-search-row {
+    flex-direction: column;
+  }
+
+  .staff-sell-cart li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 8px 0;
+  }
+
+  .staff-sell-line-total {
+    grid-column: 1;
+  }
+
+  .staff-sell-remove {
+    justify-self: end;
+  }
+}

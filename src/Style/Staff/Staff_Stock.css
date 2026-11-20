@@ -1,0 +1,126 @@
+/* ============================================
+   Staff Stock Page Stylesheet
+   (layout, header and buttons are in Staff_Layout.css)
+   ============================================ */
+
+/* --- Summary Cards --- */
+.st-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.st-stat-card {
+  background-color: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.st-stat-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: #6b6b70;
+}
+
+.st-stat-value {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+}
+
+.st-stat-value-danger {
+  color: #e5133a;
+}
+
+/* --- Stock Levels Card --- */
+.st-card {
+  flex: 1;
+  background-color: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 6px;
+  padding: 16px 12px;
+}
+
+.st-card-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #111;
+}
+
+/* --- Table --- */
+.st-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.st-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.st-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b6b70;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e5e7;
+  white-space: nowrap;
+}
+
+.st-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #f0f0f2;
+  color: #111;
+  white-space: nowrap;
+}
+
+/* Column widths to match the design */
+.st-table th:nth-child(1) { width: 34%; }
+.st-table th:nth-child(2) { width: 15%; }
+.st-table th:nth-child(3) { width: 21%; }
+.st-table th:nth-child(4) { width: 14%; }
+
+/* Status pills */
+.st-status {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.st-status-ok {
+  background-color: #ececee;
+  color: #333;
+}
+
+.st-status-low {
+  background-color: #fde4e8;
+  color: #e5133a;
+}
+
+.st-status-out {
+  background-color: #e5133a;
+  color: #fff;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+  .st-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .st-stats {
+    grid-template-columns: 1fr;
+  }
+}

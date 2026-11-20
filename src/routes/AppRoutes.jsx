@@ -24,6 +24,15 @@ import StoreOwner_Sales from '../pages/Store Owner/StoreOwner_Sales';
 import StoreOwner_Staff from '../pages/Store Owner/StoreOwner_Staff';
 import StoreOwner_Profile from '../pages/Store Owner/StoreOwner_Profile';
 import StoreOwner_Settings from '../pages/Store Owner/StoreOwner_Settings';
+//Staff pages
+import StaffDashboard from '../pages/Staff/StaffDashboard';
+import StaffMyAccount from '../pages/Staff/StaffMyAccount';
+import StaffSell from '../pages/Staff/StaffSell';
+
+// Staff pages
+import Staff_Stock from '../pages/Staff/Staff_Stock';
+import Staff_Alerts from '../pages/Staff/Staff_Alerts';
+import Staff_SalesHistory from '../pages/Staff/Staff_SalesHistory';
 
 const AppRoutes = () => {
   return (
@@ -55,6 +64,17 @@ const AppRoutes = () => {
         <Route path="/store-owner/profile" element={<StoreOwner_Profile />} />
         <Route path="/store-owner/settings" element={<StoreOwner_Settings />} />
         <Route path="/store-owner/reports" element={<Reports />} />
+     
+       {/* Staff Routes */}
+       <Route path="/staff" element={<StaffDashboard />} />
+       <Route path="/staff/account" element={<StaffMyAccount />} />
+       <Route path="/staff/sell" element={<StaffSell />} />
+
+        {/* Staff */}
+        <Route path="/staff/stock" element={<Staff_Stock />} />
+        <Route path="/staff/sales-history" element={<Staff_SalesHistory />} />
+        <Route path="/staff/alerts" element={<Staff_Alerts />} />
+
       </Routes>
     </Router>
   );

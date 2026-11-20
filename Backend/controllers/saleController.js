@@ -2,9 +2,8 @@ const db = require('../config/db');
 
 // --- RECORD A NEW SALE ---
 exports.recordSale = async (req, res) => {
-  // We expect the frontend to send the storeId, paymentMethod, and an array of items
   const { storeId, paymentMethod, items } = req.body;
-  const staffId = req.user.id; // Assumes owner is logged in (or staff)
+  const staffId = req.user.id; 
 
   if (!storeId || !items || items.length === 0) {
     return res.status(400).json({ message: "Missing sale data" });
@@ -13,7 +12,7 @@ exports.recordSale = async (req, res) => {
   // Calculate total amount on the server for security
   const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  const connection = await db.getConnection(); // Get a dedicated connection for the transaction
+  const connection = await db.getConnection(); 
 
   try {
     await connection.beginTransaction();
@@ -27,17 +26,20 @@ exports.recordSale = async (req, res) => {
 
     // 2. Loop through items: Insert into SaleItems AND deduct from Products
     for (const item of items) {
-      // Insert line item
-      await connection.query(
-        `INSERT INTO SaleItems (SaleID, ProductID, Quantity, UnitPrice, Subtotal) VALUES (?, ?, ?, ?, ?)`,
-        [saleId, item.productId, item.quantity, item.price, item.price * item.quantity]
-      );
+      // ONLY process if it is a real product (not a custom "other" item)
+      if (item.productId) {
+        // Insert line item
+        await connection.query(
+          `INSERT INTO SaleItems (SaleID, ProductID, Quantity, UnitPrice, Subtotal) VALUES (?, ?, ?, ?, ?)`,
+          [saleId, item.productId, item.quantity, item.price, item.price * item.quantity]
+        );
 
-      // Deduct stock
-      await connection.query(
-        `UPDATE Products SET OnHand = OnHand - ? WHERE ProductID = ? AND StoreID = ?`,
-        [item.quantity, item.productId, storeId]
-      );
+        // Deduct stock
+        await connection.query(
+          `UPDATE Products SET OnHand = OnHand - ? WHERE ProductID = ? AND StoreID = ?`,
+          [item.quantity, item.productId, storeId]
+        );
+      }
     }
 
     // Commit the transaction if everything succeeded
@@ -49,7 +51,35 @@ exports.recordSale = async (req, res) => {
     console.error("RECORD SALE ERROR:", error);
     res.status(500).json({ message: "Failed to record sale. Transaction rolled back." });
   } finally {
-    connection.release(); // Always release the connection back to the pool
+    connection.release(); 
+  }
+};
+
+// --- GET SALES HISTORY (For the Sales Page) ---
+exports.getSalesHistory = async (req, res) => {
+  const { storeId } = req.query;
+  try {
+    // We use LEFT JOIN so that sales with custom items still appear in the history
+    const [sales] = await db.query(
+      `SELECT 
+        s.SaleID as id, 
+        DATE(s.SaleDate) as date, 
+        DATE_FORMAT(s.SaleDate, '%H:%i') as time, 
+        s.PaymentMethod as payment, 
+        s.TotalAmount as total,
+        IFNULL(GROUP_CONCAT(CONCAT(p.Name, ' ×', si.Quantity) SEPARATOR ', '), 'Custom items') as itemsText
+       FROM Sales s
+       LEFT JOIN SaleItems si ON s.SaleID = si.SaleID
+       LEFT JOIN Products p ON si.ProductID = p.ProductID
+       WHERE s.StoreID = ?
+       GROUP BY s.SaleID
+       ORDER BY s.SaleDate DESC`, 
+      [storeId]
+    );
+    res.status(200).json(sales);
+  } catch (error) {
+    console.error("GET SALES HISTORY ERROR:", error);
+    res.status(500).json({ message: "Database error" });
   }
 };
 
@@ -63,6 +93,7 @@ exports.getTodaySales = async (req, res) => {
     );
     res.status(200).json(sales);
   } catch (error) {
+    console.error("GET TODAY'S SALES ERROR:", error);
     res.status(500).json({ message: "Database error" });
   }
 };
