@@ -1,0 +1,209 @@
+/* ============================================
+   Scan Barcode Popup Stylesheet
+   Backdrop, card, fields and buttons come from
+   StoreOwner_StockIn_popup.css (sp-* classes).
+   ============================================ */
+
+/* =========================================================
+   CAMERA AREA
+   ========================================================= */
+.sb-camera {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 170px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f2f2f3;
+  text-align: center;
+}
+
+/* Step 1: dashed box */
+.sb-camera-start {
+  border: 2px dashed #9a9aa0;
+}
+
+/* Step 2: solid black frame */
+.sb-camera-list {
+  border: 2px solid #111;
+}
+
+/* Taller while the camera is showing */
+.sb-camera-on {
+  height: 220px;
+  background-color: #000;
+}
+
+.sb-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sb-camera-text {
+  position: relative;
+  z-index: 1;
+  padding: 0 16px;
+}
+
+.sb-camera-on .sb-camera-text {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+}
+
+.sb-camera-title {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.sb-camera-sub {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #6b6b70;
+}
+
+.sb-camera-on .sb-camera-sub,
+.sb-camera-on .sb-camera-title {
+  color: #fff;
+}
+
+.sb-next {
+  font-size: 0.85rem;
+}
+
+.sb-camera-toggle {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border: 1px solid #111;
+  border-radius: 6px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Black "Added: …" bar along the bottom */
+.sb-added {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  padding: 10px 14px;
+  background-color: #111;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+/* =========================================================
+   STEP 1: START
+   ========================================================= */
+.sb-full {
+  width: 100%;
+}
+
+.sb-full + .sb-full {
+  margin-top: 10px;
+}
+
+/* "—— or type it ——" */
+.sb-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.sb-divider::before,
+.sb-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: #d4d4d8;
+}
+
+.sb-code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sb-code-row .sp-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-find-btn {
+  flex-shrink: 0;
+}
+
+.sb-hint {
+  margin: -4px 0 20px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #555;
+}
+
+/* =========================================================
+   STEP 2: SCANNED SO FAR
+   ========================================================= */
+.sb-code-row-compact {
+  margin-bottom: 12px;
+}
+
+.sb-list-label {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.sb-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  border-top: 1px solid #ececee;
+}
+
+.sb-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #ececee;
+  font-size: 0.9rem;
+}
+
+.sb-list-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-list-qty {
+  font-weight: 700;
+}
+
+.sb-remove {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #e5133a;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}

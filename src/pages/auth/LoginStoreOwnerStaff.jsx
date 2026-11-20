@@ -5,14 +5,16 @@ import Footer from "../../components/common/Footer";
 import ForgotPasswordModal from "../../components/common/ForgotPasswordModal";
 import PasswordInput from "../../components/common/PasswordInput";
 import BackgroundImage from "../../assets/images/IIK Background.jpeg";
-import Logo from "../../assets/images/IIK logo.png"; 
+import Logo from "../../assets/images/IIK logo.png";
+
+const API_BASE = "http://localhost:5000/api/auth";
 
 // Maps raw backend error messages to user-friendly, non-revealing messages.
 const mapServerError = (message, expectedRole) => {
   if (!message) return "An unknown error occurred.";
   const msg = message.toLowerCase();
 
-  if (msg.includes("incorrect") || msg.includes("not found") || msg.includes("invalid") || msg.includes("failed")) {
+  if (msg.includes("incorrect") || msg.includes("invalid") || msg.includes("failed")) {
     return "Incorrect email or password.";
   }
   if (msg.includes("verify")) {
@@ -21,138 +23,99 @@ const mapServerError = (message, expectedRole) => {
   if (msg.includes("deactivated") || msg.includes("suspended")) {
     return "Your account has been deactivated. Contact support.";
   }
-  if (msg.includes("too many")) {
-    return "Too many attempts. Try again in 15 minutes.";
-  }
   if (msg.includes("role") || msg.includes("not registered as")) {
     return `This account is not registered as a ${expectedRole}.`;
+  }
+  if (msg.includes("required")) {
+    return "Please enter your email and password.";
   }
 
   return "Server is down. Please check your connection.";
 };
 
+// POST /api/auth/login for a given role.
+// Returns { ok, status, data } — never throws on HTTP errors.
+const attemptLogin = async ({ email, password, roleName, rememberMe }) => {
+  const response = await fetch(`${API_BASE}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, password, roleName, rememberMe }),
+  });
+  const data = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, data };
+};
+
 const LoginStoreOwnerStaff = () => {
   const navigate = useNavigate();
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({});
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError("");
 
-    // --- START VALIDATION ---
-    const errors = {};
-    const cleanEmail = email.trim(); // trim silently
-
-    // Identifier validation (Email or SA Mobile)
-    if (!cleanEmail) {
-      errors.email = "Email is required.";
-    } else if (cleanEmail.length > 254) {
-      errors.email = "Email is too long.";
-    } else {
-      const isEmail = cleanEmail.includes("@");
-      const isPhone = /^[0-9+]+$/.test(cleanEmail);
-
-      if (isEmail) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(cleanEmail)) {
-          errors.email = "Enter a valid email address.";
-        }
-      } else if (isPhone) {
-        const saPhoneRegex = /^(?:\+27|0)[6-8][0-9]{8}$/;
-        if (!saPhoneRegex.test(cleanEmail)) {
-          errors.email = "Enter a valid SA mobile number.";
-        }
-      } else {
-        errors.email = "Enter a valid email address or mobile number.";
-      }
-    }
-
-    // Password validation (login — no complexity rules)
-    if (!password || password.trim() === "") {
-      errors.password = "Password is required.";
-    } else if (password.length < 8) {
-      errors.password = "Password must be at least 8 characters.";
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password) {
+      setError("Please enter your email and password.");
       return;
     }
-    setValidationErrors({});
-    // --- END VALIDATION ---
 
     setLoading(true);
-
-    // Determine role name (existing logic kept)
-    const roleName = email.toLowerCase().includes("staff") ? "Store Staff" : "Store Owner";
-
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: cleanEmail, // trimmed
-          password: password,
-          roleName: roleName,
-          rememberMe: rememberMe
-        })
+      // Option A: try "Store Owner" first, then "Store Staff" on role mismatch.
+      let result = await attemptLogin({
+        email: cleanEmail,
+        password,
+        roleName: "Store Owner",
+        rememberMe,
       });
 
-      const data = await response.json();
+      const isRoleMismatch =
+        result.status === 403 &&
+        typeof result.data?.message === "string" &&
+        /not registered as/i.test(result.data.message);
 
-      if (!response.ok) {
-        // Pass "Store" as the expectedRole so the error message reads "This account is not registered as a Store."
-        const friendlyError = mapServerError(data.message, "Store");
-        throw new Error(friendlyError);
+      if (isRoleMismatch) {
+        result = await attemptLogin({
+          email: cleanEmail,
+          password,
+          roleName: "Store Staff",
+          rememberMe,
+        });
       }
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("role", data.user.role);
-      localStorage.setItem("userName", data.user.name);
-
-      // REMOVED the alert() here so the redirect is instant. 
-      // If you want a welcome message, you should use a toast notification library later.
-      
-      if (data.user.role === "Store Staff") {
-        // Temporarily pointing to the main dashboard until you build the staff specific one
-        navigate("/dashboard"); 
-      } else {
-        // Matches the path in your AppRoutes.jsx
-        navigate("/store-owner/dashboard");
+      if (result.ok) {
+        // Backend also sets an httpOnly cookie; token is available if you need it.
+        // Store non-sensitive user info for quick UI reads (optional).
+        try {
+          if (result.data?.user) {
+            localStorage.setItem("spazanet_user", JSON.stringify(result.data.user));
+          }
+        } catch {
+          /* ignore storage errors */
+        }
+        navigate("/dashboard");
+        return;
       }
-      
-    } catch (err) {
-      setError(err.message);
-      setPassword(""); // clear password on failed attempt
+
+      setError(mapServerError(result.data?.message, "Store"));
+    } catch (networkError) {
+      console.error("Login network error:", networkError);
+      setError("Server is down. Please check your connection.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Clear field error as the user types
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-    if (validationErrors.email) setValidationErrors({ ...validationErrors, email: "" });
-    if (error) setError("");
-  };
-
-  const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
-    if (validationErrors.password) setValidationErrors({ ...validationErrors, password: "" });
-    if (error) setError("");
-  };
-
   return (
     <div className="login-page-wrapper">
       <div className="login-content">
-        
         <div className="login-left">
           <div className="hero-background">
             <img src={BackgroundImage} alt="Store background" className="bg-image" />
@@ -174,66 +137,77 @@ const LoginStoreOwnerStaff = () => {
 
         <div className="login-right">
           <div className="form-wrapper">
-            
             <h2>Sign in</h2>
-            <p className="subtitle">Sign in as a store owner or a staff member to continue.</p>
+            <p className="subtitle">
+              Sign in as a store owner or a staff member to continue.
+            </p>
 
             <div className="role-toggle">
               <button type="button" className="role-btn active">Store</button>
               <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
-            <form onSubmit={handleSubmit} noValidate>
-              
-              {error && (
-                <div style={{ color: '#d32f2f', backgroundColor: '#fde8e8', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px', fontWeight: 'bold' }}>
-                  {error}
-                </div>
-              )}
+            {/* Error banner */}
+            {error && (
+              <div
+                role="alert"
+                style={{
+                  color: "#d32f2f",
+                  backgroundColor: "#fde8e8",
+                  padding: "10px",
+                  borderRadius: "4px",
+                  marginBottom: "15px",
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                }}
+              >
+                {error}
+              </div>
+            )}
 
+            <form onSubmit={handleSubmit}>
               <div className="input-group">
-                <label>Email or mobile number</label>
-                <input 
-                  type="text" 
-                  value={email} 
-                  onChange={handleEmailChange} 
-                  className="form-input" 
+                <label htmlFor="login-email">Email or mobile number</label>
+                <input
+                  id="login-email"
+                  type="text"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="form-input"
                   placeholder="Enter your email"
+                  autoComplete="username"
+                  required
                 />
-                {validationErrors.email && (
-                  <span style={{ color: '#d32f2f', fontSize: '12px', marginTop: '5px', display: 'block', fontWeight: '500' }}>
-                    {validationErrors.email}
-                  </span>
-                )}
               </div>
 
               <div className="input-group">
-                <label>Password or user code (for Staff)</label>
+                <label htmlFor="login-password">Password or user code (for Staff)</label>
                 <PasswordInput
+                  id="login-password"
                   value={password}
-                  onChange={handlePasswordChange}
-                  className="form-input" 
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="form-input"
                   placeholder="Enter your password"
                   autoComplete="current-password"
+                  required
                 />
-                {validationErrors.password && (
-                  <span style={{ color: '#d32f2f', fontSize: '12px', marginTop: '5px', display: 'block', fontWeight: '500' }}>
-                    {validationErrors.password}
-                  </span>
-                )}
               </div>
 
               <div className="form-actions">
                 <div className="checkbox-group">
-                  <input 
-                    type="checkbox" 
-                    id="remember" 
+                  <input
+                    type="checkbox"
+                    id="remember"
                     checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
+                    onChange={(event) => setRememberMe(event.target.checked)}
                   />
                   <label htmlFor="remember">Remember me</label>
                 </div>
-                <button type="button" className="forgot-link" onClick={() => setShowForgotPassword(true)}>
+                <button
+                  type="button"
+                  className="forgot-link"
+                  onClick={() => setShowForgotPassword(true)}
+                >
                   Forgot password?
                 </button>
               </div>
@@ -253,12 +227,11 @@ const LoginStoreOwnerStaff = () => {
       <Footer />
 
       {showForgotPassword && (
-        <ForgotPasswordModal 
-          roleName={email.toLowerCase().includes("staff") ? "Store Staff" : "Store Owner"} 
-          onClose={() => setShowForgotPassword(false)} 
+        <ForgotPasswordModal
+          roleName="Store Owner"
+          onClose={() => setShowForgotPassword(false)}
         />
       )}
-    
     </div>
   );
 };

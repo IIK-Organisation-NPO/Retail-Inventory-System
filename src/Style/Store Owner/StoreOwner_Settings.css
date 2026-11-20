@@ -1,0 +1,163 @@
+/* ============================================
+   Store Owner Settings Page Stylesheet
+   Layout, sidebar, header and avatars come from
+   StoreOwnerInventory.css.
+   ============================================ */
+
+/* --- Notification preferences card --- */
+.ns-card {
+  width: 100%;
+  max-width: 540px;
+  padding: 16px 12px;
+  background-color: #fff;
+  border: 1px solid #e5e5e7;
+  border-radius: 6px;
+}
+
+.ns-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+}
+
+.ns-subtitle {
+  margin: 2px 0 12px;
+  font-size: 11px;
+  color: #6b6b70;
+}
+
+/* --- Preferences table --- */
+.ns-table-wrapper {
+  overflow-x: auto;
+}
+
+.ns-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ns-table th,
+.ns-table td {
+  padding: 9px 6px;
+  border-bottom: 1px solid #ededf0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ns-table thead th {
+  padding-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #444;
+}
+
+.ns-table thead th:first-child,
+.ns-table tbody th {
+  width: 50%;
+}
+
+.ns-table tbody th {
+  font-weight: 400;
+  color: #111;
+  white-space: normal;
+}
+
+.ns-table th:nth-child(2),
+.ns-table td:nth-child(2) {
+  width: 25%;
+}
+
+.ns-unavailable {
+  font-size: 11px;
+  color: #6b6b70;
+}
+
+/* --- On / Off switch --- */
+.ns-toggle {
+  min-width: 36px;
+  padding: 2px 8px;
+  border: 1px solid #111;
+  border-radius: 999px;
+  background-color: #fff;
+  color: #6b6b70;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ns-toggle.on {
+  background-color: #f2f2f4;
+  color: #111;
+}
+
+.ns-toggle:hover {
+  background-color: #e8e8eb;
+}
+
+.ns-toggle:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+/* --- Save button --- */
+.ns-save {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid #111;
+  border-radius: 6px;
+  background-color: #111;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.ns-save:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.ns-save:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+/* Greyed out until a preference changes */
+.ns-save:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- Success message (bottom of the screen) --- */
+.ns-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 1200;
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border-radius: 8px;
+  background-color: #111;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%);
+  animation: nsToastIn 0.2s ease-out;
+}
+
+@keyframes nsToastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

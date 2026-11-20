@@ -1,0 +1,260 @@
+/* ============================================
+   Record Sale Popup Stylesheet
+   Backdrop, card, fields and buttons come from
+   StoreOwner_StockIn_popup.css (sp-* classes).
+   ============================================ */
+
+/* --- Search / scan --- */
+.rs-search-field {
+  position: relative;
+}
+
+.rs-search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.rs-search-row .sp-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.rs-scan-btn {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.rs-results {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 4px;
+  border: 1px solid #e5e5e7;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  background: #fff;
+}
+
+.rs-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background-color: #f5f5f6;
+}
+
+.rs-result + .rs-result {
+  margin-top: 4px;
+}
+
+.rs-result-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rs-result-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.rs-result-meta {
+  font-size: 0.75rem;
+  color: #6b6b70;
+}
+
+.rs-add-btn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background-color: #000;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rs-add-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rs-no-results {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: #6b6b70;
+}
+
+/* --- Section labels --- */
+.rs-section-label {
+  margin: 4px 0 6px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+/* --- Items in this sale --- */
+.rs-empty {
+  margin: 0 0 8px;
+  padding: 12px 0;
+  border-top: 1px solid #ececee;
+  border-bottom: 1px solid #ececee;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.rs-lines {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  border-top: 1px solid #ececee;
+}
+
+.rs-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #ececee;
+}
+
+.rs-line-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rs-line-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.rs-line-meta {
+  font-size: 0.75rem;
+  color: #6b6b70;
+}
+
+/* − [1] + quantity control */
+.rs-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rs-stepper button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rs-qty {
+  min-width: 26px;
+  padding: 1px 6px;
+  border: 1px solid #c4c4c8;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.rs-line-total {
+  min-width: 64px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.rs-remove {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #e5133a;
+  font-family: inherit;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Additional item */
+.rs-link-btn {
+  margin-bottom: 14px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #111;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.rs-other {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.rs-other .sp-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.rs-other .rs-other-amount {
+  flex: 0 0 110px;
+}
+
+/* --- Payment --- */
+.rs-payment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* --- Total --- */
+.rs-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 6px 0 12px;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.rs-note {
+  margin: 0 0 4px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background-color: #e6e7ea;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+/* --- Small screens --- */
+@media (max-width: 400px) {
+  .rs-line {
+    flex-wrap: wrap;
+  }
+
+  .rs-line-info {
+    flex-basis: 100%;
+  }
+
+  .rs-other {
+    flex-wrap: wrap;
+  }
+
+  .rs-other .rs-other-amount {
+    flex: 1 1 100%;
+  }
+}

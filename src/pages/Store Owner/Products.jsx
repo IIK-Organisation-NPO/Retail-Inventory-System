@@ -1,9 +1,7 @@
 import { useState } from "react";
-// Reusing the Sidebar component
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
-// Importing the stylesheet
 import "../../Style/Store Owner/Products.css";
 
 const Products = () => {
@@ -13,7 +11,6 @@ const Products = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Dummy data for the product table
   const [products, setProducts] = useState([
     { id: "seed-1", name: "Simba Chips Original", category: "Snacks", barcode: "6001240200018", cost: "R12.99", price: "R14.63", onHand: 38, reorder: 15, status: "OK" },
     { id: "seed-2", name: "Lay's Salt & Vinegar", category: "Snacks", barcode: "6001240200025", cost: "R14.99", price: "R20.39", onHand: 24, reorder: 15, status: "OK" },
@@ -44,20 +41,21 @@ const Products = () => {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
-    const name = formData.get("name").trim();
-    const category = formData.get("category");
-    const barcode = formData.get("barcode").trim();
-    const onHand = Number(formData.get("onHand"));
-    const reorder = Number(formData.get("reorder"));
-    const cost = Number(formData.get("cost"));
-    const price = Number(formData.get("price"));
+    // Null-safe: get() can return null if the field is missing/unchecked
+    const name = (formData.get("name") ?? "").toString().trim();
+    const category = formData.get("category") ?? "Groceries";
+    const barcode = (formData.get("barcode") ?? "").toString().trim();
+    const onHand = Number(formData.get("onHand") ?? 0);
+    const reorder = Number(formData.get("reorder") ?? 0);
+    const cost = Number(formData.get("cost") ?? 0);
+    const price = Number(formData.get("price") ?? 0);
 
     const savedProduct = {
       id: editingProduct?.id ?? `product-${Date.now()}`,
       name,
       category,
       barcode,
-      unit: formData.get("unit").trim(),
+      unit: (formData.get("unit") ?? "").toString().trim(),
       cost: `R${cost.toFixed(2)}`,
       price: `R${price.toFixed(2)}`,
       onHand,
@@ -66,9 +64,11 @@ const Products = () => {
     };
 
     if (editingProduct) {
-      setProducts((currentProducts) => currentProducts.map((product) => (
-        product.id === editingProduct.id ? savedProduct : product
-      )));
+      setProducts((currentProducts) =>
+        currentProducts.map((product) =>
+          product.id === editingProduct.id ? savedProduct : product
+        )
+      );
       setSuccessMessage(`${name} updated in the product catalogue.`);
     } else {
       setProducts((currentProducts) => [savedProduct, ...currentProducts]);
@@ -84,8 +84,9 @@ const Products = () => {
   const categories = [...new Set(products.map((product) => product.category))];
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
   const filteredProducts = products.filter((product) => {
+    // Null-safe search across all searchable fields
     const matchesSearch = [product.name, product.barcode, product.category]
-      .some((value) => value.toLowerCase().includes(normalizedSearchTerm));
+      .some((value) => (value ?? "").toString().toLowerCase().includes(normalizedSearchTerm));
     const matchesCategory =
       selectedCategory === "All categories" || product.category === selectedCategory;
 
@@ -94,26 +95,22 @@ const Products = () => {
 
   return (
     <div className="app-layout">
-      <StoreOwnerSidebar />
+      <StoreOwnerSidebar notificationCount={3} />
 
       <main className="main-content">
-        
-        {/* Page Header */}
         <header className="page-header">
           <h1 className="page-title">Products</h1>
-          
           <div className="header-actions">
             <StoreOwner_StoreSwitcher />
             <StoreOwner_UserMenu />
           </div>
         </header>
 
-        {/* Filters Row */}
         <div className="filters-row">
-          <input 
-            type="text" 
-            className="search-input" 
-            placeholder="Search by name, barcode or category" 
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search by name, barcode or category"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
@@ -129,15 +126,10 @@ const Products = () => {
           </select>
         </div>
 
-        {/* Product Catalogue Card */}
         <div className="card products-card">
           <div className="card-header">
             <h3>Product catalogue</h3>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={openAddProductModal}
-            >
+            <button type="button" className="btn-primary" onClick={openAddProductModal}>
               Add product
             </button>
           </div>
@@ -158,7 +150,7 @@ const Products = () => {
                 <th>On hand</th>
                 <th>Reorder level</th>
                 <th>Status</th>
-                <th></th> {/* Empty header for the Edit button column */}
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -172,7 +164,7 @@ const Products = () => {
                   <td>{product.onHand}</td>
                   <td>{product.reorder}</td>
                   <td>
-                    <span className={`status-pill ${product.status === 'Low' ? 'status-warning' : 'status-neutral'}`}>
+                    <span className={`status-pill ${product.status === "Low" ? "status-warning" : "status-neutral"}`}>
                       {product.status}
                     </span>
                   </td>
@@ -197,22 +189,16 @@ const Products = () => {
             </tbody>
           </table>
         </div>
-
       </main>
 
-            {/* =========================================
-          ADD PRODUCT MODAL
-          ========================================= */}
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content add-product-modal">
-            
-            {/* Modal Header */}
             <div className="modal-header">
               <h2>{editingProduct ? "Edit Product" : "Add Product"}</h2>
-              <button 
+              <button
                 type="button"
-                className="modal-close-btn" 
+                className="modal-close-btn"
                 onClick={closeProductModal}
                 aria-label="Close modal"
               >
@@ -220,15 +206,12 @@ const Products = () => {
               </button>
             </div>
 
-            {/* Modal Form */}
             <form key={editingProduct?.id ?? "new-product"} onSubmit={handleSaveProduct}>
-              {/* Product Name */}
               <div className="input-group">
                 <label htmlFor="product-name">Product name</label>
                 <input id="product-name" name="name" type="text" className="form-input" defaultValue={editingProduct?.name ?? ""} required />
               </div>
 
-              {/* Category & Barcode Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-category">Category</label>
@@ -244,7 +227,6 @@ const Products = () => {
                 </div>
               </div>
 
-              {/* Unit of Measure & Reorder Level Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-unit">Unit of measure</label>
@@ -256,7 +238,6 @@ const Products = () => {
                 </div>
               </div>
 
-              {/* Unit Cost & Selling Price Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-cost">Unit cost (R)</label>
@@ -268,31 +249,23 @@ const Products = () => {
                 </div>
               </div>
 
-              {/* Current Quantity */}
               <div className="input-group">
                 <label htmlFor="product-on-hand">Current quantity</label>
                 <input id="product-on-hand" name="onHand" type="number" min="0" step="1" className="form-input" defaultValue={editingProduct?.onHand ?? ""} required />
               </div>
 
-              {/* Form Actions (Buttons) */}
               <div className="modal-actions">
                 <button type="submit" className="btn-primary save-btn">
                   {editingProduct ? "Save changes" : "Save product"}
                 </button>
-                <button 
-                  type="button" 
-                  className="btn-outline cancel-btn"
-                  onClick={closeProductModal}
-                >
+                <button type="button" className="btn-outline cancel-btn" onClick={closeProductModal}>
                   Cancel
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}
-      
     </div>
   );
 };

@@ -1,0 +1,138 @@
+/* ============================================
+   Store Owner Staff Page Stylesheet
+   Layout, sidebar, header, buttons, cards and base
+   table styles come from StoreOwnerInventory.css.
+   ============================================ */
+
+/* --- Store staff card --- */
+.st-card {
+  min-height: 280px;
+}
+
+.st-table td {
+  border-top: 1px solid #ededf0;
+}
+
+/* Reset the inventory page's column widths */
+.st-table th:nth-child(n) {
+  width: auto;
+}
+
+.st-table th:nth-child(1) { width: 24%; }
+.st-table th:nth-child(2) { width: 18%; }
+.st-table th:nth-child(3) { width: 20%; }
+.st-table th:nth-child(4) { width: 12%; }
+
+.st-empty {
+  padding: 36px 10px !important;
+  text-align: center;
+  color: #6b6b70 !important;
+  white-space: normal !important;
+}
+
+/* Hidden label for screen readers (the "Actions" column header) */
+.st-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- Status pills --- */
+.st-status {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.st-status-active {
+  background-color: #ececee;
+  color: #333;
+}
+
+.st-status-disabled {
+  background-color: #fde4e8;
+  color: #a50e2d;
+}
+
+/* --- Row actions --- */
+.st-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.st-btn {
+  min-width: 64px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.st-btn:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+.st-btn-edit {
+  background-color: #fff;
+  color: #111;
+  border: 1px solid #111;
+}
+
+.st-btn-edit:hover {
+  background-color: #f0f0f2;
+}
+
+.st-btn-disable {
+  background-color: #a50e2d;
+  color: #fff;
+  border: 1px solid #a50e2d;
+}
+
+.st-btn-enable {
+  background-color: #16a34a;
+  color: #fff;
+  border: 1px solid #16a34a;
+}
+
+.st-btn-disable:hover,
+.st-btn-enable:hover {
+  opacity: 0.88;
+}
+
+/* --- Success message (bottom of the screen) --- */
+.st-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 1200;
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border-radius: 8px;
+  background-color: #111;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%);
+  animation: stToastIn 0.2s ease-out;
+}
+
+@keyframes stToastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

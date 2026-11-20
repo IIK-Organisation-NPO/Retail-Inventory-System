@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
@@ -18,4 +18,3 @@ If you are developing a production application, we recommend using TypeScript wi
 =======
 # Retail-Inventory-System
 This project is aimed at helping local stores to manage their stock and make better purchase decisions
->>>>>>> 5eb5effc457b3ccfb080e3ec3c241a0138007569
