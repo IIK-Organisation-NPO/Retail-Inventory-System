@@ -9,7 +9,6 @@ import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMen
 // Styles
 import "../../Style/Store Owner/StoreProfile.css";
 
-const REGISTERED_COMPANY_ADDRESS = "18 Lagoon Drive, Umhlanga, KwaZulu-Natal, 4319";
 const SOUTH_AFRICAN_PROVINCES = [
   "Eastern Cape",
   "Free State",
@@ -23,24 +22,100 @@ const SOUTH_AFRICAN_PROVINCES = [
 ];
 const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/svg+xml"];
+const MAX_ADDRESS_LENGTH = 50; // the STORES.Address column holds 50 characters
+
+// Small red message shown under a field
+const FieldError = ({ message }) =>
+  message ? <span className="upload-error" role="alert">{message}</span> : null;
+
+// Checks every field and returns { fieldName: "message" } for each problem
+const validateStoreForm = (formData, address) => {
+  const get = (name) => (formData.get(name) || "").toString().trim();
+  const errors = {};
+
+  if (!get("storeName")) errors.storeName = "Enter the store / trading name.";
+  if (!get("storeCategory")) errors.storeCategory = "Select a store category.";
+  if (!get("storeDescription")) errors.storeDescription = "Enter a store description.";
+  if (!get("contactPerson")) errors.contactPerson = "Enter the contact person's name.";
+
+  if (!get("contactNumber")) {
+    errors.contactNumber = "Enter the store contact number.";
+  } else if (!/^[0-9+\s()-]{7,20}$/.test(get("contactNumber"))) {
+    errors.contactNumber = "Enter a valid contact number, for example 031 123 4567.";
+  }
+
+  if (!get("email")) {
+    errors.email = "Enter the store email address.";
+  } else if (!/^\S+@\S+\.\S+$/.test(get("email"))) {
+    errors.email = "Enter a valid email address, for example shop@example.com.";
+  }
+
+  if (!address.trim()) {
+    errors.address = "Enter the physical store address.";
+  } else if (address.trim().length > MAX_ADDRESS_LENGTH) {
+    errors.address = `The address must be ${MAX_ADDRESS_LENGTH} characters or fewer.`;
+  }
+
+  if (!get("storeLocation")) errors.storeLocation = "Enter the store location / area.";
+  if (!get("province")) errors.province = "Select a province.";
+  const hours = get("operatingHours");
+  if (!hours) {
+    errors.operatingHours = "Enter the operating hours.";
+  } else if (hours.length < 5) {
+    errors.operatingHours = "Enter valid operating hours, for example Mon-Fri 08:00-17:00.";
+  } else if (!/\d/.test(hours)) {
+    errors.operatingHours = "Include the opening and closing times, for example 08:00-17:00.";
+  } else if (hours.length > 100) {
+    errors.operatingHours = "Operating hours must be 100 characters or fewer.";
+  }
+
+  return errors;
+};
 
 const StoreProfile = () => {
   const navigate = useNavigate();
+
+  // Company details saved by the earlier steps (CIPC lookup)
+  const cipcNumber = localStorage.getItem("draftCipc") || "";
+  const [company] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("draftCompany"));
+    } catch {
+      return null;
+    }
+  });
+  const registeredAddress = company?.registeredAddress || "";
+  const registeredFits = registeredAddress.length <= MAX_ADDRESS_LENGTH;
+
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
   const [logoError, setLogoError] = useState("");
-  const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(true);
-  const [physicalAddress, setPhysicalAddress] = useState(REGISTERED_COMPANY_ADDRESS);
+  // Draft saved earlier (if the user hit "Back" from the review page)
+  const [savedDraft] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("draftStore")) || {};
+    } catch {
+      return {};
+    }
+  });
+  const savedAddress = savedDraft.address;
+
+  const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(
+    savedAddress ? savedAddress === registeredAddress : registeredFits
+  );
+  const [physicalAddress, setPhysicalAddress] = useState(
+    savedAddress || (registeredFits ? registeredAddress : "")
+  );
+  const [addressError, setAddressError] = useState("");
+  const [errors, setErrors] = useState({});
   const logoPreviewUrl = useRef("");
 
-  // Load existing draft data (if the user hit "Back" from the review page)
+  // If someone lands here without doing the company check, send them back to step 1
   useEffect(() => {
-    const savedDraft = localStorage.getItem("draftStore");
-    if (savedDraft) {
-      const parsed = JSON.parse(savedDraft);
-      if (parsed.address) setPhysicalAddress(parsed.address);
+    if (!cipcNumber || !company) {
+      navigate("/store-owner/stores/register", { replace: true });
     }
-  }, []);
+  }, [cipcNumber, company, navigate]);
 
   useEffect(
     () => () => {
@@ -81,18 +156,45 @@ const StoreProfile = () => {
     setLogoError("");
   };
 
+  const handleSameAddressChange = (event) => {
+    const isChecked = event.target.checked;
+
+    // The database only holds 50 characters, so a long registered address can't be copied
+    if (isChecked && !registeredFits) {
+      setAddressError(
+        `The registered address is longer than ${MAX_ADDRESS_LENGTH} characters. Please type a shorter version.`
+      );
+      return;
+    }
+
+    setAddressError("");
+    setSameAsRegisteredAddress(isChecked);
+    setPhysicalAddress(isChecked ? registeredAddress : "");
+  };
+
   // --- SAVE FORM DATA TO LOCALSTORAGE ---
   const handleSubmit = (event) => {
     event.preventDefault();
 
     // Extract all inputs from the form
     const formData = new FormData(event.target);
-    
+
+    // Check all fields first, and stop with a message under each problem field
+    const foundErrors = validateStoreForm(formData, physicalAddress);
+    if (Object.keys(foundErrors).length > 0) {
+      setErrors(foundErrors);
+      const firstField = Object.keys(foundErrors)[0];
+      event.target.elements[firstField]?.focus(); // jumps to the first problem
+      return;
+    }
+    setErrors({});
+
     // Build the draft object (merging with any existing draft from earlier steps if needed)
     const existingDraft = JSON.parse(localStorage.getItem("draftStore")) || {};
-    
+
     const updatedDraft = {
       ...existingDraft,
+      registrationNumber: cipcNumber, // the backend needs this to re-check the company
       storeName: formData.get("storeName"),
       category: formData.get("storeCategory"),
       description: formData.get("storeDescription"),
@@ -100,9 +202,10 @@ const StoreProfile = () => {
       contactNumber: formData.get("contactNumber"),
       email: formData.get("email"),
       website: formData.get("website") || "Not provided",
-      address: physicalAddress,
+      address: physicalAddress.trim(),
       postalAddress: formData.get("postalAddress"),
       storeLocation: formData.get("storeLocation"),
+      municipality: formData.get("storeLocation"), // saved in the Municipality column
       province: formData.get("province"),
       operatingHours: formData.get("operatingHours"),
       // Note: We aren't uploading the logo to the DB yet, just keeping it in UI for now
@@ -115,19 +218,21 @@ const StoreProfile = () => {
     navigate("/store-owner/stores/register/review");
   };
 
+  if (!cipcNumber || !company) return null;
+
   return (
     <div className="app-layout">
       <StoreOwnerSidebar notificationCount={3} />
 
       <main className="main-content">
-        
+
         {/* Page Header */}
         <header className="page-header">
           <div>
             <h1 className="page-title">Register a store</h1>
             <p className="page-subtitle">Add the details customers and suppliers will see.</p>
           </div>
-          
+
           <div className="header-actions">
             <StoreOwner_StoreSwitcher />
             <StoreOwner_UserMenu />
@@ -137,46 +242,46 @@ const StoreProfile = () => {
         {/* Progress Stepper */}
         <div className="card stepper-card">
           <div className="stepper">
-            
+
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
               <span className="step-label">Company check</span>
             </div>
-            
+
             <div className="step-divider"></div>
-            
+
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
               <span className="step-label">Company information</span>
             </div>
-            
+
             <div className="step-divider"></div>
-            
+
             <div className="step active">
               <div className="step-circle">3</div>
               <span className="step-label">Store profile</span>
             </div>
-            
+
             <div className="step-divider"></div>
-            
+
             <div className="step">
               <div className="step-circle">4</div>
               <span className="step-label">Review</span>
             </div>
-            
+
           </div>
         </div>
 
         {/* Main Content Grid */}
         <div className="store-profile-grid">
-          
+
           {/* LEFT COLUMN (Form) */}
           <div className="profile-form-column">
-            
+
             {/* Store Logo Card */}
             <div className="card logo-upload-card">
               <h2 className="form-title">Store logo</h2>
@@ -218,39 +323,53 @@ const StoreProfile = () => {
               <h2 className="form-title">Store details</h2>
               <p className="form-desc-small">Fields marked * are required.</p>
 
-              <form id="store-profile-form" className="store-details-form" onSubmit={handleSubmit}>
+              <form
+                id="store-profile-form"
+                className="store-details-form"
+                onSubmit={handleSubmit}
+                noValidate
+                onChange={(event) => {
+                  const field = event.target.name;
+                  if (field) setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+                }}
+              >
                 {/* Row 1 */}
                 <div className="form-row">
                   <div className="input-group">
                     <label>Store / trading name *</label>
-                    <input type="text" name="storeName" className="form-input" required />
+                    <input type="text" name="storeName" className="form-input" maxLength={50} defaultValue={savedDraft.storeName} required />
+                    <FieldError message={errors.storeName} />
                   </div>
                   <div className="input-group">
                     <label>Store category *</label>
-                    <select name="storeCategory" className="form-input select-input" defaultValue="" required>
+                    <select name="storeCategory" className="form-input select-input" defaultValue={savedDraft.category || ""} required>
                       <option value="" disabled>Select a store category</option>
                       <option>Grocery & essentials</option>
                       <option>General dealer</option>
                       <option>Spaza shop</option>
                     </select>
+                    <FieldError message={errors.storeCategory} />
                   </div>
                 </div>
 
                 {/* Store Description */}
                 <div className="input-group">
                   <label>Store description *</label>
-                  <textarea name="storeDescription" className="form-input" rows="2" required></textarea>
+                  <textarea name="storeDescription" className="form-input" rows="2" defaultValue={savedDraft.description} required></textarea>
+                  <FieldError message={errors.storeDescription} />
                 </div>
 
                 {/* Row 2 */}
                 <div className="form-row">
                   <div className="input-group">
                     <label>Contact person *</label>
-                    <input type="text" name="contactPerson" className="form-input" required />
+                    <input type="text" name="contactPerson" className="form-input" defaultValue={savedDraft.contactPerson} required />
+                    <FieldError message={errors.contactPerson} />
                   </div>
                   <div className="input-group">
                     <label>Store contact number *</label>
-                    <input type="tel" name="contactNumber" className="form-input" required />
+                    <input type="tel" name="contactNumber" className="form-input" maxLength={20} defaultValue={savedDraft.contactNumber} required />
+                    <FieldError message={errors.contactNumber} />
                   </div>
                 </div>
 
@@ -258,27 +377,24 @@ const StoreProfile = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Store email address *</label>
-                    <input type="email" name="email" className="form-input" required />
+                    <input type="email" name="email" className="form-input" maxLength={50} defaultValue={savedDraft.email} required />
+                    <FieldError message={errors.email} />
                   </div>
                   <div className="input-group">
                     <label>Website (optional)</label>
-                    <input type="text" name="website" className="form-input" />
+                    <input type="text" name="website" className="form-input" defaultValue={savedDraft.website === "Not provided" ? "" : savedDraft.website} />
                   </div>
                 </div>
 
                 {/* Address Section */}
                 <h3 className="section-subtitle">Store address</h3>
-                
+
                 <div className="checkbox-group mb-4">
                   <input
                     type="checkbox"
                     id="sameAddress"
                     checked={sameAsRegisteredAddress}
-                    onChange={(event) => {
-                      const isChecked = event.target.checked;
-                      setSameAsRegisteredAddress(isChecked);
-                      setPhysicalAddress(isChecked ? REGISTERED_COMPANY_ADDRESS : "");
-                    }}
+                    onChange={handleSameAddressChange}
                   />
                   <label htmlFor="sameAddress">Same as the company's registered address</label>
                 </div>
@@ -291,20 +407,27 @@ const StoreProfile = () => {
                     className="form-input"
                     value={physicalAddress}
                     onChange={(event) => setPhysicalAddress(event.target.value)}
+                    maxLength={sameAsRegisteredAddress ? undefined : MAX_ADDRESS_LENGTH}
                     required
                     readOnly={sameAsRegisteredAddress}
                   />
+                  {!sameAsRegisteredAddress && (
+                    <span className="upload-hint">Maximum {MAX_ADDRESS_LENGTH} characters</span>
+                  )}
+                  {addressError && <span className="upload-error" role="alert">{addressError}</span>}
+                  <FieldError message={errors.address} />
                 </div>
 
                 {/* Row 4 */}
                 <div className="form-row">
                   <div className="input-group">
                     <label>Postal address</label>
-                    <input type="text" name="postalAddress" className="form-input" />
+                    <input type="text" name="postalAddress" className="form-input" defaultValue={savedDraft.postalAddress} />
                   </div>
                   <div className="input-group">
                     <label>Store location / area *</label>
-                    <input type="text" name="storeLocation" className="form-input" required />
+                    <input type="text" name="storeLocation" className="form-input" maxLength={50} defaultValue={savedDraft.storeLocation} required />
+                    <FieldError message={errors.storeLocation} />
                   </div>
                 </div>
 
@@ -312,16 +435,18 @@ const StoreProfile = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Province *</label>
-                    <select name="province" className="form-input select-input" defaultValue="" required>
+                    <select name="province" className="form-input select-input" defaultValue={savedDraft.province || ""} required>
                       <option value="" disabled>Select a province</option>
                       {SOUTH_AFRICAN_PROVINCES.map((province) => (
                         <option key={province}>{province}</option>
                       ))}
                     </select>
+                    <FieldError message={errors.province} />
                   </div>
                   <div className="input-group">
                     <label>Operating hours *</label>
-                    <input type="text" name="operatingHours" className="form-input" required />
+                    <input type="text" name="operatingHours" className="form-input" placeholder="Mon-Fri 08:00-17:00" maxLength={100} defaultValue={savedDraft.operatingHours} required />
+                    <FieldError message={errors.operatingHours} />
                   </div>
                 </div>
               </form>
@@ -330,24 +455,24 @@ const StoreProfile = () => {
 
           {/* RIGHT COLUMN (Sidebars) */}
           <div className="profile-sidebar-column">
-            
+
             {/* Company Info Summary */}
             <div className="card company-summary-card">
               <h3 className="info-title">Company information</h3>
               <a href="#" className="cipc-link">CIPC · Read-only</a>
-              
-              <h4 className="company-name-small">Mseleku Trading (Pty) Ltd</h4>
-              
+
+              <h4 className="company-name-small">{company.companyName}</h4>
+
               <div className="company-meta">
                 <span className="meta-label">Registration number</span>
-                <span className="meta-value">2024/123456/07</span>
+                <span className="meta-value">{cipcNumber}</span>
               </div>
-              
+
               <div className="company-meta">
                 <span className="meta-label">Company status</span>
-                <span className="meta-value">In Business</span>
+                <span className="meta-value">{company.status}</span>
               </div>
-              
+
               <p className="company-disclaimer">
                 These company details cannot be edited.<br/>
                 Go back to check a different number.
@@ -370,15 +495,15 @@ const StoreProfile = () => {
 
         {/* Bottom Action Row */}
         <div className="bottom-actions-row">
-          <button 
+          <button
             type="button"
-            className="btn-outline" 
+            className="btn-outline"
             onClick={() => navigate("/store-owner/stores/register/company-information")}
           >
             Back
           </button>
-          
-          <button 
+
+          <button
             type="submit"
             form="store-profile-form"
             className="btn-primary"

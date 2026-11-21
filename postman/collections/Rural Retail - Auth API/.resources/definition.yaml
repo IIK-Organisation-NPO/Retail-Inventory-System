@@ -1,2 +1,9 @@
 $kind: collection
 description: Collection for testing the Authentication endpoints.
+variables:
+  - key: bearer_token_10vq
+    secret: true
+    disabled: false
+  - key: bearer_token_06v7
+    secret: true
+    disabled: false

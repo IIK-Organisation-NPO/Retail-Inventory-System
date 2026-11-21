@@ -1,0 +1,27 @@
+$kind: http-request
+name: " http://localhost:5000/api/stores"
+description: ""
+url: " http://localhost:5000/api/stores"
+method: POST
+headers:
+  Authorization: " {{bearer_token_06v7}}"
+body:
+  type: json
+  content: "{\r
+
+    \  \"storeName\": \"Ixopo Corner Shop\",\r
+
+    \  \"registrationNumber\": \"2015/123456/07\",\r
+
+    \  \"contactNumber\": \"0821234567\",\r
+
+    \  \"email\": \"shop@example.com\",\r
+
+    \  \"province\": \"KwaZulu-Natal\",\r
+
+    \  \"municipality\": \"Ixopo\",\r
+
+    \  \"address\": \"12 Main Road, Ixopo\"\r
+
+    }"
+order: 12000

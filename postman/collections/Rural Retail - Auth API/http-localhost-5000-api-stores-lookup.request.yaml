@@ -1,0 +1,14 @@
+$kind: http-request
+name: http://localhost:5000/api/stores/lookup
+description: ""
+url: http://localhost:5000/api/stores/lookup
+method: POST
+headers:
+  - key: Authorization
+    value: "{{bearer_token_10vq}}"
+    disabled: true
+    description: ""
+body:
+  type: json
+  content: "{ \"registrationNumber\": \"2015/123456/07\" }\r\n"
+order: 11000

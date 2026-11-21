@@ -1,5 +1,4 @@
 // src/App.jsx
-import React from 'react';
 import AppRoutes from './routes/AppRoutes';
 import ReloadPrompt from './components/common/ReloadPrompt';
 

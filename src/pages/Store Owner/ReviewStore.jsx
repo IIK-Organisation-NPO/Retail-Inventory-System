@@ -9,29 +9,55 @@ import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMen
 // Styles
 import "../../Style/Store Owner/ReviewStore.css";
 
+// Reads a saved JSON value from localStorage (returns null if missing or broken)
+const readDraft = (key) => {
+  try {
+    return JSON.parse(localStorage.getItem(key));
+  } catch {
+    return null;
+  }
+};
+
 const ReviewStore = () => {
   const navigate = useNavigate();
-  
-  // State
-  const [draftStore, setDraftStore] = useState(null);
+
+  // Drafts saved by the earlier steps, read once when the page first loads
+  const [draftStore] = useState(() => readDraft("draftStore"));
+  const [company] = useState(() => readDraft("draftCompany"));
+
   const [showSubmittedMessage, setShowSubmittedMessage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [accepted, setAccepted] = useState({ terms: false, accuracy: false });
+  const [checkErrors, setCheckErrors] = useState({});
 
-  // Load draft data on mount, or redirect back if there's no data
+  // If someone lands here directly without finishing the earlier steps, send them back
   useEffect(() => {
-    const savedDraft = localStorage.getItem("draftStore");
-    if (savedDraft) {
-      setDraftStore(JSON.parse(savedDraft));
-    } else {
-      // If someone navigates here directly without filling out the form
-      navigate("/store-owner/stores/register/store-profile");
+    if (!draftStore) {
+      navigate("/store-owner/stores/register/store-profile", { replace: true });
+    } else if (!company) {
+      navigate("/store-owner/stores/register", { replace: true });
     }
-  }, [navigate]);
+  }, [draftStore, company, navigate]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+
+    // Both confirmations must be ticked before we send anything
+    const missing = {};
+    if (!accepted.terms) {
+      missing.terms = "Please accept the application terms to continue.";
+    }
+    if (!accepted.accuracy) {
+      missing.accuracy = "Please confirm that your details are accurate and that you are authorised to apply.";
+    }
+    if (Object.keys(missing).length > 0) {
+      setCheckErrors(missing);
+      return;
+    }
+    setCheckErrors({});
+
     setLoading(true);
 
     const token = localStorage.getItem("token");
@@ -48,7 +74,11 @@ const ReviewStore = () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(draftStore)
+        body: JSON.stringify({
+          ...draftStore,
+          // The backend re-checks the company with this number
+          registrationNumber: draftStore.registrationNumber || localStorage.getItem("draftCipc"),
+        })
       });
 
       const data = await response.json();
@@ -57,8 +87,10 @@ const ReviewStore = () => {
         throw new Error(data.message || "Failed to submit store application");
       }
 
-      // Success! Clear the draft from localStorage
+      // Success! Clear all the drafts from localStorage
       localStorage.removeItem("draftStore");
+      localStorage.removeItem("draftCompany");
+      localStorage.removeItem("draftCipc");
       setShowSubmittedMessage(true);
 
     } catch (err) {
@@ -68,22 +100,24 @@ const ReviewStore = () => {
     }
   };
 
-  // If draftStore is still loading/null, show a blank screen
-  if (!draftStore) return null;
+  // While redirecting, show a blank screen
+  if (!draftStore || !company) return null;
+
+  const registrationNumber = draftStore.registrationNumber || localStorage.getItem("draftCipc");
 
   return (
     <div className="app-layout">
       <StoreOwnerSidebar notificationCount={3} />
 
       <main className="main-content">
-        
+
         {/* Page Header */}
         <header className="page-header">
           <div>
             <h1 className="page-title">Review your store</h1>
             <p className="page-subtitle">Check your details before submitting your application.</p>
           </div>
-          
+
           <div className="header-actions">
             <StoreOwner_StoreSwitcher />
             <StoreOwner_UserMenu />
@@ -93,39 +127,39 @@ const ReviewStore = () => {
         {/* Progress Stepper */}
         <div className="card stepper-card">
           <div className="stepper">
-            
+
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
               <span className="step-label">Company check</span>
             </div>
-            
+
             <div className="step-divider"></div>
-            
+
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
               <span className="step-label">Company information</span>
             </div>
-            
+
             <div className="step-divider"></div>
-            
+
             <div className="step completed">
               <div className="step-circle">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
               <span className="step-label">Store profile</span>
             </div>
-            
+
             <div className="step-divider"></div>
-            
+
             <div className="step active">
               <div className="step-circle">4</div>
               <span className="step-label">Review</span>
             </div>
-            
+
           </div>
         </div>
 
@@ -142,7 +176,7 @@ const ReviewStore = () => {
 
         {/* Review Grid */}
         <div className="review-grid">
-          
+
           {/* Business Registration */}
           <div className="card review-card">
             <div className="review-card-header">
@@ -152,19 +186,15 @@ const ReviewStore = () => {
             <div className="review-list">
               <div className="review-row">
                 <span className="review-label">Registration number</span>
-                <span className="review-value">{draftStore.registrationNumber}</span>
+                <span className="review-value">{registrationNumber}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Registered name</span>
-                <span className="review-value">Mseleku Trading (Pty) Ltd</span>
+                <span className="review-value">{company.companyName}</span>
               </div>
               <div className="review-row">
-                <span className="review-label">Company type</span>
-                <span className="review-value">Private Company</span>
-              </div>
-              <div className="review-row">
-                <span className="review-label">Registered on</span>
-                <span className="review-value">12 March 2024</span>
+                <span className="review-label">Company status</span>
+                <span className="review-value">{company.status}</span>
               </div>
             </div>
           </div>
@@ -226,7 +256,7 @@ const ReviewStore = () => {
             <div className="review-list">
               <div className="review-row">
                 <span className="review-label">Registered address</span>
-                <span className="review-value">18 Lagoon Drive, Umhlanga, KwaZulu-Natal, 4319</span>
+                <span className="review-value">{company.registeredAddress}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Store address</span>
@@ -235,6 +265,10 @@ const ReviewStore = () => {
               <div className="review-row">
                 <span className="review-label">Location / area</span>
                 <span className="review-value">{draftStore.storeLocation}</span>
+              </div>
+              <div className="review-row">
+                <span className="review-label">Province</span>
+                <span className="review-value">{draftStore.province}</span>
               </div>
             </div>
           </div>
@@ -245,7 +279,7 @@ const ReviewStore = () => {
         <div className="card additional-details-card">
           <h3 className="review-title">Additional details</h3>
           <div className="additional-info">
-            <span>Company status: In Business</span>
+            <span>Company status: {company.status}</span>
             <span className="bullet-separator">•</span>
             <span>Postal address: {draftStore.postalAddress || "Not provided"}</span>
             <span className="bullet-separator">•</span>
@@ -256,25 +290,47 @@ const ReviewStore = () => {
 
         {/* Edit Profile Button */}
         <div className="edit-action-wrapper">
-          <button 
-            className="btn-outline" 
+          <button
+            className="btn-outline"
             onClick={() => navigate("/store-owner/stores/register/store-profile")}
           >
             Edit profile information
           </button>
         </div>
 
-        <form className="application-submit-form" onSubmit={handleSubmit}>
+        <form className="application-submit-form" onSubmit={handleSubmit} noValidate>
           {/* Checkboxes */}
           <div className="confirmation-checkboxes">
             <div className="checkbox-item">
-              <input type="checkbox" id="terms" required />
+              <input
+                type="checkbox"
+                id="terms"
+                checked={accepted.terms}
+                onChange={(e) => {
+                  setAccepted((prev) => ({ ...prev, terms: e.target.checked }));
+                  setCheckErrors((prev) => ({ ...prev, terms: "" }));
+                }}
+              />
               <label htmlFor="terms">I accept the platform's application terms for this prototype.</label>
             </div>
+            {checkErrors.terms && (
+              <span role="alert" style={{ color: "red", fontSize: "14px" }}>{checkErrors.terms}</span>
+            )}
             <div className="checkbox-item">
-              <input type="checkbox" id="accuracy" required />
+              <input
+                type="checkbox"
+                id="accuracy"
+                checked={accepted.accuracy}
+                onChange={(e) => {
+                  setAccepted((prev) => ({ ...prev, accuracy: e.target.checked }));
+                  setCheckErrors((prev) => ({ ...prev, accuracy: "" }));
+                }}
+              />
               <label htmlFor="accuracy">I confirm the details are accurate and I am authorised to apply for this business.</label>
             </div>
+            {checkErrors.accuracy && (
+              <span role="alert" style={{ color: "red", fontSize: "14px" }}>{checkErrors.accuracy}</span>
+            )}
           </div>
 
           {/* Bottom Actions */}
