@@ -1,0 +1,69 @@
+.staff-sale-recorded-check {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  margin: 0 0 12px;
+  place-items: center;
+  border-radius: 50%;
+  background: #090909;
+}
+
+.staff-sale-recorded-check svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.staff-sale-recorded-date {
+  margin: 0 0 18px;
+  color: #666;
+  font-size: 13px;
+  text-align: center;
+}
+
+.staff-sale-recorded-summary {
+  border-top: 1px solid #e8e8e8;
+}
+
+.staff-sale-recorded-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid #e8e8e8;
+  font-size: 14px;
+}
+
+.staff-sale-recorded-summary span {
+  color: #666;
+}
+
+.staff-sale-recorded-summary strong {
+  color: #111;
+}
+
+.staff-sale-recorded-stock {
+  margin: 16px 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #e8e9ec;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.staff-sale-recorded-new {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: #090909;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

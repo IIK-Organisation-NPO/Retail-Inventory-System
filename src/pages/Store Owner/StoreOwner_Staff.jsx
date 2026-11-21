@@ -86,13 +86,15 @@ const StoreOwner_Staff = () => {
     try {
       let response;
       
+      // Note: We map member.code (from the popup) to password (for the backend)
       const payload = {
         storeId: storeId,
         name: member.name,
         surname: member.surname,
         email: member.email,
         mobile: member.mobile,
-        role: member.role
+        role: member.role,
+        password: member.code // <--- CRITICAL FIX: Pass the 6-digit code
       };
 
       if (member.id) {

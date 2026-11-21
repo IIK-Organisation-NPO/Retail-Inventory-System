@@ -1,0 +1,60 @@
+/* ============================================
+   Staff "Choose a period" Popup Stylesheet
+   (backdrop, card, fields and buttons are in Staff_StockPopups.css)
+   ============================================ */
+
+/* List of period choices */
+.stp-period-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/* One choice: radio + label in a bordered box */
+.stp-period-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #e0e0e3;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #111;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.stp-period-option:hover {
+  background-color: #f7f7f8;
+}
+
+.stp-period-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #111;
+  cursor: pointer;
+}
+
+/* Chosen period: dark border and bold text */
+.stp-period-option.selected {
+  border: 1.5px solid #111;
+  font-weight: 600;
+}
+
+/* Keyboard focus ring on the whole box */
+.stp-period-option:has(input:focus-visible) {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+/* From / To when a preset period is chosen (not editable) */
+.stp-period-locked:disabled {
+  background-color: #ececee;
+  border-color: #d4d4d8;
+  color: #9a9aa0;
+  cursor: default;
+}

@@ -155,7 +155,7 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
       return;
     }
 
-    // TODO: save the sale with the API (stock is reduced on the server)
+    // Pass the data back to the parent (StoreOwner_Sales.jsx) which sends it to the backend
     onComplete?.({
       items: lines.map(({ productId, name, price, qty }) => ({ productId, name, price, qty })),
       payment,

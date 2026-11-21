@@ -13,20 +13,17 @@ const LoginStoreOwnerStaff = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState(""); // For network errors (backend offline)
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  
-  // State for field-specific validation errors
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Clear specific field error as the user types
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
     if (validationErrors.email) {
       setValidationErrors({ ...validationErrors, email: "" });
     }
-    setError(""); // Clear network error if they start typing
+    setError("");
   };
 
   const handlePasswordChange = (e) => {
@@ -34,28 +31,25 @@ const LoginStoreOwnerStaff = () => {
     if (validationErrors.password) {
       setValidationErrors({ ...validationErrors, password: "" });
     }
-    setError(""); 
+    setError("");
   };
 
   const validateForm = () => {
     const errors = {};
     const input = email.trim();
 
-    // 1. Validate Email or Mobile Number format
     if (!input) {
-      errors.email = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567) or Email address is required";
+      errors.email = "Please enter your email or mobile number";
     } else {
       const isPhone = /^(?:\+27|0)[6-8][0-9]{8}$/.test(input.replace(/\s/g, ''));
       const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
-
       if (!isPhone && !isEmail) {
-        errors.email = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567) or Email address is required";
+        errors.email = "Please enter a valid email or mobile number";
       }
     }
 
-    // 2. Validate Password is not empty
     if (!password) {
-      errors.password = "Invalid password or passcode";
+      errors.password = "Please enter your password";
     }
 
     return errors;
@@ -63,13 +57,12 @@ const LoginStoreOwnerStaff = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Clear network errors
+    setError("");
 
-    // Run custom frontend validations (format checks)
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      return; // Stop submission
+      return;
     }
 
     setValidationErrors({});
@@ -82,46 +75,33 @@ const LoginStoreOwnerStaff = () => {
         body: JSON.stringify({
           email: email,
           password: password,
-          role: "STORE" 
+          role: "STORE", // Tells backend to check Owner AND Staff tables
+          rememberMe: rememberMe
         })
       });
 
       const data = await response.json();
 
-      // Handle specific errors based on backend status codes
       if (!response.ok) {
-        if (response.status === 404) {
-          // Email not found in database
-          setValidationErrors({ email: data.message });
-          setLoading(false);
-          return;
-        }
-        
-        if (response.status === 401) {
-          // Password incorrect
-          setValidationErrors({ password: data.message });
-          setLoading(false);
-          return;
-        }
-
         throw new Error(data.message || "Login failed");
       }
 
-      // Success! Save the token and role to local storage
+      // Save token and role
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("userName", data.user.name);
 
       alert(`Welcome back, ${data.user.name}!`);
-      navigate("/store-owner/dashboard");
+      
+      // Route based on whether they are an Owner or Staff
+      if (data.role === "STAFF") {
+        navigate("/staff/dashboard"); // Make sure this route exists for staff
+      } else {
+        navigate("/store-owner/dashboard");
+      }
       
     } catch (err) {
-      // This ONLY catches network errors (e.g., if backend is not running)
-      if (err.message === "Failed to fetch") {
-        setError("Cannot connect to the server. Please ensure the backend is running.");
-      } else {
-        setError(err.message);
-      }
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -163,7 +143,6 @@ const LoginStoreOwnerStaff = () => {
 
             <form onSubmit={handleSubmit} noValidate>
               
-              {/* Network Error Banner (Only shows if backend is offline) */}
               {error && (
                 <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px' }}>
                   {error}
@@ -179,7 +158,6 @@ const LoginStoreOwnerStaff = () => {
                   className="form-input" 
                   placeholder="Enter your email or phone"
                 />
-                {/* Email/Phone Validation Error */}
                 {validationErrors.email && (
                   <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>
                     {validationErrors.email}
@@ -196,7 +174,6 @@ const LoginStoreOwnerStaff = () => {
                   placeholder="Enter your password"
                   autoComplete="current-password"
                 />
-                {/* Password Validation Error */}
                 {validationErrors.password && (
                   <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>
                     {validationErrors.password}

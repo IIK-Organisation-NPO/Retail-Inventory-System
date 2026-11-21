@@ -47,6 +47,10 @@
   font-family: inherit;
 }
 
+.so-store-selector-read-only {
+  cursor: default;
+}
+
 .so-store-logo {
   width: 24px;
   height: 24px;

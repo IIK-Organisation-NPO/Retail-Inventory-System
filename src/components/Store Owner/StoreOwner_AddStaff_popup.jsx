@@ -5,7 +5,7 @@ import { PopupShell } from "./StoreOwner_StockIn_popup";
 import "../../Style/Store Owner/StoreOwner_StockIn_popup.css";
 import "../../Style/Store Owner/StoreOwner_AddStaff_popup.css";
 
-const STAFF_ROLES =["Cashier", "Stock clerk", "Manager"];
+const STAFF_ROLES = ["Cashier", "Stock clerk", "Manager"];
 const GENDERS = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
@@ -15,13 +15,6 @@ const CODE_LENGTH = 6;
 
 const digitsOnly = (value) => value.replace(/\D/g, "");
 
-/**
- * stores:        [{ id, name }]
- * defaultStoreId the store selected in the header
- * staffMember:   pass an existing staff member to edit them (optional)
- * isMobileTaken: (mobileDigits, staffId) => true if another staff member uses it
- * onSave:        called with the staff member's details
- */
 const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobileTaken, onSave, onClose }) => {
   const isEdit = Boolean(staffMember);
 
@@ -38,6 +31,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
     code: "",
     confirmCode: "",
   }));
+  
   const [error, setError] = useState("");
 
   const update = (field) => (e) => {
@@ -82,8 +76,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
       return;
     }
 
-    // TODO: save with the API. Never keep the user code in the browser —
-    // send it to the server, which stores it securely (hashed).
+    // Pass all data, including the new code, up to the parent
     onSave({
       ...(staffMember ?? {}),
       name: form.name.trim(),
@@ -95,6 +88,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
       disabilityType: form.hasDisability ? form.disabilityType.trim() : "",
       role: form.role,
       storeId: form.storeId,
+      code: form.code, // <--- Added this so the parent can send it to the backend
     });
     onClose();
   };
