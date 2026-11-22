@@ -1,44 +1,80 @@
-import { useMemo, useState } from "react";
+// src/pages/Staff/StaffSell.jsx
+import { useMemo, useState, useEffect } from "react";
 import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import StoreOwner_ScanBarcode_popup from "../../components/Store Owner/StoreOwner_ScanBarcode_popup";
 import StaffSaleRecordedPopup from "../../components/Staff/StaffSaleRecordedPopup";
-import { STAFF_STORE } from "../../data/stores";
 import formatRand from "../../utils/formatRand";
 import "../../Style/Staff/StaffSell.css";
 
-const INITIAL_PRODUCTS = [
-  { id: 1, product: "Coca-Cola 500ml", price: 26.5, onHand: 89, barcode: "5449000000996" },
-  { id: 2, product: "Simba Chips Original", price: 14.63, onHand: 38, barcode: "6001234500028" },
-  { id: 3, product: "NikNaks Cheese", price: 15, onHand: 66, barcode: "6001234500042" },
-  { id: 4, product: "Lay's Salt & Vinegar", price: 20.39, onHand: 24, barcode: "6001234500073" },
-  { id: 5, product: "Fanta Orange 500ml", price: 20.55, onHand: 12, barcode: "6001234500059" },
-  { id: 6, product: "Sprite 500ml", price: 21.45, onHand: 55, barcode: "6001234500035" },
-];
-
 const StaffSell = () => {
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
-  const [cart, setCart] = useState([
-    { productId: 1, qty: 2 },
-    { productId: 2, qty: 1 },
-  ]);
+  // Data State
+  const [products, setProducts] = useState([]);
+  const [storeName, setStoreName] = useState("My Store");
+  const [loading, setLoading] = useState(true);
+  const [globalError, setGlobalError] = useState("");
+
+  // Sale State
+  const [cart, setCart] = useState([]);
   const [query, setQuery] = useState("");
   const [payment, setPayment] = useState("Cash");
-  const [received, setReceived] = useState("100.00");
+  const [received, setReceived] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [initialScanned, setInitialScanned] = useState([]);
   const [completedSale, setCompletedSale] = useState(null);
 
+  const storeId = localStorage.getItem("activeStoreId") || 1;
+  const token = localStorage.getItem("token");
+  const userName = localStorage.getItem("userName") || "Staff Member";
+
+  // --- 1. FETCH REAL PRODUCTS FROM DB ---
+  const fetchProducts = async () => {
+    try {
+      const headers = { "Authorization": `Bearer ${token}` };
+      
+      const prodRes = await fetch(`http://localhost:5000/api/products?storeId=${storeId}`, { headers });
+      const data = await prodRes.json();
+      
+      if (prodRes.ok) {
+        setProducts(data.map(p => ({
+          id: p.ProductID,
+          product: p.Name,
+          price: Number(p.SellingPrice),
+          onHand: p.OnHand,
+          barcode: p.Barcode
+        })));
+      }
+
+      // Fetch store name
+      const storeRes = await fetch(`http://localhost:5000/api/stores/my-stores`, { headers });
+      const storeData = await storeRes.json();
+      if (storeRes.ok && storeData.length > 0) {
+        const currentStore = storeData.find(s => s.StoreID === Number(storeId));
+        if (currentStore) setStoreName(currentStore.StoreName);
+      }
+
+    } catch (err) {
+      setGlobalError("Failed to load products.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) fetchProducts();
+  }, [storeId, token]);
+
+  // --- UI HELPERS ---
   const visibleProducts = useMemo(() => {
     const search = query.trim().toLowerCase();
     if (!search) return products;
     return products.filter(
       (product) =>
         product.product.toLowerCase().includes(search) ||
-        product.barcode.includes(search)
+        (product.barcode && product.barcode.includes(search))
     );
   }, [products, query]);
 
@@ -48,6 +84,7 @@ const StaffSell = () => {
       return sum + (product?.price ?? 0) * item.qty;
     }, 0) * 100
   ) / 100;
+
   const change = received !== "" && Number(received) >= total
     ? Math.round((Number(received) - total) * 100) / 100
     : null;
@@ -56,6 +93,15 @@ const StaffSell = () => {
     cart.find((item) => item.productId === productId)?.qty ?? 0;
 
   const changeQuantity = (productId, changeBy) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const currentQty = quantityInCart(productId);
+    if (currentQty + changeBy > product.onHand) {
+      setError(`Only ${product.onHand} of ${product.product} in stock.`);
+      return;
+    }
+
     setCart((current) =>
       current
         .map((item) =>
@@ -68,7 +114,8 @@ const StaffSell = () => {
     setError("");
   };
 
-  const handleCompleteSale = (event) => {
+  // --- 2. COMPLETE SALE TO DB ---
+  const handleCompleteSale = async (event) => {
     event.preventDefault();
     if (!cart.length) {
       setError("Add at least one product to the sale.");
@@ -79,31 +126,53 @@ const StaffSell = () => {
       return;
     }
 
-    const stockUpdated = cart.map((item) => {
-      const product = products.find((entry) => entry.id === item.productId);
-      return {
-        product: product.product,
-        onHand: product.onHand - item.qty,
-      };
-    });
-    setProducts((current) =>
-      current.map((product) => {
-        const soldItem = cart.find((item) => item.productId === product.id);
-        return soldItem ? { ...product, onHand: product.onHand - soldItem.qty } : product;
-      })
-    );
-    setCompletedSale({
-      total,
-      payment,
-      received: payment === "Cash" ? Number(received) : total,
-      change: payment === "Cash" ? change : 0,
-      stockUpdated,
-      recordedAt: new Date(),
-    });
-    setCart([]);
-    setReceived("");
     setError("");
-    setNotice("");
+
+    try {
+      const payload = {
+        storeId: storeId,
+        paymentMethod: payment,
+        items: cart.map(item => {
+          const product = products.find(p => p.id === item.productId);
+          return {
+            productId: item.productId,
+            price: product.price,
+            quantity: item.qty
+          };
+        })
+      };
+
+      const response = await fetch("http://localhost:5000/api/sales", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to record sale");
+
+      // Success! Show the success popup with receipt details
+      setCompletedSale({
+        total,
+        payment,
+        received: payment === "Cash" ? Number(received) : total,
+        change: payment === "Cash" ? change : 0,
+        recordedAt: new Date()
+      });
+
+      // Reset cart
+      setCart([]);
+      setReceived("");
+      
+      // Refresh products to show updated stock
+      fetchProducts();
+
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const clearSale = () => {
@@ -135,6 +204,8 @@ const StaffSell = () => {
     setShowScanner(true);
   };
 
+  if (loading) return <div style={{ padding: '50px' }}>Loading POS...</div>;
+
   return (
     <div className="staff-sell-layout">
       <Staff_Sidebar alertCount={3} />
@@ -143,10 +214,10 @@ const StaffSell = () => {
         <header className="staff-sell-header">
           <h1>New sale</h1>
           <div className="staff-sell-header-actions">
-            <span className="staff-sell-sync">Synced 2 min ago</span>
-            <StoreOwner_StoreSwitcher stores={[STAFF_STORE]} readOnly />
+            <span className="staff-sell-sync">Synced just now</span>
+            <StoreOwner_StoreSwitcher readOnly />
             <StoreOwner_UserMenu
-              name="Lindiwe Ngcobo"
+              name={userName}
               role="Cashier"
               accountPath="/staff/account"
               accountLabel="My account"
@@ -154,6 +225,12 @@ const StaffSell = () => {
             />
           </div>
         </header>
+
+        {globalError && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+            {globalError}
+          </div>
+        )}
 
         <div className="staff-sell-grid">
           <section className="staff-sell-card staff-sell-products">
@@ -182,26 +259,29 @@ const StaffSell = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleProducts.map((product) => (
-                    <tr key={product.id}>
-                      <td>{product.product}</td>
-                      <td>{formatRand(product.price)}</td>
-                      <td>
-                        <span>{product.onHand}</span>
-                        {product.onHand < 15 && <span className="staff-sell-low-stock">Low</span>}
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="staff-sell-button staff-sell-add"
-                          disabled={quantityInCart(product.id) >= product.onHand}
-                          onClick={() => openScanner([{ productId: product.id, qty: 1 }])}
-                        >
-                          Add
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {visibleProducts.map((product) => {
+                    const left = product.onHand - quantityInCart(product.id);
+                    return (
+                      <tr key={product.id}>
+                        <td>{product.product}</td>
+                        <td>{formatRand(product.price)}</td>
+                        <td>
+                          <span>{left}</span>
+                          {left < 15 && <span className="staff-sell-low-stock">Low</span>}
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="staff-sell-button staff-sell-add"
+                            disabled={left <= 0}
+                            onClick={() => changeQuantity(product.id, 1)}
+                          >
+                            Add
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {visibleProducts.length === 0 && (
                     <tr>
                       <td className="staff-sell-no-results" colSpan="4">No matching products.</td>

@@ -1,5 +1,5 @@
 // src/pages/Staff/Staff_Stock.jsx
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import "../../Style/Staff/Staff_Layout.css";
 import "../../Style/Staff/Staff_Stock.css";
 import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
@@ -10,34 +10,16 @@ import {
   Staff_StockAdjustmentPopup,
 } from "../../components/Staff/Staff_StockPopups";
 
-// Mock data — replace with API data once the backend is connected
-const STORE = { name: "Mseleku Tuckshop" };
-const LAST_SYNCED = "2 min ago";
-
-const SUMMARY = {
-  inventoryValue: "R48,549",
-  lowStockProducts: 5,
-  outOfStock: 0,
-  lastStockCount: "12 Nov",
-};
-
-const STOCK_ITEMS = [
-  { id: 1, product: "Simba Chips Original", onHand: 38, reorderLevel: 15, lastMovement: "Sale, 13 Nov" },
-  { id: 2, product: "Lay's Salt & Vinegar", onHand: 24, reorderLevel: 15, lastMovement: "Stock in, 11 Nov" },
-  { id: 3, product: "NikNaks Cheese", onHand: 66, reorderLevel: 15, lastMovement: "Sale, 13 Nov" },
-  { id: 4, product: "Coca-Cola 500ml", onHand: 89, reorderLevel: 15, lastMovement: "Adjustment, 12 Nov" },
-  { id: 5, product: "Fanta Orange 500ml", onHand: 12, reorderLevel: 15, lastMovement: "Stock out, 10 Nov" },
-  { id: 6, product: "Sprite 500ml", onHand: 55, reorderLevel: 15, lastMovement: "Sale, 12 Nov" },
-];
-
 // "Mseleku Tuckshop" -> "MT"
-const getInitials = (name) =>
-  name
+const getInitials = (name) => {
+  if (!name) return "ST";
+  return name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((word) => word[0].toUpperCase())
     .join("");
+};
 
 // Work out the stock status of a product from its quantity
 const getStatus = (onHand, reorderLevel) => {
@@ -49,52 +31,136 @@ const getStatus = (onHand, reorderLevel) => {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // "2026-11-13" -> "13 Nov"
-const formatShortDate = (iso) => {
-  const [, month, day] = iso.split("-").map(Number);
-  return `${day} ${MONTHS[month - 1]}`;
+const formatShortDate = (isoString) => {
+  if (!isoString) return "N/A";
+  const d = new Date(isoString);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 };
 
 const Staff_Stock = () => {
-  const [stockItems, setStockItems] = useState(STOCK_ITEMS);
-  const [openPopup, setOpenPopup] = useState(null); // "in" | "out" | "adjust" | null
+  // Data State
+  const [stockItems, setStockItems] = useState([]);
+  const [summary, setSummary] = useState({
+    inventoryValue: 0,
+    lowStockProducts: 0,
+    outOfStock: 0,
+    lastStockCount: "N/A",
+  });
+  const [storeName, setStoreName] = useState("My Store");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // UI State
+  const [openPopup, setOpenPopup] = useState(null);
+
+  const storeId = localStorage.getItem("activeStoreId") || 1;
+  const token = localStorage.getItem("token");
+  const userName = localStorage.getItem("userName") || "Staff Member";
+
+  // --- 1. FETCH REAL DATA ---
+  const fetchData = async () => {
+    try {
+      const headers = { "Authorization": `Bearer ${token}` };
+
+      // Fetch Products
+      const prodRes = await fetch(`http://localhost:5000/api/products?storeId=${storeId}`, { headers });
+      const data = await prodRes.json();
+      
+      if (!prodRes.ok) throw new Error(data.message);
+
+      let totalValue = 0;
+      let lowCount = 0;
+      let outCount = 0;
+
+      const formattedItems = data.map((p) => {
+        const onHand = p.OnHand || 0;
+        const reorder = p.ReorderLevel || 15;
+        const cost = Number(p.CostPrice) || 0;
+        
+        // Calculate summaries
+        totalValue += (onHand * cost);
+        if (onHand === 0) outCount++;
+        else if (onHand < reorder) lowCount++;
+
+        return {
+          id: p.ProductID,
+          product: p.Name,
+          onHand: onHand,
+          reorderLevel: reorder,
+          lastMovement: p.LastMovementDate ? `Updated, ${formatShortDate(p.LastMovementDate)}` : "No recent movements",
+        };
+      });
+
+      setStockItems(formattedItems);
+      setSummary({
+        inventoryValue: totalValue,
+        lowStockProducts: lowCount,
+        outOfStock: outCount,
+        lastStockCount: formatShortDate(new Date()),
+      });
+
+      // Fetch Store Name
+      const storeRes = await fetch(`http://localhost:5000/api/stores/my-stores`, { headers });
+      const storeData = await storeRes.json();
+      if (storeRes.ok && storeData.length > 0) {
+        const currentStore = storeData.find(s => s.StoreID === Number(storeId));
+        if (currentStore) setStoreName(currentStore.StoreName);
+      }
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) fetchData();
+  }, [storeId, token]);
 
   const closePopup = useCallback(() => setOpenPopup(null), []);
 
-  // Update one product's quantity and last movement after a popup is saved
-  const applyMovement = (productId, getNewOnHand, label, date) => {
-    setStockItems((items) =>
-      items.map((item) =>
-        item.id === productId
-          ? { ...item, onHand: getNewOnHand(item.onHand), lastMovement: `${label}, ${formatShortDate(date)}` }
-          : item
-      )
-    );
+  // --- 2. SAVE MOVEMENT TO BACKEND ---
+  const handleSaveMovement = async (productId, quantityChange, type, details) => {
+    try {
+      const payload = { storeId, productId, type, quantityChange, details };
+
+      const response = await fetch("http://localhost:5000/api/inventory/movement", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) throw new Error("Failed to update stock");
+
+      closePopup();
+      fetchData(); // Refresh table and stats from DB
+    } catch (err) {
+      alert(err.message);
+    }
   };
+
+  if (loading) return <div style={{ padding: '50px' }}>Loading stock...</div>;
 
   return (
     <div className="st-layout">
-      {/* =========================================
-          SIDEBAR
-          ========================================= */}
-      <Staff_Sidebar alertCount={3} />
+      <Staff_Sidebar alertCount={summary.lowStockProducts} />
 
-      {/* =========================================
-          MAIN CONTENT
-          ========================================= */}
       <main className="st-main">
-        {/* Page header: title, sync status, store, actions, user avatar */}
         <header className="st-header">
           <h1 className="st-page-title">Stock</h1>
 
           <div className="st-header-actions">
-            <span className="st-sync">Synced {LAST_SYNCED}</span>
+            <span className="st-sync">Synced just now</span>
 
-            {/* Staff work in one store, so this is a label, not a switcher */}
             <div className="st-store-chip">
               <span className="st-avatar st-avatar-sm" aria-hidden="true">
-                {getInitials(STORE.name)}
+                {getInitials(storeName)}
               </span>
-              <span>{STORE.name}</span>
+              <span>{storeName}</span>
             </div>
 
             <button type="button" className="st-btn st-btn-primary" onClick={() => setOpenPopup("in")}>
@@ -108,7 +174,7 @@ const Staff_Stock = () => {
             </button>
 
             <StoreOwner_UserMenu
-              name="Lindiwe Ngcobo"
+              name={userName}
               role="Cashier"
               accountPath="/staff/account"
               accountLabel="My account"
@@ -117,23 +183,31 @@ const Staff_Stock = () => {
           </div>
         </header>
 
+        {error && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+            {error}
+          </div>
+        )}
+
         {/* Summary cards */}
         <section className="st-stats">
           <div className="st-stat-card">
             <p className="st-stat-label">Inventory value</p>
-            <p className="st-stat-value">{SUMMARY.inventoryValue}</p>
+            <p className="st-stat-value">
+              R{summary.inventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
           </div>
           <div className="st-stat-card">
             <p className="st-stat-label">Low stock products</p>
-            <p className="st-stat-value st-stat-value-danger">{SUMMARY.lowStockProducts}</p>
+            <p className="st-stat-value st-stat-value-danger">{summary.lowStockProducts}</p>
           </div>
           <div className="st-stat-card">
             <p className="st-stat-label">Out of stock</p>
-            <p className="st-stat-value">{SUMMARY.outOfStock}</p>
+            <p className="st-stat-value">{summary.outOfStock}</p>
           </div>
           <div className="st-stat-card">
-            <p className="st-stat-label">Last stock count</p>
-            <p className="st-stat-value">{SUMMARY.lastStockCount}</p>
+            <p className="st-stat-label">Today's Date</p>
+            <p className="st-stat-value">{summary.lastStockCount}</p>
           </div>
         </section>
 
@@ -153,37 +227,39 @@ const Staff_Stock = () => {
                 </tr>
               </thead>
               <tbody>
-                {stockItems.map((item) => {
-                  const status = getStatus(item.onHand, item.reorderLevel);
-                  return (
-                    <tr key={item.id}>
-                      <td>{item.product}</td>
-                      <td>{item.onHand}</td>
-                      <td>{item.reorderLevel}</td>
-                      <td>
-                        <span className={`st-status st-status-${status.className}`}>
-                          {status.label}
-                        </span>
-                      </td>
-                      <td>{item.lastMovement}</td>
-                    </tr>
-                  );
-                })}
+                {stockItems.length === 0 ? (
+                  <tr><td colSpan="5" style={{textAlign: "center", padding: "20px"}}>No products found.</td></tr>
+                ) : (
+                  stockItems.map((item) => {
+                    const status = getStatus(item.onHand, item.reorderLevel);
+                    return (
+                      <tr key={item.id}>
+                        <td>{item.product}</td>
+                        <td>{item.onHand}</td>
+                        <td>{item.reorderLevel}</td>
+                        <td>
+                          <span className={`st-status st-status-${status.className}`}>
+                            {status.label}
+                          </span>
+                        </td>
+                        <td>{item.lastMovement}</td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </section>
       </main>
 
-      {/* =========================================
-          POPUPS
-          ========================================= */}
+      {/* POPUPS */}
       {openPopup === "in" && (
         <Staff_StockInPopup
           products={stockItems}
           onClose={closePopup}
-          onSave={({ productId, quantity, date }) =>
-            applyMovement(productId, (onHand) => onHand + quantity, "Stock in", date)
+          onSave={({ productId, quantity }) =>
+            handleSaveMovement(productId, quantity, "Stock in", "Stock in by Staff")
           }
         />
       )}
@@ -192,8 +268,8 @@ const Staff_Stock = () => {
         <Staff_StockOutPopup
           products={stockItems}
           onClose={closePopup}
-          onSave={({ productId, quantity, date }) =>
-            applyMovement(productId, (onHand) => onHand - quantity, "Stock out", date)
+          onSave={({ productId, quantity }) =>
+            handleSaveMovement(productId, -quantity, "Stock out", "Stock out by Staff")
           }
         />
       )}
@@ -202,9 +278,11 @@ const Staff_Stock = () => {
         <Staff_StockAdjustmentPopup
           products={stockItems}
           onClose={closePopup}
-          onSave={({ productId, quantityAfter, date }) =>
-            applyMovement(productId, () => quantityAfter, "Adjustment", date)
-          }
+          onSave={({ productId, quantityAfter }) => {
+            const currentItem = stockItems.find(i => i.id === productId);
+            const diff = quantityAfter - currentItem.onHand;
+            handleSaveMovement(productId, diff, "Adjustment", "Adjustment by Staff");
+          }}
         />
       )}
     </div>
