@@ -154,12 +154,22 @@ const StaffSell = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to record sale");
 
+      // Calculate updated stock for the success popup
+      const updatedStockList = cart.map((item) => {
+        const product = products.find((p) => p.id === item.productId);
+        return {
+          product: product.product,
+          onHand: product.onHand - item.qty
+        };
+      });
+
       // Success! Show the success popup with receipt details
       setCompletedSale({
         total,
         payment,
         received: payment === "Cash" ? Number(received) : total,
         change: payment === "Cash" ? change : 0,
+        stockUpdated: updatedStockList, // <-- Added so popup displays correctly
         recordedAt: new Date()
       });
 
