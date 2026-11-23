@@ -36,6 +36,7 @@ import Staff_SalesHistory from '../pages/Staff/Staff_SalesHistory';
 import SupplierDashboard from '../pages/suppliers/SupplierDashboard';
 import SupplierNotifications from '../pages/suppliers/SupplierNotifications';
 import SupplierOrders from '../pages/suppliers/SupplierOrders';
+import Supplier_CompanyProfile from '../pages/suppliers/Supplier_CompanyProfile';
 
 const AppRoutes = () => {
   return (
@@ -52,6 +53,7 @@ const AppRoutes = () => {
         <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
         <Route path="/supplier/orders" element={<SupplierOrders />} />
         <Route path="/supplier/notifications" element={<SupplierNotifications />} />
+        <Route path="/supplier/company-profile" element={<Supplier_CompanyProfile />} />
 
         {/* Store Owner */}
         <Route path="/store-owner/dashboard" element={<StoreOwner_Dashboard />} />

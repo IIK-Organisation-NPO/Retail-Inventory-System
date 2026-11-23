@@ -1,0 +1,86 @@
+/* Supplier depot popups (Add / Edit depot, Delete depot, Add delivery area).
+   Backdrop, card, title, × button and .sp-field / .sp-input come from StoreOwner_StockIn_popup.css (PopupShell). */
+
+.sdp {
+  font-size: 14px;
+}
+
+.sdp-intro {
+  margin: -6px 0 16px;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.sdp-intro strong {
+  color: #111;
+}
+
+.sdp-input-error {
+  border-color: #d10a3c;
+}
+
+.sdp-error {
+  margin-top: 5px;
+  color: #d10a3c;
+  font-size: 12px;
+}
+
+.sdp-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.sdp-button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.sdp-button-primary {
+  border: 1px solid #090909;
+  background-color: #090909;
+  color: #fff;
+}
+
+.sdp-button-primary:hover {
+  background-color: #333;
+}
+
+.sdp-button-outline {
+  border: 1px solid #111;
+  background-color: #fff;
+  color: #111;
+}
+
+.sdp-button-outline:hover {
+  background-color: #f2f2f2;
+}
+
+.sdp-button-danger {
+  border: 1px solid #d10a3c;
+  background-color: #d10a3c;
+  color: #fff;
+}
+
+.sdp-button-danger:hover {
+  background-color: #b0082f;
+}
+
+.sdp-button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+  .sdp-actions {
+    grid-template-columns: 1fr;
+  }
+}
