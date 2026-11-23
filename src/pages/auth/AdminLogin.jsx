@@ -1,7 +1,7 @@
 // Import the CSS from the styles folder (filename is auth.css)
 import "../../Style/components/auth.css";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // Import the Footer and Forgot Password popup components from the common folder
 import Footer from "../../components/common/Footer";
@@ -14,6 +14,7 @@ import Logo from "../../assets/images/IIK logo.png";
 
 const AdminLogin = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="login-page-wrapper admin-login-page">
@@ -55,7 +56,12 @@ const AdminLogin = () => {
               <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
-            <form>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                navigate("/admin/dashboard");
+              }}
+            >
               <div className="input-group">
                 <label>Email or mobile number</label>
                 <input 
@@ -84,7 +90,7 @@ const AdminLogin = () => {
               </div>
 
               <button type="submit" className="submit-btn">
-                Sign in as Admin
+                Sign in
               </button>
             </form>
 

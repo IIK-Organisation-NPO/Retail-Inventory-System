@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
+import SupplierAccountInitials from "../../components/Supplier/SupplierAccountInitials";
 import "../../Style/components/Supplier/SupplierDashboard.css";
 
 const REGISTRATION_STEPS = [
@@ -46,9 +48,9 @@ const APPROVED_DASHBOARD_STATS = [
 ];
 
 const OPEN_DEMAND_REQUESTS = [
-  { product: "Coca-Cola 500ml", demand: "72 units", stores: 2, closes: "Sun 22 Nov", status: "New", action: "View and quote" },
-  { product: "Ace Maize Meal 2.5kg", demand: "100 units", stores: 3, closes: "Fri 20 Nov", status: "Quote submitted", action: "View" },
-  { product: "Sunflower oil 5L", demand: "60 L", stores: 4, closes: "Wed 25 Nov", status: "New", action: "View and quote" },
+  { id: "coca-cola-500", product: "Coca-Cola 500ml", demand: "72 units", stores: 2, closes: "Sun 22 Nov", status: "New", action: "View and quote" },
+  { id: "ace-maize-meal-25", product: "Ace Maize Meal 2.5kg", demand: "100 units", stores: 3, closes: "Fri 20 Nov", status: "Quote submitted", action: "View" },
+  { id: "sunflower-oil-5l", product: "Sunflower oil 5L", demand: "60 L", stores: 4, closes: "Wed 25 Nov", status: "New", action: "View and quote" },
 ];
 
 const WAITING_ORDERS = [
@@ -60,7 +62,7 @@ const RECENT_QUOTES = [
   { product: "Fanta Orange 500ml", unitPrice: "R14.50", status: "Declined" },
 ];
 
-const SupplierApprovedDashboard = () => (
+const SupplierApprovedDashboard = ({ onOpenRequest }) => (
   <main className="supplier-dashboard-main supplier-approved-dashboard">
     <header className="supplier-dashboard-header">
       <h1>Dashboard</h1>
@@ -69,7 +71,7 @@ const SupplierApprovedDashboard = () => (
           <span className="supplier-company-initials">TB</span>
           <span>Tiger Brands Ltd</span>
         </div>
-        <span className="supplier-user-avatar" aria-label="Supplier account">NM</span>
+        <SupplierAccountInitials />
       </div>
     </header>
 
@@ -89,7 +91,9 @@ const SupplierApprovedDashboard = () => (
     <section className="supplier-dashboard-panel supplier-demand-panel">
       <div className="supplier-dashboard-panel-header">
         <h2>Open demand requests</h2>
-        <button type="button" className="supplier-dashboard-outline-button">All requests</button>
+        <button type="button" className="supplier-dashboard-outline-button" onClick={() => onOpenRequest()}>
+          All requests
+        </button>
       </div>
       <div className="supplier-dashboard-table-wrap">
         <table className="supplier-dashboard-table">
@@ -115,7 +119,15 @@ const SupplierApprovedDashboard = () => (
                     {request.status}
                   </span>
                 </td>
-                <td><button type="button" className="supplier-dashboard-text-button">{request.action}</button></td>
+                <td>
+                  <button
+                    type="button"
+                    className="supplier-dashboard-text-button"
+                    onClick={() => onOpenRequest(request.id)}
+                  >
+                    {request.action}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -186,6 +198,7 @@ const SupplierApprovedDashboard = () => (
 );
 
 const SupplierDashboard = () => {
+  const navigate = useNavigate();
   const [showVerification, setShowVerification] = useState(false);
   const [cipcNumber, setCipcNumber] = useState("");
   const [verificationError, setVerificationError] = useState("");
@@ -209,7 +222,9 @@ const SupplierDashboard = () => {
   const [acceptedSupplierTerms, setAcceptedSupplierTerms] = useState(false);
   const [confirmedApplicationDetails, setConfirmedApplicationDetails] = useState(false);
   const [applicationSubmitted, setApplicationSubmitted] = useState(false);
-  const [applicationApproved, setApplicationApproved] = useState(false);
+  const [applicationApproved, setApplicationApproved] = useState(
+    () => sessionStorage.getItem("supplierApplicationApproved") === "true"
+  );
 
   useEffect(() => {
     if (!isCheckingCipc) return undefined;
@@ -278,7 +293,14 @@ const SupplierDashboard = () => {
     <div className="supplier-dashboard-layout">
       <SupplierSidebar showActivityBadges={applicationApproved} />
 
-      {applicationApproved ? <SupplierApprovedDashboard /> : <main className="supplier-dashboard-main">
+      {applicationApproved ? (
+        <SupplierApprovedDashboard
+          onOpenRequest={(requestId) => {
+            const query = requestId ? `?request=${encodeURIComponent(requestId)}` : "";
+            navigate(`/supplier/demand-requests${query}`);
+          }}
+        />
+      ) : <main className="supplier-dashboard-main">
         <header className="supplier-dashboard-header">
           <h1>Welcome</h1>
           <div className="supplier-dashboard-account">
@@ -286,7 +308,7 @@ const SupplierDashboard = () => {
               <span className="supplier-company-initials">TB</span>
               <span>Tiger Brands Ltd</span>
             </div>
-            <span className="supplier-user-avatar" aria-label="Supplier account">NM</span>
+            <SupplierAccountInitials />
           </div>
         </header>
 
@@ -403,6 +425,7 @@ const SupplierDashboard = () => {
                   type="button"
                   className="supplier-verify-button supplier-success-account-button"
                   onClick={() => {
+                    sessionStorage.setItem("supplierApplicationApproved", "true");
                     setApplicationApproved(true);
                     closeVerification();
                   }}

@@ -1,0 +1,20 @@
+.supplier-account-initials {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #090909;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .supplier-account-initials {
+    width: 36px;
+    height: 36px;
+  }
+}
