@@ -192,3 +192,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Banner shown while the email address is not verified */
+.pf-verify-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fff4e5;
+  color: #8a5300;
+  font-size: 14px;
+}
+
+/* Small helper text under the fields */
+.pf-hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
