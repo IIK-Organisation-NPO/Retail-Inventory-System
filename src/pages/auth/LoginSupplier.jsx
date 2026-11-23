@@ -129,11 +129,6 @@ const LoginSupplier = () => {
     }
   };
 
-  const handleSignIn = (event) => {
-    event.preventDefault();
-    navigate("/supplier/dashboard");
-  };
-
   return (
     <div className="login-page-wrapper">
       <div className="login-content">
@@ -173,7 +168,6 @@ const LoginSupplier = () => {
               <button type="button" className="role-btn active">Supplier</button>
             </div>
 
-<<<<<<< HEAD
             {/* Added noValidate to prevent browser default popups */}
             <form onSubmit={handleSubmit} noValidate>
               
@@ -184,11 +178,6 @@ const LoginSupplier = () => {
                 </div>
               )}
 
-=======
-            {/* Main Login Form */}
-            <form onSubmit={handleSignIn}>
-              {/* Email/Phone Input Field */}
->>>>>>> origin/kgotso
               <div className="input-group">
                 <label>Email or mobile number</label>
                 <input

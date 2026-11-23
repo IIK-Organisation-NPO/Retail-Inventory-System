@@ -114,10 +114,6 @@ const StaffSell = () => {
     setError("");
   };
 
-<<<<<<< HEAD
-  // --- 2. COMPLETE SALE TO DB ---
-  const handleCompleteSale = async (event) => {
-=======
   const addProductToSale = (product) => {
     if (quantityInCart(product.id) >= product.onHand) {
       setError(`No more ${product.product} in stock.`);
@@ -136,8 +132,8 @@ const StaffSell = () => {
     setNotice(`${product.product} added to current sale.`);
   };
 
-  const handleCompleteSale = (event) => {
->>>>>>> origin/kgotso
+  // --- 2. COMPLETE SALE TO DB ---
+  const handleCompleteSale = async (event) => {
     event.preventDefault();
     if (!cart.length) {
       setError("Add at least one product to the sale.");
@@ -291,7 +287,6 @@ const StaffSell = () => {
                   </tr>
                 </thead>
                 <tbody>
-<<<<<<< HEAD
                   {visibleProducts.map((product) => {
                     const left = product.onHand - quantityInCart(product.id);
                     return (
@@ -307,7 +302,7 @@ const StaffSell = () => {
                             type="button"
                             className="staff-sell-button staff-sell-add"
                             disabled={left <= 0}
-                            onClick={() => changeQuantity(product.id, 1)}
+                            onClick={() => addProductToSale(product)}
                           >
                             Add
                           </button>
@@ -315,28 +310,6 @@ const StaffSell = () => {
                       </tr>
                     );
                   })}
-=======
-                  {visibleProducts.map((product) => (
-                    <tr key={product.id}>
-                      <td>{product.product}</td>
-                      <td>{formatRand(product.price)}</td>
-                      <td>
-                        <span>{product.onHand}</span>
-                        {product.onHand < 15 && <span className="staff-sell-low-stock">Low</span>}
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="staff-sell-button staff-sell-add"
-                          disabled={quantityInCart(product.id) >= product.onHand}
-                          onClick={() => addProductToSale(product)}
-                        >
-                          Add
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
->>>>>>> origin/kgotso
                   {visibleProducts.length === 0 && (
                     <tr>
                       <td className="staff-sell-no-results" colSpan="4">No matching products.</td>

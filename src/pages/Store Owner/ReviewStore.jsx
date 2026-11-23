@@ -91,6 +91,12 @@ const ReviewStore = () => {
       localStorage.removeItem("draftStore");
       localStorage.removeItem("draftCompany");
       localStorage.removeItem("draftCipc");
+      
+      // Also update the active store ID if the backend returns the new store ID
+      if (data.storeId) {
+        localStorage.setItem("activeStoreId", data.storeId);
+      }
+
       setShowSubmittedMessage(true);
 
     } catch (err) {
@@ -190,7 +196,8 @@ const ReviewStore = () => {
               </div>
               <div className="review-row">
                 <span className="review-label">Registered name</span>
-                <span className="review-value">{company.companyName}</span>
+                {/* FIXED: Changed company.companyName to company.registeredName to match CompanyInformation.jsx */}
+                <span className="review-value">{company.registeredName || "Not provided"}</span>
               </div>
               <div className="review-row">
                 <span className="review-label">Company status</span>
@@ -220,7 +227,8 @@ const ReviewStore = () => {
               </div>
               <div className="review-row">
                 <span className="review-label">Operating hours</span>
-                <span className="review-value">{draftStore.operatingHours}</span>
+                {/* Displays the new string format perfectly */}
+                <span className="review-value">{draftStore.operatingHours || "Not provided"}</span>
               </div>
             </div>
           </div>

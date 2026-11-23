@@ -30,7 +30,22 @@ const FieldError = ({ message }) =>
   message ? <span className="upload-error" role="alert">{message}</span> : null;
 
 // Checks every field and returns { fieldName: "message" } for each problem
-const validateStoreForm = (formData, address) => {
+const formatOperatingHours = ({ fromDay, toDay, openTime, closeTime }) => {
+  const dayLabels = {
+    Monday: "Mon",
+    Tuesday: "Tue",
+    Wednesday: "Wed",
+    Thursday: "Thu",
+    Friday: "Fri",
+    Saturday: "Sat",
+    Sunday: "Sun",
+  };
+
+  if (!fromDay || !toDay || !openTime || !closeTime) return "";
+  return `${dayLabels[fromDay]}-${dayLabels[toDay]} ${openTime}-${closeTime}`;
+};
+
+const validateStoreForm = (formData, address, hours) => {
   const get = (name) => (formData.get(name) || "").toString().trim();
   const errors = {};
 
@@ -59,9 +74,8 @@ const validateStoreForm = (formData, address) => {
 
   if (!get("storeLocation")) errors.storeLocation = "Enter the store location / area.";
   if (!get("province")) errors.province = "Select a province.";
-  const hours = get("operatingHours");
   if (!hours) {
-    errors.operatingHours = "Enter the operating hours.";
+    errors.operatingHours = "Choose operating days and opening and closing times.";
   } else if (hours.length < 5) {
     errors.operatingHours = "Enter valid operating hours, for example Mon-Fri 08:00-17:00.";
   } else if (!/\d/.test(hours)) {
@@ -91,7 +105,6 @@ const StoreProfile = () => {
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
   const [logoError, setLogoError] = useState("");
-<<<<<<< HEAD
   // Draft saved earlier (if the user hit "Back" from the review page)
   const [savedDraft] = useState(() => {
     try {
@@ -110,17 +123,13 @@ const StoreProfile = () => {
   );
   const [addressError, setAddressError] = useState("");
   const [errors, setErrors] = useState({});
-=======
-  const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(true);
-  const [physicalAddress, setPhysicalAddress] = useState(REGISTERED_COMPANY_ADDRESS);
-  const [operatingHours, setOperatingHours] = useState({
+  const [operatingHours, setOperatingHours] = useState(() => savedDraft.operatingHoursDetails || {
     fromDay: "",
     toDay: "",
     openTime: "",
     closeTime: "",
   });
   const [operatingHoursError, setOperatingHoursError] = useState("");
->>>>>>> origin/kgotso
   const logoPreviewUrl = useRef("");
 
   // If someone lands here without doing the company check, send them back to step 1
@@ -188,20 +197,24 @@ const StoreProfile = () => {
   // --- SAVE FORM DATA TO LOCALSTORAGE ---
   const handleSubmit = (event) => {
     event.preventDefault();
-<<<<<<< HEAD
 
     // Extract all inputs from the form
     const formData = new FormData(event.target);
+    const formattedHours = formatOperatingHours(operatingHours);
 
     // Check all fields first, and stop with a message under each problem field
-    const foundErrors = validateStoreForm(formData, physicalAddress);
+    const foundErrors = validateStoreForm(formData, physicalAddress, formattedHours);
     if (Object.keys(foundErrors).length > 0) {
       setErrors(foundErrors);
+      setOperatingHoursError(foundErrors.operatingHours || "");
       const firstField = Object.keys(foundErrors)[0];
-      event.target.elements[firstField]?.focus(); // jumps to the first problem
+      if (firstField !== "operatingHours") {
+        event.target.elements[firstField]?.focus(); // jumps to the first problem
+      }
       return;
     }
     setErrors({});
+    setOperatingHoursError("");
 
     // Build the draft object (merging with any existing draft from earlier steps if needed)
     const existingDraft = JSON.parse(localStorage.getItem("draftStore")) || {};
@@ -221,7 +234,8 @@ const StoreProfile = () => {
       storeLocation: formData.get("storeLocation"),
       municipality: formData.get("storeLocation"), // saved in the Municipality column
       province: formData.get("province"),
-      operatingHours: formData.get("operatingHours"),
+      operatingHours: formattedHours,
+      operatingHoursDetails: operatingHours,
       // Note: We aren't uploading the logo to the DB yet, just keeping it in UI for now
     };
 
@@ -229,12 +243,6 @@ const StoreProfile = () => {
     localStorage.setItem("draftStore", JSON.stringify(updatedDraft));
 
     // Move to the final review step
-=======
-    if (!operatingHours.fromDay || !operatingHours.toDay) {
-      setOperatingHoursError("Choose both the first and last open day.");
-      return;
-    }
->>>>>>> origin/kgotso
     navigate("/store-owner/stores/register/review");
   };
 
@@ -462,24 +470,16 @@ const StoreProfile = () => {
                     </select>
                     <FieldError message={errors.province} />
                   </div>
-<<<<<<< HEAD
-                  <div className="input-group">
-                    <label>Operating hours *</label>
-                    <input type="text" name="operatingHours" className="form-input" placeholder="Mon-Fri 08:00-17:00" maxLength={100} defaultValue={savedDraft.operatingHours} required />
-                    <FieldError message={errors.operatingHours} />
-                  </div>
-=======
                 </div>
                 <div className="input-group operating-hours-input-group">
                   <OperatingHoursField
                     value={operatingHours}
                     onChange={(hours) => {
                       setOperatingHours(hours);
-                      if (hours.fromDay && hours.toDay) setOperatingHoursError("");
+                      if (formatOperatingHours(hours)) setOperatingHoursError("");
                     }}
                     error={operatingHoursError}
                   />
->>>>>>> origin/kgotso
                 </div>
               </form>
             </div>

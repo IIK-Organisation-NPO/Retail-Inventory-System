@@ -32,6 +32,8 @@ const EditStore = () => {
   const [logoError, setLogoError] = useState("");
   const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(false);
   const [physicalAddress, setPhysicalAddress] = useState("Pietermaritzburg, KwaZulu-Natal");
+  
+  // State for Operating Hours
   const [operatingHours, setOperatingHours] = useState({
     fromDay: "Monday",
     toDay: "Friday",
@@ -39,6 +41,7 @@ const EditStore = () => {
     closeTime: "17:00",
   });
   const [operatingHoursError, setOperatingHoursError] = useState("");
+  
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   
@@ -112,22 +115,10 @@ const EditStore = () => {
     const postalAddress = formData.get("postalAddress")?.trim();
     const storeLocation = formData.get("storeLocation")?.trim();
     
-    // 1. Store Name
-    if (!storeName) {
-      errors.storeName = "Enter required name";
-    }
+    if (!storeName) errors.storeName = "Enter required name";
+    if (!storeDescription) errors.storeDescription = "Please enter a description";
+    if (!contactPerson) errors.contactPerson = "Please enter contact name";
 
-    // 2. Store Description
-    if (!storeDescription) {
-      errors.storeDescription = "Please enter a description";
-    }
-
-    // 3. Contact Person
-    if (!contactPerson) {
-      errors.contactPerson = "Please enter contact name";
-    }
-
-    // 4. Contact Number
     if (!contactNumber) {
       errors.contactNumber = "Please enter contact number";
     } else {
@@ -137,35 +128,66 @@ const EditStore = () => {
       }
     }
 
-    // 5. Email Address
-    if (!email) {
-      errors.email = "Enter a required email address";
-    }
-
-    // 6. Physical Store Address
-    if (!physicalAddress.trim()) {
-      errors.address = "Enter a required physical address";
-    }
-
-    // 7. Postal Address
-    if (!postalAddress) {
-      errors.postalAddress = "Enter a required postal address";
-    }
-
-    // 8. Store Location
-    if (!storeLocation) {
-      errors.storeLocation = "Enter a required store location";
-    }
+    if (!email) errors.email = "Enter a required email address";
+    if (!physicalAddress.trim()) errors.address = "Enter a required physical address";
+    if (!postalAddress) errors.postalAddress = "Enter a required postal address";
+    if (!storeLocation) errors.storeLocation = "Enter a required store location";
 
     return errors;
   };
 
+  // --- THIS IS THE FIXED FUNCTION ---
   const handleSaveChanges = (event) => {
     event.preventDefault();
+    
+    // 1. Gather all form data
+    const formData = new FormData(event.target);
+    
+    let hasError = false;
+
+    // 2. Check Operating Hours
     if (!operatingHours.fromDay || !operatingHours.toDay) {
       setOperatingHoursError("Choose both the first and last open day.");
+      hasError = true;
+    } else {
+      setOperatingHoursError("");
+    }
+
+    // 3. Validate standard fields
+    const errors = validateForm(formData);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      hasError = true;
+    } else {
+      setValidationErrors({});
+    }
+
+    // 4. Stop if there are any errors
+    if (hasError) {
       return;
     }
+
+    // 5. Build the draft object (Restored Backend Integration)
+    const draftStore = {
+      storeName: formData.get("storeName"),
+      registrationNumber: "2024/123456/07", 
+      contactNumber: formData.get("contactNumber"),
+      email: formData.get("email"),
+      province: formData.get("province"),
+      municipality: formData.get("municipality"),
+      address: physicalAddress,
+      category: formData.get("storeCategory"),
+      description: formData.get("storeDescription"),
+      contactPerson: formData.get("contactPerson"),
+      postalAddress: formData.get("postalAddress"),
+      storeLocation: formData.get("storeLocation"),
+      operatingHours: `${operatingHours.fromDay} - ${operatingHours.toDay}, ${operatingHours.openTime} - ${operatingHours.closeTime}`,
+      gpsCoordinates: formData.get("gpsCoordinates"),
+    };
+
+    // 6. Save to localStorage for the Review page
+    localStorage.setItem("draftStore", JSON.stringify(draftStore));
+    
     setShowSaveConfirmation(true);
   };
 
@@ -397,6 +419,8 @@ const EditStore = () => {
                     </select>
                   </div>
                 </div>
+                
+                {/* Operating Hours Component */}
                 <div className="input-group operating-hours-input-group">
                   <OperatingHoursField
                     value={operatingHours}
