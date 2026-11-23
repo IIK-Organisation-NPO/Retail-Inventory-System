@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
+import OperatingHoursField from "../../components/Store Owner/OperatingHoursField";
 
 // Styles
 import "../../Style/Store Owner/StoreProfile.css";
@@ -90,6 +91,7 @@ const StoreProfile = () => {
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
   const [logoError, setLogoError] = useState("");
+<<<<<<< HEAD
   // Draft saved earlier (if the user hit "Back" from the review page)
   const [savedDraft] = useState(() => {
     try {
@@ -108,6 +110,17 @@ const StoreProfile = () => {
   );
   const [addressError, setAddressError] = useState("");
   const [errors, setErrors] = useState({});
+=======
+  const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(true);
+  const [physicalAddress, setPhysicalAddress] = useState(REGISTERED_COMPANY_ADDRESS);
+  const [operatingHours, setOperatingHours] = useState({
+    fromDay: "",
+    toDay: "",
+    openTime: "",
+    closeTime: "",
+  });
+  const [operatingHoursError, setOperatingHoursError] = useState("");
+>>>>>>> origin/kgotso
   const logoPreviewUrl = useRef("");
 
   // If someone lands here without doing the company check, send them back to step 1
@@ -175,6 +188,7 @@ const StoreProfile = () => {
   // --- SAVE FORM DATA TO LOCALSTORAGE ---
   const handleSubmit = (event) => {
     event.preventDefault();
+<<<<<<< HEAD
 
     // Extract all inputs from the form
     const formData = new FormData(event.target);
@@ -215,6 +229,12 @@ const StoreProfile = () => {
     localStorage.setItem("draftStore", JSON.stringify(updatedDraft));
 
     // Move to the final review step
+=======
+    if (!operatingHours.fromDay || !operatingHours.toDay) {
+      setOperatingHoursError("Choose both the first and last open day.");
+      return;
+    }
+>>>>>>> origin/kgotso
     navigate("/store-owner/stores/register/review");
   };
 
@@ -431,7 +451,6 @@ const StoreProfile = () => {
                   </div>
                 </div>
 
-                {/* Row 5 */}
                 <div className="form-row">
                   <div className="input-group">
                     <label>Province *</label>
@@ -443,11 +462,24 @@ const StoreProfile = () => {
                     </select>
                     <FieldError message={errors.province} />
                   </div>
+<<<<<<< HEAD
                   <div className="input-group">
                     <label>Operating hours *</label>
                     <input type="text" name="operatingHours" className="form-input" placeholder="Mon-Fri 08:00-17:00" maxLength={100} defaultValue={savedDraft.operatingHours} required />
                     <FieldError message={errors.operatingHours} />
                   </div>
+=======
+                </div>
+                <div className="input-group operating-hours-input-group">
+                  <OperatingHoursField
+                    value={operatingHours}
+                    onChange={(hours) => {
+                      setOperatingHours(hours);
+                      if (hours.fromDay && hours.toDay) setOperatingHoursError("");
+                    }}
+                    error={operatingHoursError}
+                  />
+>>>>>>> origin/kgotso
                 </div>
               </form>
             </div>

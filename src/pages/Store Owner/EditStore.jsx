@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
+import OperatingHoursField from "../../components/Store Owner/OperatingHoursField";
 
 // Styles
 import "../../Style/Store Owner/EditStore.css";
@@ -31,6 +32,13 @@ const EditStore = () => {
   const [logoError, setLogoError] = useState("");
   const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(false);
   const [physicalAddress, setPhysicalAddress] = useState("Pietermaritzburg, KwaZulu-Natal");
+  const [operatingHours, setOperatingHours] = useState({
+    fromDay: "Monday",
+    toDay: "Friday",
+    openTime: "08:00",
+    closeTime: "17:00",
+  });
+  const [operatingHoursError, setOperatingHoursError] = useState("");
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   
@@ -154,44 +162,10 @@ const EditStore = () => {
 
   const handleSaveChanges = (event) => {
     event.preventDefault();
-    
-    // 1. Gather all form data
-    const formData = new FormData(event.target);
-    
-    // 2. Validate form
-    const errors = validateForm(formData);
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      // Scroll to the first error
-      const firstErrorField = Object.keys(errors)[0];
-      document.getElementsByName(firstErrorField)[0]?.focus();
-      return; // Stop submission
+    if (!operatingHours.fromDay || !operatingHours.toDay) {
+      setOperatingHoursError("Choose both the first and last open day.");
+      return;
     }
-
-    // Clear errors if valid
-    setValidationErrors({});
-
-    // 3. Build the draft object
-    const draftStore = {
-      storeName: formData.get("storeName"),
-      registrationNumber: "2024/123456/07", 
-      contactNumber: formData.get("contactNumber"),
-      email: formData.get("email"),
-      province: formData.get("province"),
-      municipality: formData.get("municipality"),
-      address: physicalAddress,
-      category: formData.get("storeCategory"),
-      description: formData.get("storeDescription"),
-      contactPerson: formData.get("contactPerson"),
-      postalAddress: formData.get("postalAddress"),
-      storeLocation: formData.get("storeLocation"),
-      operatingHours: formData.get("operatingHours"),
-      gpsCoordinates: formData.get("gpsCoordinates"),
-    };
-
-    // 4. Save to localStorage for the Review page
-    localStorage.setItem("draftStore", JSON.stringify(draftStore));
-    
     setShowSaveConfirmation(true);
   };
 
@@ -422,10 +396,16 @@ const EditStore = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="input-group">
-                    <label>Operating hours *</label>
-                    <input type="text" name="operatingHours" className="form-input" defaultValue="Mon–Fri, 08:00–17:00" />
-                  </div>
+                </div>
+                <div className="input-group operating-hours-input-group">
+                  <OperatingHoursField
+                    value={operatingHours}
+                    onChange={(hours) => {
+                      setOperatingHours(hours);
+                      if (hours.fromDay && hours.toDay) setOperatingHoursError("");
+                    }}
+                    error={operatingHoursError}
+                  />
                 </div>
               </form>
             </div>
