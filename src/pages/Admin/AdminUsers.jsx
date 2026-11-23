@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import AdminSidebar from "../../components/Admin/AdminSidebar";
+import AdminUserMenu from "../../components/Admin/AdminUserMenu";
 import "../../Style/Admin/AdminStores.css";
 import "../../Style/Admin/AdminUsers.css";
 
@@ -122,15 +124,15 @@ const USERS_PER_PAGE = 8;
 
 const AdminUsers = () => {
   const [users, setUsers] = useState(INITIAL_USERS);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("All roles");
   const [status, setStatus] = useState("All statuses");
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(null);
-  const [adminName, setAdminName] = useState("");
-  const [adminEmail, setAdminEmail] = useState("");
-  const [adminMobile, setAdminMobile] = useState("");
 
+  const selectedUserId = searchParams.get("user");
+  const selectedUser = users.find((user) => user.id === selectedUserId);
   const normalizedSearch = search.trim().toLowerCase();
   const filteredUsers = users.filter((user) => {
     const matchesSearch = [user.name, user.mobile, user.email]
@@ -144,6 +146,8 @@ const AdminUsers = () => {
   const modalUser = modal?.userId ? users.find((user) => user.id === modal.userId) : null;
 
   const resetFilters = () => setPage(1);
+  const openUser = (userId) => setSearchParams({ user: userId });
+  const returnToList = () => setSearchParams({});
 
   const updateUserStatus = (userId, nextStatus) => {
     setUsers((currentUsers) => currentUsers.map((user) => (
@@ -152,42 +156,31 @@ const AdminUsers = () => {
     setModal(null);
   };
 
-  const openAddAdministrator = () => {
-    setAdminName("");
-    setAdminEmail("");
-    setAdminMobile("");
-    setModal({ type: "add" });
-  };
-
-  const addAdministrator = (event) => {
-    event.preventDefault();
-    const newAdministrator = {
-      id: `admin-${Date.now()}`,
-      name: adminName.trim(),
-      role: "Admin",
-      organization: "IIK",
-      status: "Active",
-      lastSignIn: "Never",
-      mobile: adminMobile.trim(),
-      email: adminEmail.trim(),
-    };
-    setUsers((currentUsers) => [newAdministrator, ...currentUsers]);
-    setPage(1);
-    setModal(null);
-  };
-
   return (
     <div className="admin-stores-layout">
       <AdminSidebar />
 
       <main className="admin-stores-main">
+        {selectedUser ? (
+          <UserDetail
+            user={selectedUser}
+            onBack={returnToList}
+            onDisable={() => setModal({ type: "disable", userId: selectedUser.id })}
+            onEnable={() => updateUserStatus(selectedUser.id, "Active")}
+          />
+        ) : selectedUserId ? (
+          <section className="admin-store-not-found">
+            <h1>User not found</h1>
+            <button type="button" className="admin-stores-back" onClick={returnToList}>
+              ← Back to users
+            </button>
+          </section>
+        ) : (
+          <>
         <header className="admin-stores-header">
           <h1>Users</h1>
           <div className="admin-stores-header-actions">
-            <button type="button" className="admin-users-add-button" onClick={openAddAdministrator}>
-              Add administrator
-            </button>
-            <span className="admin-stores-avatar" aria-label="Administrator">IA</span>
+            <AdminUserMenu />
           </div>
         </header>
 
@@ -261,7 +254,7 @@ const AdminUsers = () => {
                         <button
                           type="button"
                           className="admin-store-row-button"
-                          onClick={() => setModal({ type: "view", userId: user.id })}
+                          onClick={() => openUser(user.id)}
                         >
                           View
                         </button>
@@ -305,6 +298,8 @@ const AdminUsers = () => {
             )}
           </div>
         </section>
+          </>
+        )}
       </main>
 
       {modal && (
@@ -336,58 +331,87 @@ const AdminUsers = () => {
             </section>
           )}
 
-          {modal.type === "view" && modalUser && (
-            <section className="admin-store-modal" role="dialog" aria-modal="true" aria-labelledby="admin-user-view-title">
-              <header className="admin-store-modal-header">
-                <h2 id="admin-user-view-title">{modalUser.name}</h2>
-                <button type="button" aria-label="Close" onClick={() => setModal(null)}>×</button>
-              </header>
-              <dl className="admin-user-details">
-                <div><dt>Role</dt><dd>{modalUser.role}</dd></div>
-                <div><dt>Store or company</dt><dd>{modalUser.organization}</dd></div>
-                <div><dt>Status</dt><dd>{modalUser.status}</dd></div>
-                <div><dt>Mobile</dt><dd>{modalUser.mobile}</dd></div>
-                <div><dt>Email</dt><dd>{modalUser.email}</dd></div>
-                <div><dt>Last sign-in</dt><dd>{modalUser.lastSignIn}</dd></div>
-              </dl>
-              <button type="button" className="admin-store-action-button admin-store-approve-button admin-user-view-close" onClick={() => setModal(null)}>
-                Close
-              </button>
-            </section>
-          )}
-
-          {modal.type === "add" && (
-            <form className="admin-store-modal" role="dialog" aria-modal="true" aria-labelledby="admin-user-add-title" onSubmit={addAdministrator}>
-              <header className="admin-store-modal-header">
-                <h2 id="admin-user-add-title">Add administrator</h2>
-                <button type="button" aria-label="Close" onClick={() => setModal(null)}>×</button>
-              </header>
-              <label className="admin-store-modal-field">
-                Full name
-                <input required value={adminName} onChange={(event) => setAdminName(event.target.value)} />
-              </label>
-              <label className="admin-store-modal-field">
-                Email
-                <input required type="email" value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} />
-              </label>
-              <label className="admin-store-modal-field">
-                Mobile
-                <input required type="tel" value={adminMobile} onChange={(event) => setAdminMobile(event.target.value)} />
-              </label>
-              <div className="admin-store-modal-actions">
-                <button type="submit" className="admin-store-action-button admin-store-approve-button">
-                  Add administrator
-                </button>
-                <button type="button" className="admin-store-action-button admin-store-cancel-button" onClick={() => setModal(null)}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
         </div>
       )}
     </div>
   );
 };
+
+const UserDetail = ({ user, onBack, onDisable, onEnable }) => (
+  <>
+    <header className="admin-stores-header">
+      <h1>{user.name}</h1>
+      <AdminUserMenu />
+    </header>
+
+    <button type="button" className="admin-stores-back admin-user-back" onClick={onBack}>
+      ← Back to users
+    </button>
+
+    <div className="admin-store-detail-grid">
+      <section className="admin-store-card">
+        <h2>User information</h2>
+        <p className="admin-store-card-subtitle">Account details</p>
+        <dl className="admin-store-fields">
+          <UserField label="Name" value={user.name} />
+          <UserField label="Role" value={user.role} />
+          <UserField label="User ID" value={user.id} />
+        </dl>
+      </section>
+
+      <section className="admin-store-card">
+        <h2>Organization</h2>
+        <p className="admin-store-card-subtitle">Assigned store or company</p>
+        <dl className="admin-store-fields">
+          <UserField label="Store or company" value={user.organization} />
+          <UserField label="Account type" value={user.role} />
+        </dl>
+      </section>
+
+      <section className="admin-store-card admin-store-decision-card">
+        <h2>Account status</h2>
+        <span className={`admin-store-status admin-user-status-${user.status.toLowerCase()}`}>
+          {user.status}
+        </span>
+        <p className="admin-store-decision-copy">
+          {user.status === "Active"
+            ? "This user can sign in. Disabling the account keeps their past activity on record."
+            : "This user cannot sign in while the account is disabled."}
+        </p>
+        {user.status === "Active" ? (
+          <button type="button" className="admin-store-action-button admin-store-suspend-button" onClick={onDisable}>
+            Disable user
+          </button>
+        ) : (
+          <button type="button" className="admin-store-action-button admin-user-enable-button" onClick={onEnable}>
+            Enable user
+          </button>
+        )}
+      </section>
+
+      <section className="admin-store-card">
+        <h2>Contact information</h2>
+        <dl className="admin-store-fields">
+          <UserField label="Mobile" value={user.mobile} />
+          <UserField label="Email" value={user.email} />
+        </dl>
+      </section>
+
+      <section className="admin-store-card">
+        <h2>Sign-in activity</h2>
+        <dl className="admin-store-fields">
+          <UserField label="Last sign-in" value={user.lastSignIn} />
+        </dl>
+      </section>
+    </div>
+  </>
+);
+
+const UserField = ({ label, value }) => (
+  <div className="admin-store-field">
+    <dt>{label}</dt>
+    <dd>{value}</dd>
+  </div>
+);
 
 export default AdminUsers;

@@ -8,7 +8,11 @@ import AdminStores from '../pages/Admin/AdminStores';
 import AdminSuppliers from '../pages/Admin/AdminSuppliers';
 import AdminUsers from '../pages/Admin/AdminUsers';
 import AdminReports from '../pages/Admin/AdminReports';
+import AuditLog from '../pages/Admin/AuditLog';
 import SystemHealth from '../pages/Admin/SystemHealth';
+import AdminAnnouncements from '../pages/Admin/AdminAnnouncements';
+import AdminProfile from '../pages/Admin/AdminProfile';
+import AdminSettings from '../pages/Admin/AdminSettings';
 import LoginStoreOwnerStaff from '../pages/auth/LoginStoreOwnerStaff';
 import SignupStoreOwner from '../pages/auth/SignupStoreOwner';
 import LoginSupplier from '../pages/auth/LoginSupplier';
@@ -55,7 +59,11 @@ const AppRoutes = () => {
         <Route path="/admin/suppliers" element={<AdminSuppliers />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/reports" element={<AdminReports />} />
+        <Route path="/admin/audit-log" element={<AuditLog />} />
         <Route path="/admin/system-health" element={<SystemHealth />} />
+        <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+        <Route path="/admin/profile" element={<AdminProfile />} />
+        <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/dashboard" element={<StoreOwner_Dashboard />} />
         <Route path="/login/store-owner-staff" element={<LoginStoreOwnerStaff />} />
         <Route path="/login/supplier" element={<LoginSupplier />} />

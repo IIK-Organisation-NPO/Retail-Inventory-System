@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AdminSidebar from "../../components/Admin/AdminSidebar";
+import AdminUserMenu from "../../components/Admin/AdminUserMenu";
 import "../../Style/Admin/AdminReports.css";
 
 const REPORT_DATA = {
@@ -101,7 +102,7 @@ const AdminReports = () => {
       <main className="admin-reports-main">
         <header className="admin-reports-header">
           <h1>Reports</h1>
-          <span className="admin-reports-avatar" aria-label="Administrator">IA</span>
+          <AdminUserMenu />
         </header>
 
         <div className="admin-reports-tabs" role="tablist" aria-label="Report type">

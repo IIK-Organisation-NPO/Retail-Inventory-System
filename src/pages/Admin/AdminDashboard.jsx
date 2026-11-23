@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../../components/Admin/AdminSidebar";
+import AdminUserMenu from "../../components/Admin/AdminUserMenu";
 import "../../Style/Admin/AdminDashboard.css";
 
 const METRICS = [
@@ -66,7 +67,7 @@ const AdminDashboard = () => {
       <main className="admin-dashboard-main">
         <header className="admin-dashboard-header">
           <h1>Dashboard</h1>
-          <span className="admin-dashboard-avatar" aria-label="Administrator">IA</span>
+          <AdminUserMenu />
         </header>
 
         <p className="admin-review-notice">
@@ -172,7 +173,13 @@ const AdminDashboard = () => {
         <section className="admin-dashboard-card admin-activity-card">
           <div className="admin-activity-header">
             <h2>Recent activity</h2>
-            <button type="button" className="admin-dashboard-link">Open audit log</button>
+            <button
+              type="button"
+              className="admin-dashboard-audit-button"
+              onClick={() => navigate("/admin/audit-log")}
+            >
+              Open audit log
+            </button>
           </div>
           <div className="admin-table-scroll">
             <table className="admin-dashboard-table">

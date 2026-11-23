@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import AdminSidebar from "../../components/Admin/AdminSidebar";
+import AdminUserMenu from "../../components/Admin/AdminUserMenu";
 import "../../Style/Admin/AdminStores.css";
 import "../../Style/Admin/AdminSuppliers.css";
 
@@ -181,7 +182,7 @@ const AdminSuppliers = () => {
           <>
             <header className="admin-stores-header">
               <h1>{selectedSupplier.name}</h1>
-              <span className="admin-stores-avatar" aria-label="Administrator">IA</span>
+              <AdminUserMenu />
             </header>
 
             <button type="button" className="admin-stores-back admin-supplier-back" onClick={returnToList}>
@@ -303,7 +304,7 @@ const AdminSuppliers = () => {
               <h1>Suppliers</h1>
               <div className="admin-stores-header-actions">
                 <button type="button" className="admin-stores-export" onClick={exportSuppliers}>Export</button>
-                <span className="admin-stores-avatar" aria-label="Administrator">IA</span>
+                <AdminUserMenu />
               </div>
             </header>
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AdminSidebar from "../../components/Admin/AdminSidebar";
+import AdminUserMenu from "../../components/Admin/AdminUserMenu";
 import "../../Style/Admin/SystemHealth.css";
 
 const SYNC_DATA = {
@@ -45,7 +46,7 @@ const SystemHealth = () => {
       <main className="admin-health-main">
         <header className="admin-health-header">
           <h1>System health</h1>
-          <span className="admin-health-avatar" aria-label="Administrator">IA</span>
+          <AdminUserMenu />
         </header>
 
         <section className="admin-health-metrics" aria-label="System health metrics">

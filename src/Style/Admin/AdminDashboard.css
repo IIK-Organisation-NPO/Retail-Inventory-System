@@ -10,7 +10,7 @@
 .admin-dashboard-main {
   flex: 1;
   min-width: 0;
-  padding: 20px;
+  padding: 24px;
 }
 
 .admin-dashboard-header {
@@ -18,12 +18,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .admin-dashboard-header h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 24px;
   line-height: 1.2;
   font-weight: 700;
 }
@@ -33,22 +33,22 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background-color: #090909;
   color: #fff;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .admin-review-notice {
   margin: 0 0 12px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 7px;
   background-color: #e9efff;
   color: #2452c6;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .admin-dashboard-context {
@@ -56,31 +56,31 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .admin-dashboard-context > p {
   margin: 0;
   color: #666;
-  font-size: 9px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
 .admin-period-controls {
   display: flex;
   flex: 0 0 auto;
-  gap: 4px;
+  gap: 6px;
 }
 
 .admin-period-controls button {
-  min-height: 26px;
-  padding: 0 10px;
+  min-height: 34px;
+  padding: 0 12px;
   border: 1px solid #888;
   border-radius: 7px;
   background-color: #fff;
   color: #111;
   font: inherit;
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -94,40 +94,40 @@
 .admin-metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .admin-metric-card,
 .admin-dashboard-card {
   min-width: 0;
   border: 1px solid #dedede;
-  border-radius: 7px;
+  border-radius: 8px;
   background-color: #fff;
 }
 
 .admin-metric-card {
   display: flex;
   flex-direction: column;
-  min-height: 82px;
-  padding: 10px 12px;
+  min-height: 96px;
+  padding: 12px 14px;
 }
 
 .admin-metric-label {
-  color: #666;
-  font-size: 9px;
+  color: #555;
+  font-size: 13px;
 }
 
 .admin-metric-value {
   margin-top: 2px;
   color: #111;
-  font-size: 18px;
-  line-height: 1.1;
+  font-size: 24px;
+  line-height: 1.15;
 }
 
 .admin-metric-progress {
   height: 6px;
-  margin-top: 6px;
+  margin-top: 8px;
   overflow: hidden;
   border-radius: 999px;
   background-color: #ededed;
@@ -143,30 +143,30 @@
 
 .admin-metric-note {
   margin-top: 3px;
-  color: #777;
-  font-size: 9px;
+  color: #666;
+  font-size: 12px;
 }
 
 .admin-dashboard-middle {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.9fr);
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
 .admin-dashboard-card {
-  padding: 12px 14px;
+  padding: 16px;
 }
 
 .admin-dashboard-card h2 {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: #111;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .admin-transactions-card {
-  min-height: 190px;
+  min-height: 220px;
 }
 
 .admin-transactions-chart {
@@ -174,7 +174,7 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   align-items: end;
   gap: 7px;
-  height: 148px;
+  height: 160px;
   padding: 0 2px;
 }
 
@@ -189,8 +189,8 @@
 
 .admin-chart-value,
 .admin-chart-day {
-  color: #666;
-  font-size: 9px;
+  color: #555;
+  font-size: 12px;
 }
 
 .admin-chart-value {
@@ -202,7 +202,7 @@
   align-items: flex-end;
   justify-content: center;
   width: 100%;
-  height: 100px;
+  height: 106px;
 }
 
 .admin-chart-bar {
@@ -222,7 +222,7 @@
 }
 
 .admin-review-card {
-  min-height: 190px;
+  min-height: 220px;
 }
 
 .admin-table-scroll {
@@ -238,16 +238,16 @@
 
 .admin-dashboard-table th,
 .admin-dashboard-table td {
-  padding: 7px 5px;
+  padding: 10px 8px;
   border-bottom: 1px solid #ededed;
   color: #222;
-  font-size: 9px;
+  font-size: 13px;
   vertical-align: middle;
 }
 
 .admin-dashboard-table th {
   color: #666;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -257,15 +257,34 @@
   background: none;
   color: #2452c6;
   font: inherit;
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 600;
   text-decoration: underline;
   white-space: nowrap;
   cursor: pointer;
 }
 
+.admin-dashboard-audit-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #090909;
+  border-radius: 6px;
+  background-color: #090909;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-dashboard-audit-button:hover {
+  background-color: #333;
+}
+
 .admin-activity-card {
-  min-height: 180px;
+  min-height: 210px;
 }
 
 .admin-activity-header {
@@ -276,7 +295,7 @@
 }
 
 .admin-activity-header h2 {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .admin-visually-hidden {

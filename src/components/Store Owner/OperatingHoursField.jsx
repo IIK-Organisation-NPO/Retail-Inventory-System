@@ -1,4 +1,4 @@
-import "./OperatingHoursField.css";
+import "../../Style/Store Owner/OperatingHoursField.css";
 
 const DAYS_OF_WEEK = [
   { value: "Monday", label: "Mon" },
