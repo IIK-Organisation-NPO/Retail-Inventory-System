@@ -33,6 +33,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use("/api/owner", require("./routes/ownerProfileRoutes"));
 
 
 const PORT = process.env.PORT || 5000;
