@@ -56,8 +56,9 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
   const validate = () => {
     if (!form.name.trim()) return "Enter the staff member's name.";
     if (!form.surname.trim()) return "Enter the staff member's surname.";
+    if (!isEdit && !form.email.trim()) return "Enter the staff member's email address.";
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      return "Enter a valid email address, or leave it empty.";
+      return "Enter a valid email address.";
     }
     const mobile = digitsOnly(form.mobile);
     if (!/^0\d{9}$/.test(mobile)) return "Enter a valid 10-digit mobile number, e.g. 082 000 0000.";
@@ -116,8 +117,16 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
 
         {/* Email */}
         <div className="sp-field">
-          <label htmlFor="staff-email">Email (optional)</label>
-          <input id="staff-email" type="email" className="sp-input" value={form.email} onChange={update("email")} autoComplete="off" />
+          <label htmlFor="staff-email">Email address{isEdit ? "" : " *"}</label>
+          <input
+            id="staff-email"
+            type="email"
+            className="sp-input"
+            value={form.email}
+            onChange={update("email")}
+            autoComplete="email"
+            required={!isEdit}
+          />
         </div>
 
         {/* Mobile */}
