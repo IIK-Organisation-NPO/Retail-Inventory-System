@@ -1,0 +1,211 @@
+/* Supplier order popups (Confirm order / Can't supply / Details).
+   Backdrop, card, title and × button come from StoreOwner_StockIn_popup.css (PopupShell). */
+
+.sop {
+  font-size: 14px;
+}
+
+/* "Accepted by 2 of 3 stores" */
+.sop-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  margin-bottom: 10px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background-color: #e9efff;
+  color: #2452c6;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Label / value rows */
+.sop-rows {
+  margin: 0 0 16px;
+}
+
+.sop-rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.sop-rows dt {
+  color: #666;
+}
+
+.sop-rows dd {
+  margin: 0;
+  color: #111;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* Deliver to N stores */
+.sop-subtitle {
+  margin: 0 0 6px;
+  color: #111;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sop-stores {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sop-stores li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.sop-stores li > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sop-stores strong {
+  color: #111;
+  font-size: 14px;
+}
+
+.sop-stores span {
+  margin-top: 2px;
+  color: #666;
+  font-size: 11px;
+}
+
+.sop-stores .sop-stores-amount {
+  flex: 0 0 auto;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.sop-excluded {
+  margin: 10px 0 0;
+  color: #666;
+  font-size: 11px;
+}
+
+/* Checkbox */
+.sop-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 12px;
+  color: #111;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sop-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #090909;
+  cursor: pointer;
+}
+
+/* Grey and blue notes */
+.sop-note,
+.sop-info {
+  margin: 0 0 18px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.sop-note {
+  background-color: #e8e9ec;
+  color: #666;
+}
+
+.sop-info {
+  background-color: #e9efff;
+  color: #2452c6;
+}
+
+.sop-intro {
+  margin: -6px 0 16px;
+  color: #666;
+  font-size: 13px;
+}
+
+.sop-textarea {
+  height: auto;
+  min-height: 84px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+/* Buttons */
+.sop-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.sop-button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.sop-button-primary {
+  border: 1px solid #090909;
+  background-color: #090909;
+  color: #fff;
+}
+
+.sop-button-primary:hover:not(:disabled) {
+  background-color: #333;
+}
+
+.sop-button-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sop-button-outline {
+  border: 1px solid #111;
+  background-color: #fff;
+  color: #111;
+}
+
+.sop-button-outline:hover {
+  background-color: #f2f2f2;
+}
+
+.sop-button-danger {
+  border: 1px solid #d10a3c;
+  background-color: #d10a3c;
+  color: #fff;
+}
+
+.sop-button-danger:hover {
+  background-color: #b0082f;
+}
+
+.sop-button:focus-visible,
+.sop-check input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+  .sop-actions {
+    grid-template-columns: 1fr;
+  }
+}

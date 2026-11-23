@@ -1,7 +1,14 @@
 // src/pages/suppliers/SupplierOrders.jsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
 import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
+import {
+  SupplierConfirmOrderPopup,
+  SupplierCantSupplyPopup,
+  SupplierOrderDetailsPopup,
+} from "../../components/Supplier/SupplierOrderPopups";
+import formatRand from "../../utils/formatRand";
+import formatOrderDate from "../../utils/formatOrderDate";
 import "../../Style/components/Supplier/SupplierDashboard.css";
 import "../../Style/components/Supplier/SupplierOrders.css";
 
@@ -24,7 +31,7 @@ const INITIAL_ORDERS = [
     product: "Ace Maize Meal 2.5kg",
     quantity: 70,
     unitPrice: 52,
-    deliverBy: "20 Nov",
+    deliverBy: "2026-11-20",
     status: "awaiting",
     minimumOrder: 60,
     storesInRequest: 3,
@@ -51,7 +58,7 @@ const INITIAL_ORDERS = [
     product: "Sprite 500ml",
     quantity: 24,
     unitPrice: 15,
-    deliverBy: "02 Nov",
+    deliverBy: "2026-11-02",
     status: "confirmed",
     minimumOrder: 24,
     storesInRequest: 1,
@@ -68,17 +75,14 @@ const INITIAL_ORDERS = [
   },
 ];
 
-// 3640 -> "R3,640.00"
-const formatRand = (value) =>
-  `R${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
 const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
 
 const SupplierOrders = () => {
   const [orders, setOrders] = useState(INITIAL_ORDERS);
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(INITIAL_ORDERS[0].id);
-  const [confirmingId, setConfirmingId] = useState(null);
+  // Which popup is open: { type: "confirm" | "cantSupply" | "details", orderId }
+  const [popup, setPopup] = useState(null);
 
   const visibleOrders =
     activeFilter === "all" ? orders : orders.filter((order) => order.status === activeFilter);
@@ -87,26 +91,28 @@ const SupplierOrders = () => {
   const selectedOrder =
     visibleOrders.find((order) => order.id === selectedId) ?? visibleOrders[0] ?? null;
 
-  const confirmingOrder = orders.find((order) => order.id === confirmingId) ?? null;
+  const popupOrder = popup ? orders.find((order) => order.id === popup.orderId) : null;
 
-  useEffect(() => {
-    if (!confirmingId) return;
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") setConfirmingId(null);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [confirmingId]);
-
-  const openConfirmation = (id) => {
-    setSelectedId(id);
-    setConfirmingId(id);
+  const openPopup = (type, orderId) => {
+    setSelectedId(orderId);
+    setPopup({ type, orderId });
   };
 
-  const updateStatus = (id, status) => {
-    // TODO: send the supplier's answer for this order to the API
-    setOrders((items) => items.map((order) => (order.id === id ? { ...order, status } : order)));
-    setConfirmingId(null);
+  const closePopup = () => setPopup(null);
+
+  const updateOrder = (id, changes) => {
+    setOrders((items) => items.map((order) => (order.id === id ? { ...order, ...changes } : order)));
+    setPopup(null);
+  };
+
+  const handleConfirm = () => {
+    // TODO: tell the API the supplier confirmed this order
+    updateOrder(popup.orderId, { status: "confirmed" });
+  };
+
+  const handleDecline = ({ reason, note }) => {
+    // TODO: tell the API the supplier can't supply this order, with the reason and note
+    updateOrder(popup.orderId, { status: "declined", declineReason: reason, declineNote: note });
   };
 
   return (
@@ -168,7 +174,7 @@ const SupplierOrders = () => {
                       <td>{order.quantity}</td>
                       <td>{formatRand(order.unitPrice)}</td>
                       <td>{formatRand(order.quantity * order.unitPrice)}</td>
-                      <td>{order.deliverBy}</td>
+                      <td>{formatOrderDate(order.deliverBy, false)}</td>
                       <td>
                         <span className={`supplier-dashboard-status supplier-orders-status ${order.status}`}>
                           {STATUS_LABELS[order.status]}
@@ -179,7 +185,7 @@ const SupplierOrders = () => {
                           <button
                             type="button"
                             className="supplier-orders-confirm-button"
-                            onClick={() => openConfirmation(order.id)}
+                            onClick={() => openPopup("confirm", order.id)}
                           >
                             Confirm order
                           </button>
@@ -187,8 +193,8 @@ const SupplierOrders = () => {
                           <button
                             type="button"
                             className="supplier-orders-link"
-                            onClick={() => setSelectedId(order.id)}
-                            aria-label={`View delivery list for ${order.id}`}
+                            onClick={() => openPopup("details", order.id)}
+                            aria-label={`View details for ${order.id}`}
                           >
                             View
                           </button>
@@ -287,59 +293,25 @@ const SupplierOrders = () => {
         </p>
       </main>
 
-      {confirmingOrder && (
-        <div className="supplier-modal-overlay" onClick={() => setConfirmingId(null)}>
-          <section
-            className="supplier-orders-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="supplier-confirm-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="supplier-orders-modal-header">
-              <h2 id="supplier-confirm-title">Confirm {confirmingOrder.id}</h2>
-              <button
-                type="button"
-                className="supplier-orders-modal-close"
-                aria-label="Close"
-                onClick={() => setConfirmingId(null)}
-              >
-                ×
-              </button>
-            </div>
+      {popupOrder && popup.type === "confirm" && (
+        <SupplierConfirmOrderPopup
+          order={popupOrder}
+          onClose={closePopup}
+          onConfirm={handleConfirm}
+          onCantSupply={() => setPopup({ type: "cantSupply", orderId: popupOrder.id })}
+        />
+      )}
 
-            <p className="supplier-orders-modal-intro">
-              Can you supply this order by {confirmingOrder.deliverBy}?
-            </p>
+      {popupOrder && popup.type === "cantSupply" && (
+        <SupplierCantSupplyPopup
+          onClose={closePopup}
+          onCancel={() => setPopup({ type: "confirm", orderId: popupOrder.id })}
+          onDecline={handleDecline}
+        />
+      )}
 
-            <dl className="supplier-orders-modal-details">
-              <div><dt>Product</dt><dd>{confirmingOrder.product}</dd></div>
-              <div><dt>Quantity</dt><dd>{confirmingOrder.quantity} units</dd></div>
-              <div><dt>Unit price</dt><dd>{formatRand(confirmingOrder.unitPrice)}</dd></div>
-              <div><dt>Total</dt><dd>{formatRand(confirmingOrder.quantity * confirmingOrder.unitPrice)}</dd></div>
-              <div><dt>Deliver to</dt><dd>{plural(confirmingOrder.deliveries.length, "store")}</dd></div>
-              <div><dt>Deliver by</dt><dd>{confirmingOrder.deliverBy}</dd></div>
-            </dl>
-
-            <div className="supplier-orders-modal-actions">
-              <button
-                type="button"
-                className="supplier-orders-cant-supply"
-                onClick={() => updateStatus(confirmingOrder.id, "declined")}
-              >
-                Can&apos;t supply
-              </button>
-              <button
-                type="button"
-                className="supplier-orders-confirm-button"
-                onClick={() => updateStatus(confirmingOrder.id, "confirmed")}
-                autoFocus
-              >
-                Confirm order
-              </button>
-            </div>
-          </section>
-        </div>
+      {popupOrder && popup.type === "details" && (
+        <SupplierOrderDetailsPopup order={popupOrder} onClose={closePopup} />
       )}
     </div>
   );
