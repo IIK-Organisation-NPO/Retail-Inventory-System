@@ -49,6 +49,8 @@ import SupplierQuotations from '../pages/suppliers/SupplierQuotations';
 import SupplierNotifications from '../pages/suppliers/SupplierNotifications';
 import SupplierOrders from '../pages/suppliers/SupplierOrders';
 import Supplier_CompanyProfile from '../pages/suppliers/Supplier_CompanyProfile';
+import SupplierProfile from '../pages/suppliers/SupplierProfile';
+import SupplierSettings from '../pages/suppliers/SupplierSettings';
 
 const AppRoutes = () => {
   return (
@@ -78,6 +80,9 @@ const AppRoutes = () => {
         <Route path="/supplier/orders" element={<SupplierOrders />} />
         <Route path="/supplier/notifications" element={<SupplierNotifications />} />
         <Route path="/supplier/company-profile" element={<Supplier_CompanyProfile />} />
+        <Route path="/supplier/profile" element={<SupplierProfile />} />
+        <Route path="/supplier/account" element={<SupplierProfile />} />
+        <Route path="/supplier/settings" element={<SupplierSettings />} />
 
         {/* Store Owner */}
         <Route path="/store-owner/dashboard" element={<StoreOwner_Dashboard />} />

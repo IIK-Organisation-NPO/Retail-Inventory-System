@@ -1,6 +1,6 @@
 import { useState } from "react";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
-import SupplierAccountInitials from "../../components/Supplier/SupplierAccountInitials";
+import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
 import "../../Style/components/Supplier/SupplierQuotations.css";
 
 const QUOTATIONS = [
@@ -29,7 +29,7 @@ const SupplierQuotations = () => {
               <span className="supplier-quotations-company-initials">TB</span>
               <span>Tiger Brands Ltd</span>
             </div>
-            <SupplierAccountInitials />
+            <SupplierUserMenu />
           </div>
         </header>
 

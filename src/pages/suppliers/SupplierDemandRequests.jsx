@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
-import SupplierAccountInitials from "../../components/Supplier/SupplierAccountInitials";
+import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
 import "../../Style/components/Supplier/SupplierDemandRequests.css";
 
 const DEMAND_REQUESTS = [
@@ -141,7 +141,7 @@ const SupplierDemandRequests = () => {
               <span className="supplier-demand-company-initials">TB</span>
               <span>Tiger Brands Ltd</span>
             </div>
-            <SupplierAccountInitials />
+            <SupplierUserMenu />
           </div>
         </header>
 

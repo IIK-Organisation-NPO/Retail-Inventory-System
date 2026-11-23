@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
-import SupplierAccountInitials from "../../components/Supplier/SupplierAccountInitials";
+import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
 import "../../Style/components/Supplier/SupplierDashboard.css";
 
 const REGISTRATION_STEPS = [
@@ -71,7 +71,7 @@ const SupplierApprovedDashboard = ({ onOpenRequest }) => (
           <span className="supplier-company-initials">TB</span>
           <span>Tiger Brands Ltd</span>
         </div>
-        <SupplierAccountInitials />
+        <SupplierUserMenu />
       </div>
     </header>
 
@@ -308,7 +308,7 @@ const SupplierDashboard = () => {
               <span className="supplier-company-initials">TB</span>
               <span>Tiger Brands Ltd</span>
             </div>
-            <SupplierAccountInitials />
+            <SupplierUserMenu />
           </div>
         </header>
 

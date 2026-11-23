@@ -14,7 +14,7 @@ const getInitials = (name) =>
     .join("");
 
 const MENU_ITEMS = [
-  { title: "My Account", subtitle: "personal info", to: "/supplier/account" },
+  { title: "Profile", subtitle: "Your details and password", to: "/supplier/profile" },
   { title: "Settings", subtitle: "Notification preferences", to: "/supplier/settings" },
 ];
 
