@@ -291,7 +291,7 @@ const SupplierDashboard = () => {
 
   return (
     <div className="supplier-dashboard-layout">
-      <SupplierSidebar showActivityBadges={applicationApproved} />
+      <SupplierSidebar />
 
       {applicationApproved ? (
         <SupplierApprovedDashboard
