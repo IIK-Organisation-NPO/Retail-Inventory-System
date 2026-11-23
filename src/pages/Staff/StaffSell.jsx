@@ -68,6 +68,24 @@ const StaffSell = () => {
     setError("");
   };
 
+  const addProductToSale = (product) => {
+    if (quantityInCart(product.id) >= product.onHand) {
+      setError(`No more ${product.product} in stock.`);
+      return;
+    }
+
+    setCart((current) => {
+      const existing = current.find((item) => item.productId === product.id);
+      return existing
+        ? current.map((item) =>
+            item.productId === product.id ? { ...item, qty: item.qty + 1 } : item
+          )
+        : [...current, { productId: product.id, qty: 1 }];
+    });
+    setError("");
+    setNotice(`${product.product} added to current sale.`);
+  };
+
   const handleCompleteSale = (event) => {
     event.preventDefault();
     if (!cart.length) {
@@ -195,7 +213,7 @@ const StaffSell = () => {
                           type="button"
                           className="staff-sell-button staff-sell-add"
                           disabled={quantityInCart(product.id) >= product.onHand}
-                          onClick={() => openScanner([{ productId: product.id, qty: 1 }])}
+                          onClick={() => addProductToSale(product)}
                         >
                           Add
                         </button>

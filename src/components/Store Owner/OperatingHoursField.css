@@ -1,0 +1,63 @@
+.operating-hours-field {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.operating-hours-field legend {
+  margin-bottom: 4px;
+  color: #000;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.operating-hours-hint {
+  margin: 0 0 16px;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.operating-hours-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  max-width: 560px;
+}
+
+.operating-hours-range label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.operating-hours-range .form-input {
+  width: 100%;
+}
+
+.operating-hours-range > span {
+  margin-top: 22px;
+  color: #6b7280;
+}
+
+.operating-time-range {
+  margin-top: 16px;
+}
+
+.operating-hours-error {
+  display: block;
+  margin-top: 8px;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 560px) {
+  .operating-hours-range {
+    gap: 8px;
+  }
+}

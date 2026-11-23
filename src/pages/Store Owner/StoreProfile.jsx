@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
+import OperatingHoursField from "../../components/Store Owner/OperatingHoursField";
 
 // Styles
 import "../../Style/Store Owner/StoreProfile.css";
@@ -31,6 +32,13 @@ const StoreProfile = () => {
   const [logoError, setLogoError] = useState("");
   const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(true);
   const [physicalAddress, setPhysicalAddress] = useState(REGISTERED_COMPANY_ADDRESS);
+  const [operatingHours, setOperatingHours] = useState({
+    fromDay: "",
+    toDay: "",
+    openTime: "",
+    closeTime: "",
+  });
+  const [operatingHoursError, setOperatingHoursError] = useState("");
   const logoPreviewUrl = useRef("");
 
   useEffect(
@@ -74,6 +82,10 @@ const StoreProfile = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (!operatingHours.fromDay || !operatingHours.toDay) {
+      setOperatingHoursError("Choose both the first and last open day.");
+      return;
+    }
     navigate("/store-owner/stores/register/review");
   };
 
@@ -273,7 +285,6 @@ const StoreProfile = () => {
                   </div>
                 </div>
 
-                {/* Row 5 */}
                 <div className="form-row">
                   <div className="input-group">
                     <label>Province *</label>
@@ -284,10 +295,16 @@ const StoreProfile = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="input-group">
-                    <label>Operating hours *</label>
-                    <input type="text" className="form-input" required />
-                  </div>
+                </div>
+                <div className="input-group operating-hours-input-group">
+                  <OperatingHoursField
+                    value={operatingHours}
+                    onChange={(hours) => {
+                      setOperatingHours(hours);
+                      if (hours.fromDay && hours.toDay) setOperatingHoursError("");
+                    }}
+                    error={operatingHoursError}
+                  />
                 </div>
               </form>
             </div>

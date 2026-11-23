@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
+import OperatingHoursField from "../../components/Store Owner/OperatingHoursField";
 
 // Styles
 import "../../Style/Store Owner/EditStore.css";
@@ -31,6 +32,13 @@ const EditStore = () => {
   const [logoError, setLogoError] = useState("");
   const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(false);
   const [physicalAddress, setPhysicalAddress] = useState("Pietermaritzburg, KwaZulu-Natal");
+  const [operatingHours, setOperatingHours] = useState({
+    fromDay: "Monday",
+    toDay: "Friday",
+    openTime: "08:00",
+    closeTime: "17:00",
+  });
+  const [operatingHoursError, setOperatingHoursError] = useState("");
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const logoPreviewUrl = useRef("");
@@ -76,6 +84,10 @@ const EditStore = () => {
 
   const handleSaveChanges = (event) => {
     event.preventDefault();
+    if (!operatingHours.fromDay || !operatingHours.toDay) {
+      setOperatingHoursError("Choose both the first and last open day.");
+      return;
+    }
     setShowSaveConfirmation(true);
   };
 
@@ -252,10 +264,16 @@ const EditStore = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="input-group">
-                    <label>Operating hours *</label>
-                    <input type="text" className="form-input" defaultValue="Mon–Fri, 08:00–17:00" required />
-                  </div>
+                </div>
+                <div className="input-group operating-hours-input-group">
+                  <OperatingHoursField
+                    value={operatingHours}
+                    onChange={(hours) => {
+                      setOperatingHours(hours);
+                      if (hours.fromDay && hours.toDay) setOperatingHoursError("");
+                    }}
+                    error={operatingHoursError}
+                  />
                 </div>
               </form>
             </div>
