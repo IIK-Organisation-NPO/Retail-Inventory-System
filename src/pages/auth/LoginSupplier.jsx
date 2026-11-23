@@ -11,6 +11,11 @@ const LoginSupplier = () => {
   const navigate = useNavigate();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
+  const handleSignIn = (event) => {
+    event.preventDefault();
+    navigate("/supplier/dashboard");
+  };
+
   return (
     // Main page wrapper using CSS Grid to keep footer at the bottom
     <div className="login-page-wrapper">
@@ -72,7 +77,7 @@ const LoginSupplier = () => {
             </div>
 
             {/* Main Login Form */}
-            <form>
+            <form onSubmit={handleSignIn}>
               {/* Email/Phone Input Field */}
               <div className="input-group">
                 <label>Email or mobile number</label>
