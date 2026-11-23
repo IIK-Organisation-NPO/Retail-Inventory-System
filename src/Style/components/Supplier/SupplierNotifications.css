@@ -1,0 +1,171 @@
+/* Layout, header and company pill come from SupplierDashboard.css */
+
+.supplier-notifications .supplier-dashboard-header {
+  margin-bottom: 16px;
+}
+
+.supplier-notifications-mark-all {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid #111;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #111;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.supplier-notifications-mark-all:hover:not(:disabled) {
+  background-color: #f0f0f1;
+}
+
+.supplier-notifications-mark-all:disabled {
+  border-color: #c8c8cb;
+  color: #8a8a8d;
+  cursor: default;
+}
+
+.supplier-notifications-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.supplier-notifications-filter {
+  min-height: 34px;
+  padding: 0 16px;
+  border: 1px solid #111;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #111;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.supplier-notifications-filter:hover:not(.active) {
+  background-color: #f0f0f1;
+}
+
+.supplier-notifications-filter.active {
+  background-color: #090909;
+  color: #fff;
+}
+
+.supplier-notifications-card {
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.supplier-notifications-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.supplier-notifications-list li + li {
+  border-top: 1px solid #ececec;
+}
+
+.supplier-notification {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: #111;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.supplier-notification:hover {
+  background-color: #f7f7f8;
+}
+
+.supplier-notification:focus-visible,
+.supplier-notifications-filter:focus-visible,
+.supplier-notifications-mark-all:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.supplier-notification-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #090909;
+}
+
+.supplier-notification.unread .supplier-notification-dot {
+  background-color: #1d4ed8;
+}
+
+.supplier-notification-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.supplier-notification-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.supplier-notification-message {
+  margin-top: 2px;
+  color: #555;
+  font-size: 12px;
+}
+
+.supplier-notification-time {
+  flex: 0 0 auto;
+  color: #555;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.supplier-notifications-empty {
+  margin: 0;
+  padding: 24px 14px;
+  color: #555;
+  font-size: 14px;
+  text-align: center;
+}
+
+.supplier-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .supplier-notifications .supplier-dashboard-header {
+    flex-wrap: wrap;
+  }
+
+  .supplier-notification {
+    flex-wrap: wrap;
+  }
+
+  .supplier-notification-time {
+    width: 100%;
+    padding-left: 19px;
+  }
+}

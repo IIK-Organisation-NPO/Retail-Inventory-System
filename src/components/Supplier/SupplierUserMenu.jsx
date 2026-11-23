@@ -1,0 +1,84 @@
+// src/components/Supplier/SupplierUserMenu.jsx
+// Avatar button in the supplier header that opens the account menu (user info, account, settings, sign out)
+import { useNavigate } from "react-router-dom";
+import useDropdown from "../../hooks/useDropdown";
+import "../../Style/components/Supplier/SupplierUserMenu.css";
+
+// "Nandi Mokoena" -> "NM"
+const getInitials = (name) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("");
+
+const MENU_ITEMS = [
+  { title: "My Account", subtitle: "personal info", to: "/supplier/account" },
+  { title: "Settings", subtitle: "Notification preferences", to: "/supplier/settings" },
+];
+
+// Mock user. Replace with the signed-in supplier from the API.
+const SupplierUserMenu = ({ name = "Nandi Mokoena", role = "Supplier" }) => {
+  const navigate = useNavigate();
+  const { ref, isOpen, toggle, close } = useDropdown();
+
+  const goTo = (path) => {
+    close();
+    navigate(path);
+  };
+
+  const handleSignOut = () => {
+    close();
+    // TODO: end the session with the API and clear any saved login token
+    navigate("/login/supplier", { replace: true });
+  };
+
+  return (
+    <div className="supplier-user-menu" ref={ref}>
+      <button
+        type="button"
+        className={`supplier-user-menu-trigger${isOpen ? " open" : ""}`}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label={`Account menu for ${name}`}
+        onClick={toggle}
+      >
+        {getInitials(name)}
+      </button>
+
+      {isOpen && (
+        <div className="supplier-user-menu-panel" role="menu" aria-label="Account">
+          <div className="supplier-user-menu-info">
+            <p className="supplier-user-menu-name">{name}</p>
+            <p className="supplier-user-menu-role">{role}</p>
+          </div>
+
+          {MENU_ITEMS.map((item) => (
+            <button
+              key={item.to}
+              type="button"
+              role="menuitem"
+              className="supplier-user-menu-item"
+              onClick={() => goTo(item.to)}
+            >
+              <span className="supplier-user-menu-item-title">{item.title}</span>
+              <span className="supplier-user-menu-item-sub">{item.subtitle}</span>
+            </button>
+          ))}
+
+          <button
+            type="button"
+            role="menuitem"
+            className="supplier-user-menu-item"
+            onClick={handleSignOut}
+          >
+            <span className="supplier-user-menu-item-title">Sign out</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SupplierUserMenu;
