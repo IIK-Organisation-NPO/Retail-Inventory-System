@@ -81,7 +81,7 @@ const SupplierNotifications = () => {
 
   return (
     <div className="supplier-dashboard-layout">
-      <SupplierSidebar showActivityBadges />
+      <SupplierSidebar />
 
       <main className="supplier-dashboard-main supplier-notifications">
         <header className="supplier-dashboard-header">
