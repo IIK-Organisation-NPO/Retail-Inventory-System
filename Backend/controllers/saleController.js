@@ -4,6 +4,7 @@ const db = require('../config/db');
 exports.recordSale = async (req, res) => {
   const { storeId, paymentMethod, items } = req.body;
   const staffId = req.user.id; 
+  const userRole = req.user.role; // 'OWNER' or 'STAFF'
 
   if (!storeId || !items || items.length === 0) {
     return res.status(400).json({ message: "Missing sale data" });
@@ -24,7 +25,7 @@ exports.recordSale = async (req, res) => {
     );
     const saleId = saleResult.insertId;
 
-    // 2. Loop through items: Insert into SaleItems AND deduct from Products
+    // 2. Loop through items: Insert into SaleItems, deduct stock, and log movement
     for (const item of items) {
       // ONLY process if it is a real product (not a custom "other" item)
       if (item.productId) {
@@ -34,10 +35,30 @@ exports.recordSale = async (req, res) => {
           [saleId, item.productId, item.quantity, item.price, item.price * item.quantity]
         );
 
+        // Fetch current stock and lock the row to prevent race conditions
+        const [prod] = await connection.query(
+          `SELECT OnHand, Name FROM Products WHERE ProductID = ? AND StoreID = ? FOR UPDATE`,
+          [item.productId, storeId]
+        );
+
+        if (prod.length === 0) {
+          throw new Error(`Product ID ${item.productId} not found in this store.`);
+        }
+
+        const newOnHand = prod[0].OnHand - item.quantity;
+        const productName = prod[0].Name;
+
         // Deduct stock
         await connection.query(
-          `UPDATE Products SET OnHand = OnHand - ? WHERE ProductID = ? AND StoreID = ?`,
-          [item.quantity, item.productId, storeId]
+          `UPDATE Products SET OnHand = ? WHERE ProductID = ? AND StoreID = ?`,
+          [newOnHand, item.productId, storeId]
+        );
+
+        // Log the movement (So it shows up in the History page)
+        await connection.query(
+          `INSERT INTO StockMovements (StoreID, ProductID, Type, QuantityChange, OnHandAfter, Details, RecordedBy) 
+           VALUES (?, ?, 'Sale', ?, ?, ?, ?)`,
+          [storeId, item.productId, -item.quantity, newOnHand, `${paymentMethod} payment`, userRole]
         );
       }
     }
@@ -49,7 +70,7 @@ exports.recordSale = async (req, res) => {
   } catch (error) {
     await connection.rollback(); // Undo everything if there was an error
     console.error("RECORD SALE ERROR:", error);
-    res.status(500).json({ message: "Failed to record sale. Transaction rolled back." });
+    res.status(500).json({ message: error.message || "Failed to record sale. Transaction rolled back." });
   } finally {
     connection.release(); 
   }
@@ -58,10 +79,13 @@ exports.recordSale = async (req, res) => {
 // --- GET SALES HISTORY (For the Sales Page) ---
 exports.getSalesHistory = async (req, res) => {
   const { storeId } = req.query;
+  const userRole = req.user.role; // Extracted from JWT middleware
+  const userId = req.user.id;     // Extracted from JWT middleware
+
   try {
-    // We use LEFT JOIN so that sales with custom items still appear in the history
-    const [sales] = await db.query(
-      `SELECT 
+    // Base query (used by Owners to see all store sales)
+    let query = `
+      SELECT 
         s.SaleID as id, 
         DATE(s.SaleDate) as date, 
         DATE_FORMAT(s.SaleDate, '%H:%i') as time, 
@@ -72,11 +96,23 @@ exports.getSalesHistory = async (req, res) => {
        LEFT JOIN SaleItems si ON s.SaleID = si.SaleID
        LEFT JOIN Products p ON si.ProductID = p.ProductID
        WHERE s.StoreID = ?
-       GROUP BY s.SaleID
-       ORDER BY s.SaleDate DESC`, 
-      [storeId]
-    );
+    `;
+    
+    const queryParams = [storeId];
+
+    // If the logged-in user is Staff, append a condition to only show their own sales
+    if (userRole === 'STAFF') {
+      query += ` AND s.StaffID = ?`;
+      queryParams.push(userId);
+    }
+
+    // Complete the query
+    query += ` GROUP BY s.SaleID ORDER BY s.SaleDate DESC`;
+
+    // Execute
+    const [sales] = await db.query(query, queryParams);
     res.status(200).json(sales);
+
   } catch (error) {
     console.error("GET SALES HISTORY ERROR:", error);
     res.status(500).json({ message: "Database error" });

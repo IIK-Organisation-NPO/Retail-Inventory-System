@@ -38,7 +38,7 @@ const findProduct = (products, productId) =>
    Backdrop, card, header and close button used by all three
    (also used by Staff_PeriodPopup)
    ========================================================= */
-export const PopupShell =({ title, onClose, children }) => {
+export const PopupShell = ({ title, onClose, children }) => {
   // Close on Escape and stop the page behind the popup from scrolling
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -149,7 +149,6 @@ export const Staff_StockInPopup = ({ products, suppliers = DEFAULT_SUPPLIERS, on
       return;
     }
 
-    // TODO: save the stock in with the API
     onSave?.({
       productId: findProduct(products, productId)?.id,
       quantity: Number(quantity),
@@ -238,7 +237,6 @@ export const Staff_StockOutPopup = ({ products, onSave, onClose }) => {
       return;
     }
 
-    // TODO: save the stock out with the API
     onSave?.({
       productId: product?.id,
       quantity: Number(quantity),
@@ -310,7 +308,6 @@ export const Staff_StockAdjustmentPopup = ({ products, onSave, onClose }) => {
       return;
     }
 
-    // TODO: save the adjustment with the API
     onSave?.({
       productId: product?.id,
       quantityBefore: Number(quantityBefore),

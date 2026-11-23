@@ -1,3 +1,4 @@
+// src/components/Staff/StaffSaleRecordedPopup.jsx
 import { PopupShell } from "../Store Owner/StoreOwner_StockIn_popup";
 import formatRand from "../../utils/formatRand";
 import "../../Style/Staff/StaffSaleRecordedPopup.css";
@@ -44,9 +45,12 @@ const StaffSaleRecordedPopup = ({ sale, onClose, onNewSale }) => (
         )}
       </div>
 
-      <p className="staff-sale-recorded-stock">
-        Stock updated: {sale.stockUpdated.map(({ product, onHand }) => `${product} ${onHand}`).join(", ")}.
-      </p>
+      {/* Added optional chaining (?.) so it doesn't crash if stockUpdated is missing */}
+      {sale.stockUpdated && sale.stockUpdated.length > 0 && (
+        <p className="staff-sale-recorded-stock">
+          Stock updated: {sale.stockUpdated.map(({ product, onHand }) => `${product} ${onHand}`).join(", ")}.
+        </p>
+      )}
 
       <button type="button" className="staff-sale-recorded-new" onClick={onNewSale}>
         New sale

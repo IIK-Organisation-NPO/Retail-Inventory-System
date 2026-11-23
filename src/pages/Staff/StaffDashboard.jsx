@@ -1,10 +1,10 @@
-import { useState } from "react";
+// src/pages/Staff/StaffDashboard.jsx
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
-import { STAFF_STORE } from "../../data/stores";
 import StoreOwner_RecordSale_popup from "../../components/Store Owner/StoreOwner_RecordSale_popup";
 import {
   StockAdjustmentPopup,
@@ -17,37 +17,147 @@ import "../../Style/Staff/StaffDashboard.css";
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState([
-    { id: 1, product: "Coca-Cola 500ml", price: 26.5, onHand: 89, barcode: "5449000000996" },
-    { id: 2, product: "Simba Chips Original", price: 14.63, onHand: 38, barcode: "6001234500028" },
-    { id: 3, product: "Sprite 500ml", price: 21.45, onHand: 55, barcode: "6001234500035" },
-    { id: 4, product: "NikNaks Cheese", price: 15, onHand: 66, barcode: "6001234500042" },
-    { id: 5, product: "Fanta Orange 500ml", price: 20.55, onHand: 12, barcode: "6001234500059" },
-    { id: 6, product: "Ace Maize Meal 2.5kg", price: 64.03, onHand: 20, barcode: "6001234500066" },
-    { id: 7, product: "Lay's Salt & Vinegar", price: 18.99, onHand: 24, barcode: "6001234500073" },
-  ]);
+  
+  // State
+  const [products, setProducts] = useState([]);
+  const [recentSales, setRecentSales] = useState([]);
+  const [stats, setStats] = useState({ salesToday: 0, transactionsToday: 0, lowStock: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [openPopup, setOpenPopup] = useState(null);
 
-  const updateProductStock = (productId, update) => {
-    setProducts((current) =>
-      current.map((product) =>
-        product.id === productId ? { ...product, onHand: update(product.onHand) } : product
-      )
-    );
+  const storeId = localStorage.getItem("activeStoreId") || 1;
+  const token = localStorage.getItem("token");
+  const userName = localStorage.getItem("userName") || "Staff Member";
+
+  // --- 1. FETCH DATA ON LOAD ---
+  const fetchData = async () => {
+    try {
+      const headers = { "Authorization": `Bearer ${token}` };
+
+      // Fetch Products
+      const prodRes = await fetch(`http://localhost:5000/api/products?storeId=${storeId}`, { headers });
+      const prodData = await prodRes.json();
+      
+      let lowCount = 0;
+      if (prodRes.ok) {
+        const formattedProds = prodData.map(p => {
+          if (p.OnHand <= p.ReorderLevel) lowCount++;
+          return {
+            id: p.ProductID,
+            product: p.Name,
+            price: Number(p.SellingPrice),
+            onHand: p.OnHand,
+            reorder: p.ReorderLevel,
+            barcode: p.Barcode
+          };
+        });
+        setProducts(formattedProds);
+      }
+
+      // Fetch Sales History
+      const salesRes = await fetch(`http://localhost:5000/api/sales/history?storeId=${storeId}`, { headers });
+      const salesData = await salesRes.json();
+      
+      let todaySales = 0;
+      let todayTransactions = 0;
+      if (salesRes.ok) {
+        // Map and filter only today's sales
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        const formattedSales = salesData.map(s => {
+          if (s.date === todayStr) {
+            todaySales += Number(s.total);
+            todayTransactions++;
+          }
+          return {
+            id: s.id,
+            time: s.time,
+            items: s.itemsText,
+            payment: s.payment,
+            total: `R${Number(s.total).toFixed(2)}`
+          };
+        });
+
+        setRecentSales(formattedSales.slice(0, 5)); // Show only the last 5
+      }
+
+      setStats({
+        salesToday: todaySales,
+        transactionsToday: todayTransactions,
+        lowStock: lowCount
+      });
+
+    } catch (err) {
+      setError("Failed to load dashboard data.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Dummy data for recent sales
-  const recentSales = [
-    { time: "16:42", items: "Coca-Cola 500ml ×2, Simba Chips Original ×1", payment: "Cash", total: "R67.63" },
-    { time: "14:20", items: "Fanta Orange 500ml ×1", payment: "Card", total: "R20.55" },
-    { time: "13:55", items: "Sprite 500ml ×3", payment: "Cash", total: "R64.35" },
-    { time: "11:40", items: "NikNaks Cheese ×2", payment: "Cash", total: "R30.00" },
-    { time: "09:05", items: "Fanta Orange 500ml ×2", payment: "Cash", total: "R41.10" },
-  ];
+  useEffect(() => {
+    if (token) fetchData();
+  }, [storeId, token]);
+
+  // --- 2. HANDLE RECORD SALE ---
+  const handleRecordSale = async (sale) => {
+    try {
+      const payload = {
+        storeId: storeId,
+        paymentMethod: sale.payment,
+        items: sale.items.map(item => ({
+          productId: item.productId,
+          price: item.price,
+          quantity: item.qty
+        }))
+      };
+
+      const response = await fetch("http://localhost:5000/api/sales", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) throw new Error("Failed to save sale");
+
+      setOpenPopup(null);
+      fetchData(); // Refresh data from DB
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // --- 3. HANDLE STOCK MOVEMENTS ---
+  const handleSaveMovement = async (productId, quantityChange, type, details) => {
+    try {
+      const payload = { storeId, productId, type, quantityChange, details };
+
+      const response = await fetch("http://localhost:5000/api/inventory/movement", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) throw new Error("Failed to update stock");
+
+      setOpenPopup(null);
+      fetchData(); // Refresh data from DB
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  if (loading) return <div style={{ padding: '50px' }}>Loading Dashboard...</div>;
 
   return (
     <div className="app-layout">
-      <Staff_Sidebar alertCount={3} />
+      <Staff_Sidebar alertCount={stats.lowStock} />
 
       <main className="main-content">
         
@@ -58,17 +168,24 @@ const StaffDashboard = () => {
           </div>
           
           <div className="header-actions">
-            <span className="sync-status">Synced 2 min ago</span>
-            <StoreOwner_StoreSwitcher stores={[STAFF_STORE]} readOnly />
+            <span className="sync-status">Synced just now</span>
+            {/* Pass readOnly to prevent staff from switching stores */}
+            <StoreOwner_StoreSwitcher readOnly />
             <StoreOwner_UserMenu
-              name="Lindiwe Ngcobo"
-              role="Cashier"
+              name={userName}
+              role="Staff"
               accountPath="/staff/account"
               accountLabel="My account"
               showSettings={false}
             />
           </div>
         </header>
+
+        {error && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+            {error}
+          </div>
+        )}
 
         {/* Action Buttons Row */}
         <div className="staff-action-buttons">
@@ -79,51 +196,30 @@ const StaffDashboard = () => {
         </div>
 
         {/* Alert Banner */}
-        <div className="alert-banner-danger">
-          3 products are below their reorder level. Review stock
-        </div>
+        {stats.lowStock > 0 && (
+          <div className="alert-banner-danger">
+            {stats.lowStock} products are below their reorder level. Review stock
+          </div>
+        )}
 
         {/* Top Stat Cards */}
         <div className="staff-stats-grid">
           <div className="stat-card">
             <span className="stat-label">My sales today</span>
-            <h3 className="stat-value">R223.63</h3>
+            <h3 className="stat-value">R{stats.salesToday.toFixed(2)}</h3>
           </div>
           <div className="stat-card">
             <span className="stat-label">My transactions today</span>
-            <h3 className="stat-value">5</h3>
+            <h3 className="stat-value">{stats.transactionsToday}</h3>
           </div>
           <div className="stat-card">
             <span className="stat-label">Low stock</span>
-            <h3 className="stat-value text-danger">3</h3>
+            <h3 className="stat-value text-danger">{stats.lowStock}</h3>
           </div>
         </div>
 
-        {/* Middle Row: Top Selling & Low Stock */}
+        {/* Middle Row: Low Stock */}
         <div className="staff-row-2-col">
-          
-          {/* Top Selling */}
-          <div className="card top-selling-card">
-            <div className="card-header">
-              <h3>Top-selling today (store)</h3>
-            </div>
-            <ul className="top-selling-list">
-              <li>
-                <span>Coca-Cola 500ml</span>
-                <strong>48 sold</strong>
-              </li>
-              <li>
-                <span>Simba Chips Original</span>
-                <strong>35 sold</strong>
-              </li>
-              <li>
-                <span>White Star Maize Meal 2.5kg</span>
-                <strong>21 sold</strong>
-              </li>
-            </ul>
-          </div>
-
-          {/* Low Stock */}
           <div className="card">
             <div className="card-header">
               <h3>Low stock</h3>
@@ -141,24 +237,21 @@ const StaffDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Rama Margarine 500g</td>
-                  <td>0</td>
-                  <td>6</td>
-                  <td><span className="status-pill status-danger">Out of stock</span></td>
-                </tr>
-                <tr>
-                  <td>Clover Fresh Milk 1L</td>
-                  <td>9</td>
-                  <td>15</td>
-                  <td><span className="status-pill status-warning">Low</span></td>
-                </tr>
-                <tr>
-                  <td>Sasko Premium Bread</td>
-                  <td>12</td>
-                  <td>15</td>
-                  <td><span className="status-pill status-warning">Low</span></td>
-                </tr>
+                {products.filter(p => p.onHand <= p.reorder).slice(0, 5).map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.product}</td>
+                    <td>{p.onHand}</td>
+                    <td>{p.reorder}</td>
+                    <td>
+                      <span className={`status-pill ${p.onHand === 0 ? 'status-danger' : 'status-warning'}`}>
+                        {p.onHand === 0 ? "Out of stock" : "Low"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {products.filter(p => p.onHand <= p.reorder).length === 0 && (
+                  <tr><td colSpan="4" style={{ textAlign: "center" }}>All stock is healthy!</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -182,54 +275,53 @@ const StaffDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {recentSales.map((sale, index) => (
-                <tr key={index}>
-                  <td>{sale.time}</td>
-                  <td>{sale.items}</td>
-                  <td>{sale.payment}</td>
-                  <td>{sale.total}</td>
-                </tr>
-              ))}
+              {recentSales.length === 0 ? (
+                <tr><td colSpan="4" style={{ textAlign: "center" }}>No recent sales.</td></tr>
+              ) : (
+                recentSales.map((sale) => (
+                  <tr key={sale.id}>
+                    <td>{sale.time}</td>
+                    <td>{sale.items}</td>
+                    <td>{sale.payment}</td>
+                    <td>{sale.total}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
       </main>
+
+      {/* --- POPUPS --- */}
       {openPopup === "sale" && (
         <StoreOwner_RecordSale_popup
           products={products}
-          onComplete={({ items }) =>
-            items.forEach(({ productId, qty }) =>
-              updateProductStock(productId, (onHand) => onHand - qty)
-            )
-          }
+          onComplete={handleRecordSale}
           onClose={() => setOpenPopup(null)}
         />
       )}
       {openPopup === "in" && (
         <StockInPopup
           products={products}
-          onSave={({ productId, quantity }) =>
-            updateProductStock(productId, (onHand) => onHand + quantity)
-          }
+          onSave={({ productId, quantity, supplier }) => handleSaveMovement(productId, quantity, "Stock in", supplier)}
           onClose={() => setOpenPopup(null)}
         />
       )}
       {openPopup === "out" && (
         <StockOutPopup
           products={products}
-          onSave={({ productId, quantity }) =>
-            updateProductStock(productId, (onHand) => onHand - quantity)
-          }
+          onSave={({ productId, quantity, reason }) => handleSaveMovement(productId, -quantity, "Stock out", reason)}
           onClose={() => setOpenPopup(null)}
         />
       )}
       {openPopup === "adjust" && (
         <StockAdjustmentPopup
           products={products}
-          onSave={({ productId, quantityAfter }) =>
-            updateProductStock(productId, () => quantityAfter)
-          }
+          onSave={({ productId, quantityBefore, quantityAfter, reason }) => {
+            const diff = quantityAfter - quantityBefore;
+            handleSaveMovement(productId, diff, "Adjustment", `${reason} (was ${quantityBefore})`);
+          }}
           onClose={() => setOpenPopup(null)}
         />
       )}

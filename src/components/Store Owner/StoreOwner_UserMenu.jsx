@@ -5,7 +5,7 @@ import useDropdown from "../../hooks/useDropdown";
 import "../../Style/Store Owner/StoreOwner_HeaderMenus.css";
 
 // "Sipho Dlamini" -> "SD"
-const getInitials = (name) =>
+const getInitials = (name = "") =>
   name
     .split(/\s+/)
     .filter(Boolean)
@@ -13,9 +13,15 @@ const getInitials = (name) =>
     .map((word) => word[0].toUpperCase())
     .join("");
 
-// Mock user — replace with the signed-in user from the API
+// The name of whoever is signed in, saved at login (and updated when the profile is edited)
+const getSavedName = () => {
+  const first = localStorage.getItem("userName") || "";
+  const last = localStorage.getItem("userSurname") || "";
+  return `${first} ${last}`.trim();
+};
+
 const StoreOwner_UserMenu = ({
-  name = "Sipho Dlamini",
+  name, // optional: if a page passes a name it is used, otherwise the saved login name is shown
   role = "Store Owner",
   accountPath = "/store-owner/profile",
   accountLabel = "Profile",
@@ -24,6 +30,8 @@ const StoreOwner_UserMenu = ({
   const navigate = useNavigate();
   const { ref, isOpen, toggle, close } = useDropdown();
 
+  const displayName = getSavedName() || (name && name.trim()) || "Account";
+
   const goTo = (path) => {
     close();
     navigate(path);
@@ -31,7 +39,11 @@ const StoreOwner_UserMenu = ({
 
   const handleSignOut = () => {
     close();
-    // TODO: end the session with the API and clear any saved login token
+    // Clear the saved login so the next person who signs in never sees this person's details
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userSurname");
     navigate("/login/store-owner-staff", { replace: true });
   };
 
@@ -43,17 +55,17 @@ const StoreOwner_UserMenu = ({
         className={`so-avatar hm-avatar-btn${isOpen ? " open" : ""}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        aria-label={`Account menu for ${name}`}
+        aria-label={`Account menu for ${displayName}`}
         onClick={toggle}
       >
-        {getInitials(name)}
+        {getInitials(displayName)}
       </button>
 
       {isOpen && (
         <div className="hm-menu hm-user-menu" role="menu" aria-label="Account">
           {/* User information */}
           <div className="hm-user-info">
-            <p className="hm-user-name">{name}</p>
+            <p className="hm-user-name">{displayName}</p>
             <p className="hm-user-role">{role}</p>
           </div>
 

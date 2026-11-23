@@ -86,10 +86,11 @@ const LoginStoreOwnerStaff = () => {
         throw new Error(data.message || "Login failed");
       }
 
-      // Save token and role
+      // Save token, role and the signed-in person's name (shown in the header menu)
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("userName", data.user.name);
+      localStorage.setItem("userSurname", data.user.surname || "");
 
       alert(`Welcome back, ${data.user.name}!`);
       
