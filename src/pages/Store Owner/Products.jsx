@@ -132,6 +132,18 @@ const Products = () => {
       errors.onHand = "Please enter a quantity";
     }
 
+    // --- NEW CROSS-FIELD VALIDATION ---
+    // Only check if both fields have values so we don't overwrite the "required" errors above
+    if (cost !== null && cost !== "" && price !== null && price !== "") {
+      const numericCost = Number(cost);
+      const numericPrice = Number(price);
+
+      if (numericCost > numericPrice) {
+        errors.cost = "Unit cost must less than a selling price";
+        errors.price = "selling price must be more than a unit cost";
+      }
+    }
+
     return errors;
   };
 
@@ -449,7 +461,10 @@ const Products = () => {
                     step="0.01" 
                     className="form-input" 
                     defaultValue={editingProduct ? editingProduct.rawCost : ""} 
-                    onChange={() => clearError("cost")}
+                    onChange={() => {
+                      clearError("cost");
+                      clearError("price"); // Clear price error too since the relation changed
+                    }}
                   />
                   {validationErrors.cost && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.cost}</span>}
                 </div>
@@ -463,7 +478,10 @@ const Products = () => {
                     step="0.01" 
                     className="form-input" 
                     defaultValue={editingProduct ? editingProduct.rawPrice : ""} 
-                    onChange={() => clearError("price")}
+                    onChange={() => {
+                      clearError("price");
+                      clearError("cost"); // Clear cost error too since the relation changed
+                    }}
                   />
                   {validationErrors.price && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.price}</span>}
                 </div>

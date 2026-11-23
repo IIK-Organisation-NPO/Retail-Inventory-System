@@ -32,49 +32,88 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
     confirmCode: "",
   }));
   
-  const [error, setError] = useState("");
+  // State for validation errors
+  const [validationErrors, setValidationErrors] = useState({});
 
   const update = (field) => (e) => {
     const value = field === "code" || field === "confirmCode"
       ? digitsOnly(e.target.value).slice(0, CODE_LENGTH)
       : e.target.value;
     setForm((current) => ({ ...current, [field]: value }));
-    setError("");
+    
+    // Clear the specific error as the user types
+    if (validationErrors[field]) {
+      setValidationErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   const setDisability = (hasDisability) => {
     setForm((current) => ({ ...current, hasDisability }));
-    setError("");
+    if (validationErrors.disabilityType) {
+      setValidationErrors((prev) => ({ ...prev, disabilityType: "" }));
+    }
   };
 
   const validate = () => {
-    if (!form.name.trim()) return "Enter the staff member's name.";
-    if (!form.surname.trim()) return "Enter the staff member's surname.";
-    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      return "Enter a valid email address, or leave it empty.";
+    const errors = {};
+
+    if (!form.name.trim()) {
+      errors.name = "Please enter a name";
     }
+    
+    if (!form.surname.trim()) {
+      errors.surname = "Please enter a surname";
+    }
+    
+    if (!form.email.trim()) {
+      errors.email = "Please enter an email";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errors.email = "Enter a valid email address.";
+    }
+
     const mobile = digitsOnly(form.mobile);
-    if (!/^0\d{9}$/.test(mobile)) return "Enter a valid 10-digit mobile number, e.g. 082 000 0000.";
-    if (isMobileTaken?.(mobile, staffMember?.id)) return "Another staff member already uses this mobile number.";
-    if (!form.gender) return "Select a gender.";
-    if (form.hasDisability && !form.disabilityType.trim()) return "Enter the type of disability.";
+    if (!mobile) {
+      errors.mobile = "Please enter a mobile number";
+    } else if (!/^(?:\+27|0)[6-8][0-9]{8}$/.test(mobile)) {
+      errors.mobile = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567)";
+    } else if (isMobileTaken?.(mobile, staffMember?.id)) {
+      errors.mobile = "Another staff member already uses this mobile number.";
+    }
+
+    if (!form.gender) {
+      errors.gender = "Enter a gender";
+    }
+
+    if (form.hasDisability && !form.disabilityType.trim()) {
+      errors.disabilityType = "Enter type of disability";
+    }
 
     // When editing, the user code only changes if a new one is entered
     const codeRequired = !isEdit || form.code || form.confirmCode;
     if (codeRequired) {
-      if (form.code.length !== CODE_LENGTH) return "The user code must be exactly 6 digits.";
-      if (form.code !== form.confirmCode) return "The user codes do not match.";
+      if (form.code.length !== CODE_LENGTH) {
+        errors.code = "The user code must be exactly 6 digits.";
+      }
+      if (!form.confirmCode) {
+        errors.confirmCode = "Please confirm a user code";
+      } else if (form.code !== form.confirmCode) {
+        errors.confirmCode = "The user codes do not match.";
+      }
     }
-    return "";
+
+    return errors;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const problem = validate();
-    if (problem) {
-      setError(problem);
+    
+    const errors = validate();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
+
+    setValidationErrors({});
 
     // Pass all data, including the new code, up to the parent
     onSave({
@@ -88,7 +127,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
       disabilityType: form.hasDisability ? form.disabilityType.trim() : "",
       role: form.role,
       storeId: form.storeId,
-      code: form.code, // <--- Added this so the parent can send it to the backend
+      code: form.code,
     });
     onClose();
   };
@@ -101,17 +140,20 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
           <div className="sp-field">
             <label htmlFor="staff-name">Name</label>
             <input id="staff-name" type="text" className="sp-input" value={form.name} onChange={update("name")} autoComplete="off" autoFocus />
+            {validationErrors.name && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.name}</span>}
           </div>
           <div className="sp-field">
             <label htmlFor="staff-surname">Surname</label>
             <input id="staff-surname" type="text" className="sp-input" value={form.surname} onChange={update("surname")} autoComplete="off" />
+            {validationErrors.surname && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.surname}</span>}
           </div>
         </div>
 
         {/* Email */}
         <div className="sp-field">
-          <label htmlFor="staff-email">Email (optional)</label>
+          <label htmlFor="staff-email">Email</label>
           <input id="staff-email" type="email" className="sp-input" value={form.email} onChange={update("email")} autoComplete="off" />
+          {validationErrors.email && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.email}</span>}
         </div>
 
         {/* Mobile */}
@@ -127,6 +169,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
             onChange={update("mobile")}
             autoComplete="off"
           />
+          {validationErrors.mobile && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.mobile}</span>}
         </div>
 
         {/* Gender & Disability */}
@@ -144,6 +187,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
                 <option key={g.value} value={g.value}>{g.label}</option>
               ))}
             </select>
+            {validationErrors.gender && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.gender}</span>}
           </div>
           <fieldset className="sp-field as-fieldset">
             <legend>Disability</legend>
@@ -164,6 +208,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
           <div className="sp-field">
             <label htmlFor="staff-disability-type">What type of disability?</label>
             <input id="staff-disability-type" type="text" className="sp-input" value={form.disabilityType} onChange={update("disabilityType")} />
+            {validationErrors.disabilityType && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.disabilityType}</span>}
           </div>
         )}
 
@@ -200,6 +245,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
             onChange={update("code")}
             autoComplete="new-password"
           />
+          {validationErrors.code && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.code}</span>}
         </div>
         <div className="sp-field">
           <label htmlFor="staff-confirm-code">Confirm user code</label>
@@ -213,9 +259,8 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
             onChange={update("confirmCode")}
             autoComplete="new-password"
           />
+          {validationErrors.confirmCode && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.confirmCode}</span>}
         </div>
-
-        {error && <p className="sp-error" role="alert">{error}</p>}
 
         <div className="sp-actions">
           <button type="submit" className="sp-btn sp-btn-primary">
