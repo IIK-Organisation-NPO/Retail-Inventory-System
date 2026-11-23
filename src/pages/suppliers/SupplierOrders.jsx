@@ -1,5 +1,6 @@
 // src/pages/suppliers/SupplierOrders.jsx
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
 import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
 import {
@@ -123,10 +124,14 @@ const SupplierOrders = () => {
         <header className="supplier-dashboard-header">
           <h1>Orders</h1>
           <div className="supplier-dashboard-account">
-            <div className="supplier-company-pill">
-              <span className="supplier-company-initials">TB</span>
+            <Link
+              to="/supplier/company-profile"
+              className="supplier-company-pill"
+              aria-label="Tiger Brands Ltd company profile"
+            >
+              <span className="supplier-company-initials" aria-hidden="true">TB</span>
               <span>Tiger Brands Ltd</span>
-            </div>
+            </Link>
             <SupplierUserMenu />
           </div>
         </header>
