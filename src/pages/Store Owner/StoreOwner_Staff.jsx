@@ -52,8 +52,9 @@ const StoreOwner_Staff = () => {
         email: s.email,
         mobile: s.mobile,
         role: s.role,
-        status: s.IsActive ? "Active" : "Disabled",
-        storeId: storeId // Local reference
+        // The backend now returns IsActive from the StoreUsers table
+        status: s.IsActive ? "Active" : "Disabled", 
+        storeId: storeId 
       }));
 
       setStaff(formatted);
@@ -86,7 +87,6 @@ const StoreOwner_Staff = () => {
     try {
       let response;
       
-      // Note: We map member.code (from the popup) to password (for the backend)
       const payload = {
         storeId: storeId,
         name: member.name,
@@ -94,7 +94,7 @@ const StoreOwner_Staff = () => {
         email: member.email,
         mobile: member.mobile,
         role: member.role,
-        password: member.code // <--- CRITICAL FIX: Pass the 6-digit code
+        password: member.code 
       };
 
       if (member.id) {
@@ -124,10 +124,10 @@ const StoreOwner_Staff = () => {
 
       setToast(member.id ? `${fullName(member)}'s details were updated.` : `${fullName(member)} was added.`);
       closePopup();
-      fetchStaff(); // Refresh the table from the DB
+      fetchStaff(); 
 
     } catch (err) {
-      alert(err.message); // Ideally, show this inside the popup
+      alert(err.message); 
     }
   };
 
@@ -143,7 +143,8 @@ const StoreOwner_Staff = () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ isActive })
+        // CRITICAL FIX: Send storeId so the backend knows which StoreUsers record to update
+        body: JSON.stringify({ isActive, storeId }) 
       });
 
       const data = await response.json();
@@ -151,7 +152,7 @@ const StoreOwner_Staff = () => {
 
       setToast(`${fullName(member)} was ${action}d successfully.`);
       closeConfirm();
-      fetchStaff(); // Refresh the table
+      fetchStaff(); 
 
     } catch (err) {
       alert(err.message);

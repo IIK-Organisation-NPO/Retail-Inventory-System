@@ -157,6 +157,7 @@
   align-items: center;
   z-index: 1000;
   padding: 20px;
+  box-sizing: border-box; /* Ensures padding is included in the 100vw/100vh */
 }
 
 /* Modal Card Container */
@@ -168,6 +169,26 @@
   padding: 30px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   animation: modalFadeIn 0.2s ease-out;
+  
+  /* --- THE FIX: Add max-height and overflow to enable scrolling --- */
+  max-height: calc(100vh - 40px); /* 40px accounts for the 20px top/bottom padding */
+  overflow-y: auto;
+}
+
+/* Optional: Customizing the scrollbar so it looks nice */
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+.modal-content::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+  border-radius: 12px;
+}
+.modal-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1; 
+  border-radius: 12px;
+}
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8; 
 }
 
 @keyframes modalFadeIn {
@@ -283,4 +304,4 @@
     flex-direction: column;
     gap: 0;
   }
-}   
+}

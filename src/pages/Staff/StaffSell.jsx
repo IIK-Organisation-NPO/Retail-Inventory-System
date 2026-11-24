@@ -1,4 +1,3 @@
-// src/pages/Staff/StaffSell.jsx
 import { useMemo, useState, useEffect } from "react";
 import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
@@ -67,6 +66,13 @@ const StaffSell = () => {
     if (token) fetchProducts();
   }, [storeId, token]);
 
+  // Clear the notice message after 3 seconds
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   // --- UI HELPERS ---
   const visibleProducts = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -81,7 +87,9 @@ const StaffSell = () => {
   const total = Math.round(
     cart.reduce((sum, item) => {
       const product = products.find((entry) => entry.id === item.productId);
-      return sum + (product?.price ?? 0) * item.qty;
+      // Use the snapshot price from the cart, fallback to current product price
+      const priceToUse = item.price ?? product?.price ?? 0;
+      return sum + priceToUse * item.qty;
     }, 0) * 100
   ) / 100;
 
@@ -114,6 +122,25 @@ const StaffSell = () => {
     setError("");
   };
 
+  // FIX 1: Save the price to the cart when adding the item
+  const addProductToSale = (product) => {
+    if (quantityInCart(product.id) >= product.onHand) {
+      setError(`No more ${product.product} in stock.`);
+      return;
+    }
+
+    setCart((current) => {
+      const existing = current.find((item) => item.productId === product.id);
+      return existing
+        ? current.map((item) =>
+            item.productId === product.id ? { ...item, qty: item.qty + 1 } : item
+          )
+        : [...current, { productId: product.id, qty: 1, price: product.price }];
+    });
+    setError("");
+    setNotice(`${product.product} added to current sale.`);
+  };
+
   // --- 2. COMPLETE SALE TO DB ---
   const handleCompleteSale = async (event) => {
     event.preventDefault();
@@ -133,10 +160,9 @@ const StaffSell = () => {
         storeId: storeId,
         paymentMethod: payment,
         items: cart.map(item => {
-          const product = products.find(p => p.id === item.productId);
           return {
             productId: item.productId,
-            price: product.price,
+            price: item.price, // Use the snapshot price
             quantity: item.qty
           };
         })
@@ -169,7 +195,7 @@ const StaffSell = () => {
         payment,
         received: payment === "Cash" ? Number(received) : total,
         change: payment === "Cash" ? change : 0,
-        stockUpdated: updatedStockList, // <-- Added so popup displays correctly
+        stockUpdated: updatedStockList, 
         recordedAt: new Date()
       });
 
@@ -195,12 +221,17 @@ const StaffSell = () => {
   const addScannedProducts = (scanned) => {
     setCart((current) =>
       scanned.reduce((items, { productId, qty }) => {
+        const product = products.find(p => p.id === productId);
         const existing = items.find((item) => item.productId === productId);
-        return existing
-          ? items.map((item) =>
-              item.productId === productId ? { ...item, qty: item.qty + qty } : item
-            )
-          : [...items, { productId, qty }];
+        
+        if (existing) {
+          return items.map((item) =>
+            item.productId === productId ? { ...item, qty: item.qty + qty } : item
+          );
+        } else {
+          // FIX 1 applied here too: Save price snapshot for scanned items
+          return [...items, { productId, qty, price: product?.price ?? 0 }];
+        }
       }, current)
     );
     setError("");
@@ -284,7 +315,7 @@ const StaffSell = () => {
                             type="button"
                             className="staff-sell-button staff-sell-add"
                             disabled={left <= 0}
-                            onClick={() => changeQuantity(product.id, 1)}
+                            onClick={() => addProductToSale(product)}
                           >
                             Add
                           </button>
@@ -314,7 +345,7 @@ const StaffSell = () => {
                     <li key={item.productId}>
                       <div className="staff-sell-cart-product">
                         <strong>{product.product}</strong>
-                        <span>{formatRand(product.price)} each</span>
+                        <span>{formatRand(item.price ?? product.price)} each</span>
                       </div>
                       <div className="staff-sell-quantity">
                         <button
@@ -334,7 +365,9 @@ const StaffSell = () => {
                           +
                         </button>
                       </div>
-                      <strong className="staff-sell-line-total">{formatRand(product.price * item.qty)}</strong>
+                      <strong className="staff-sell-line-total">
+                        {formatRand((item.price ?? product.price) * item.qty)}
+                      </strong>
                       <button
                         type="button"
                         className="staff-sell-remove"

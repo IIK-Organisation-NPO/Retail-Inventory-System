@@ -3,7 +3,7 @@ const { isValidRegNumber, lookupCompany } = require('../services/cipcService');
 
 // --- CREATE A NEW STORE ---
 exports.createStore = async (req, res) => {
-  const { storeName, registrationNumber, contactNumber, email, province, address } = req.body;
+  const { storeName, registrationNumber, contactNumber, email, province, address, operatingHours } = req.body;
   // The page calls this field "storeLocation"; the database column is "Municipality"
   const municipality = req.body.municipality || req.body.storeLocation;
 
@@ -18,6 +18,7 @@ exports.createStore = async (req, res) => {
     const prov = (province || '').trim();
     const muni = (municipality || '').trim();
     const addr = (address || '').trim();
+    const hours = (operatingHours || 'Not provided').trim();
 
     if (!name || !regNumber || !contact || !mail || !prov || !muni || !addr) {
       return res.status(400).json({ message: 'Please fill in all required fields.' });
@@ -53,11 +54,12 @@ exports.createStore = async (req, res) => {
     }
 
     // PART D: Save. Status is left out on purpose: the database fills in 'Pending'.
+    // We have added OperatingHours to the INSERT query here.
     const [result] = await db.query(
       `INSERT INTO STORES
-      (OwnerID, StoreName, RegistrationNumber, ContactNumber, Email, Province, Municipality, Address)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [ownerId, name, regNumber, contact, mail, prov, muni, addr]
+      (OwnerID, StoreName, RegistrationNumber, ContactNumber, Email, Province, Municipality, Address, OperatingHours)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [ownerId, name, regNumber, contact, mail, prov, muni, addr, hours]
     );
 
     res.status(201).json({
@@ -118,7 +120,7 @@ exports.getStoreById = async (req, res) => {
 exports.updateStore = async (req, res) => {
   const { storeId } = req.params;
   const { 
-    storeName, contactNumber, email, province, municipality, address 
+    storeName, contactNumber, email, province, municipality, address, operatingHours 
   } = req.body;
 
   const ownerId = req.user.id;
@@ -137,9 +139,9 @@ exports.updateStore = async (req, res) => {
     // 2. Update the store details and set Status back to 'Pending' for Admin review
     await db.query(
       `UPDATE STORES 
-       SET StoreName = ?, ContactNumber = ?, Email = ?, Province = ?, Municipality = ?, Address = ?, Status = 'Pending'
+       SET StoreName = ?, ContactNumber = ?, Email = ?, Province = ?, Municipality = ?, Address = ?, OperatingHours = ?, Status = 'Pending'
        WHERE StoreID = ?`,
-      [storeName, contactNumber, email, province, municipality, address, storeId]
+      [storeName, contactNumber, email, province, municipality, address, operatingHours, storeId]
     );
 
     res.status(200).json({ message: "Store updated successfully. Awaiting Admin approval." });

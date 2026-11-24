@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
 import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_StoreSwitcher";
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
+import OperatingHoursField from "../../components/Store Owner/OperatingHoursField";
 
 // Styles
 import "../../Style/Store Owner/EditStore.css";
@@ -31,8 +32,22 @@ const EditStore = () => {
   const [logoError, setLogoError] = useState("");
   const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(false);
   const [physicalAddress, setPhysicalAddress] = useState("Pietermaritzburg, KwaZulu-Natal");
+  
+  // State for Operating Hours
+  const [operatingHours, setOperatingHours] = useState({
+    fromDay: "Monday",
+    toDay: "Friday",
+    openTime: "08:00",
+    closeTime: "17:00",
+  });
+  const [operatingHoursError, setOperatingHoursError] = useState("");
+  
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  
+  // State for validation errors
+  const [validationErrors, setValidationErrors] = useState({});
+  
   const logoPreviewUrl = useRef("");
 
   // Load any previously saved draft data on mount (in case they hit "Back")
@@ -83,32 +98,94 @@ const EditStore = () => {
     setLogoError("");
   };
 
+  // Clear specific field error as the user types
+  const clearError = (field) => {
+    if (validationErrors[field]) {
+      setValidationErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const validateForm = (formData) => {
+    const errors = {};
+    const storeName = formData.get("storeName")?.trim();
+    const storeDescription = formData.get("storeDescription")?.trim();
+    const contactPerson = formData.get("contactPerson")?.trim();
+    const contactNumber = formData.get("contactNumber")?.trim();
+    const email = formData.get("email")?.trim();
+    const postalAddress = formData.get("postalAddress")?.trim();
+    const storeLocation = formData.get("storeLocation")?.trim();
+    
+    if (!storeName) errors.storeName = "Enter required name";
+    if (!storeDescription) errors.storeDescription = "Please enter a description";
+    if (!contactPerson) errors.contactPerson = "Please enter contact name";
+
+    if (!contactNumber) {
+      errors.contactNumber = "Please enter contact number";
+    } else {
+      const mobileRegex = /^(?:\+27|0)[6-8][0-9]{8}$/;
+      if (!mobileRegex.test(contactNumber.replace(/\s/g, ''))) {
+        errors.contactNumber = "Please enter a valid South African phone number (e.g., 0821234567 or +27821234567)";
+      }
+    }
+
+    if (!email) errors.email = "Enter a required email address";
+    if (!physicalAddress.trim()) errors.address = "Enter a required physical address";
+    if (!postalAddress) errors.postalAddress = "Enter a required postal address";
+    if (!storeLocation) errors.storeLocation = "Enter a required store location";
+
+    return errors;
+  };
+
+  // --- THIS IS THE FIXED FUNCTION ---
   const handleSaveChanges = (event) => {
     event.preventDefault();
     
     // 1. Gather all form data
     const formData = new FormData(event.target);
     
-    // 2. Build the draft object
+    let hasError = false;
+
+    // 2. Check Operating Hours
+    if (!operatingHours.fromDay || !operatingHours.toDay) {
+      setOperatingHoursError("Choose both the first and last open day.");
+      hasError = true;
+    } else {
+      setOperatingHoursError("");
+    }
+
+    // 3. Validate standard fields
+    const errors = validateForm(formData);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      hasError = true;
+    } else {
+      setValidationErrors({});
+    }
+
+    // 4. Stop if there are any errors
+    if (hasError) {
+      return;
+    }
+
+    // 5. Build the draft object (Restored Backend Integration)
     const draftStore = {
-      storeName: formData.get("storeName") || "Mseleku Tuckshop",
-      registrationNumber: "2024/123456/07", // Hardcoded for now based on the sidebar text
-      contactNumber: formData.get("contactNumber") || "",
-      email: formData.get("email") || "",
-      province: formData.get("province") || "",
-      municipality: formData.get("municipality") || "",
-      address: physicalAddress || "",
-      // Optional fields we capture for the review page
-      category: formData.get("storeCategory") || "",
-      description: formData.get("storeDescription") || "",
-      contactPerson: formData.get("contactPerson") || "",
-      postalAddress: formData.get("postalAddress") || "",
-      storeLocation: formData.get("storeLocation") || "",
-      operatingHours: formData.get("operatingHours") || "",
-      gpsCoordinates: formData.get("gpsCoordinates") || "",
+      storeName: formData.get("storeName"),
+      registrationNumber: "2024/123456/07", 
+      contactNumber: formData.get("contactNumber"),
+      email: formData.get("email"),
+      province: formData.get("province"),
+      municipality: formData.get("municipality"),
+      address: physicalAddress,
+      category: formData.get("storeCategory"),
+      description: formData.get("storeDescription"),
+      contactPerson: formData.get("contactPerson"),
+      postalAddress: formData.get("postalAddress"),
+      storeLocation: formData.get("storeLocation"),
+      operatingHours: `${operatingHours.fromDay} - ${operatingHours.toDay}, ${operatingHours.openTime} - ${operatingHours.closeTime}`,
+      gpsCoordinates: formData.get("gpsCoordinates"),
     };
 
-    // 3. Save to localStorage for the Review page
+    // 6. Save to localStorage for the Review page
     localStorage.setItem("draftStore", JSON.stringify(draftStore));
     
     setShowSaveConfirmation(true);
@@ -120,7 +197,6 @@ const EditStore = () => {
   };
 
   const closeSaveSuccess = () => {
-    // Navigate to the final step (Review)
     navigate("/store-owner/stores/register/review");
   };
 
@@ -190,16 +266,23 @@ const EditStore = () => {
               <h2 className="form-title">Store details</h2>
               <p className="form-desc-small">Fields marked * are required.</p>
 
-              <form id="edit-store-form" className="store-details-form" onSubmit={handleSaveChanges}>
+              <form id="edit-store-form" className="store-details-form" onSubmit={handleSaveChanges} noValidate>
                 {/* Row 1 */}
                 <div className="form-row">
                   <div className="input-group">
                     <label>Store / trading name *</label>
-                    <input type="text" name="storeName" className="form-input" defaultValue="Mseleku Tuckshop" required />
+                    <input 
+                      type="text" 
+                      name="storeName" 
+                      className="form-input" 
+                      defaultValue="Mseleku Tuckshop" 
+                      onChange={() => clearError("storeName")}
+                    />
+                    {validationErrors.storeName && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.storeName}</span>}
                   </div>
                   <div className="input-group">
                     <label>Store category *</label>
-                    <select name="storeCategory" className="form-input select-input" defaultValue="Grocery & essentials" required>
+                    <select name="storeCategory" className="form-input select-input" defaultValue="Grocery & essentials">
                       <option>Grocery & essentials</option>
                       <option>General dealer</option>
                       <option>Spaza shop</option>
@@ -210,18 +293,39 @@ const EditStore = () => {
                 {/* Store Description */}
                 <div className="input-group">
                   <label>Store description *</label>
-                  <textarea name="storeDescription" className="form-input" rows="2" defaultValue="Everyday groceries and household essentials." required></textarea>
+                  <textarea 
+                    name="storeDescription" 
+                    className="form-input" 
+                    rows="2" 
+                    defaultValue="Everyday groceries and household essentials." 
+                    onChange={() => clearError("storeDescription")}
+                  />
+                  {validationErrors.storeDescription && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.storeDescription}</span>}
                 </div>
 
                 {/* Row 2 */}
                 <div className="form-row">
                   <div className="input-group">
                     <label>Contact person *</label>
-                    <input type="text" name="contactPerson" className="form-input" defaultValue="Sipho Dlamini" required />
+                    <input 
+                      type="text" 
+                      name="contactPerson" 
+                      className="form-input" 
+                      defaultValue="Sipho Dlamini" 
+                      onChange={() => clearError("contactPerson")}
+                    />
+                    {validationErrors.contactPerson && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.contactPerson}</span>}
                   </div>
                   <div className="input-group">
                     <label>Store contact number *</label>
-                    <input type="tel" name="contactNumber" className="form-input" defaultValue="082 000 0001" required />
+                    <input 
+                      type="tel" 
+                      name="contactNumber" 
+                      className="form-input" 
+                      defaultValue="082 000 0001" 
+                      onChange={() => clearError("contactNumber")}
+                    />
+                    {validationErrors.contactNumber && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.contactNumber}</span>}
                   </div>
                 </div>
 
@@ -229,7 +333,14 @@ const EditStore = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Store email address *</label>
-                    <input type="email" name="email" className="form-input" defaultValue="sipho@example.co.za" required />
+                    <input 
+                      type="email" 
+                      name="email" 
+                      className="form-input" 
+                      defaultValue="sipho@example.co.za" 
+                      onChange={() => clearError("email")}
+                    />
+                    {validationErrors.email && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.email}</span>}
                   </div>
                   <div className="input-group">
                     <label>Website (optional)</label>
@@ -249,6 +360,7 @@ const EditStore = () => {
                       const isChecked = event.target.checked;
                       setSameAsRegisteredAddress(isChecked);
                       setPhysicalAddress(isChecked ? REGISTERED_COMPANY_ADDRESS : "");
+                      clearError("address");
                     }}
                   />
                   <label htmlFor="sameAddress">Same as the company's registered address</label>
@@ -261,21 +373,38 @@ const EditStore = () => {
                     name="address"
                     className="form-input"
                     value={physicalAddress}
-                    onChange={(event) => setPhysicalAddress(event.target.value)}
-                    required
+                    onChange={(event) => {
+                      setPhysicalAddress(event.target.value);
+                      clearError("address");
+                    }}
                     readOnly={sameAsRegisteredAddress}
                   />
+                  {validationErrors.address && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.address}</span>}
                 </div>
 
                 {/* Row 4 */}
                 <div className="form-row">
                   <div className="input-group">
-                    <label>Postal address</label>
-                    <input type="text" name="postalAddress" className="form-input" defaultValue="Pietermaritzburg" />
+                    <label>Postal address *</label>
+                    <input 
+                      type="text" 
+                      name="postalAddress" 
+                      className="form-input" 
+                      defaultValue="Pietermaritzburg" 
+                      onChange={() => clearError("postalAddress")}
+                    />
+                    {validationErrors.postalAddress && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.postalAddress}</span>}
                   </div>
                   <div className="input-group">
                     <label>Store location / area *</label>
-                    <input type="text" name="storeLocation" className="form-input" defaultValue="Pietermaritzburg" required />
+                    <input 
+                      type="text" 
+                      name="storeLocation" 
+                      className="form-input" 
+                      defaultValue="Pietermaritzburg" 
+                      onChange={() => clearError("storeLocation")}
+                    />
+                    {validationErrors.storeLocation && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.storeLocation}</span>}
                   </div>
                 </div>
 
@@ -283,16 +412,24 @@ const EditStore = () => {
                 <div className="form-row">
                   <div className="input-group">
                     <label>Province *</label>
-                    <select name="province" className="form-input select-input" defaultValue="KwaZulu-Natal" required>
+                    <select name="province" className="form-input select-input" defaultValue="KwaZulu-Natal">
                       {SOUTH_AFRICAN_PROVINCES.map((province) => (
                         <option key={province}>{province}</option>
                       ))}
                     </select>
                   </div>
-                  <div className="input-group">
-                    <label>Operating hours *</label>
-                    <input type="text" name="operatingHours" className="form-input" defaultValue="Mon–Fri, 08:00–17:00" required />
-                  </div>
+                </div>
+                
+                {/* Operating Hours Component */}
+                <div className="input-group operating-hours-input-group">
+                  <OperatingHoursField
+                    value={operatingHours}
+                    onChange={(hours) => {
+                      setOperatingHours(hours);
+                      if (hours.fromDay && hours.toDay) setOperatingHoursError("");
+                    }}
+                    error={operatingHoursError}
+                  />
                 </div>
               </form>
             </div>
