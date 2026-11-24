@@ -27,10 +27,56 @@ const formatShortDate = (isoString) => {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 };
 
+// Fetches the inventory and works out the summary cards.
+// It lives outside the component and never sets state, it only returns data.
+const loadInventory = async (storeId, token) => {
+  const response = await fetch(`http://localhost:5000/api/products?storeId=${storeId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.message || "Failed to load inventory");
+
+  let totalValue = 0;
+  let lowCount = 0;
+  let outCount = 0;
+
+  const items = data.map((p) => {
+    const onHand = Number(p.OnHand) || 0;
+    const reorder = Number(p.ReorderLevel ?? 15);
+    const cost = Number(p.CostPrice) || 0;
+
+    totalValue += onHand * cost;
+    if (onHand === 0) outCount++;
+    else if (onHand < reorder) lowCount++;
+
+    return {
+      id: p.ProductID,
+      product: p.Name,
+      onHand,
+      reorderLevel: reorder,
+      lastMovement: p.LastMovementDate
+        ? `Updated, ${formatShortDate(p.LastMovementDate)}`
+        : "No recent movements",
+      raw: p,
+    };
+  });
+
+  return {
+    items,
+    summary: {
+      inventoryValue: totalValue,
+      lowStockProducts: lowCount,
+      outOfStock: outCount,
+      lastStockCount: formatShortDate(new Date()),
+    },
+  };
+};
+
 const StoreOwnerInventory = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Data State
   const [stockItems, setStockItems] = useState([]);
   const [summary, setSummary] = useState({
@@ -50,61 +96,46 @@ const StoreOwnerInventory = () => {
   const storeId = localStorage.getItem("activeStoreId") || 1;
   const token = localStorage.getItem("token");
 
-  // --- 1. FETCH INVENTORY DATA ---
-  const fetchInventory = async () => {
+  // Puts freshly loaded data on the screen
+  const applyInventory = useCallback(({ items, summary: newSummary }) => {
+    setStockItems(items);
+    setSummary(newSummary);
+    setError("");
+  }, []);
+
+  // --- 1. LOAD ON PAGE OPEN (and when the store changes) ---
+  // State is only set inside the .then callbacks.
+  useEffect(() => {
+    let cancelled = false;
+
+    loadInventory(storeId, token)
+      .then((result) => {
+        if (!cancelled) applyInventory(result);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId, token, applyInventory]);
+
+  // Reload after a stock movement (runs from a button click, not from an effect)
+  const refreshInventory = useCallback(async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/products?storeId=${storeId}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-
-      let totalValue = 0;
-      let lowCount = 0;
-      let outCount = 0;
-
-      const formattedItems = data.map((p) => {
-        const onHand = p.OnHand || 0;
-        const reorder = p.ReorderLevel || 15;
-        const cost = Number(p.CostPrice) || 0;
-        
-        // Calculate summaries
-        totalValue += (onHand * cost);
-        if (onHand === 0) outCount++;
-        else if (onHand < reorder) lowCount++;
-
-        return {
-          id: p.ProductID,
-          product: p.Name,
-          onHand: onHand,
-          reorderLevel: reorder,
-          lastMovement: p.LastMovementDate ? `Updated, ${formatShortDate(p.LastMovementDate)}` : "No recent movements",
-          raw: p // Keep original data if needed
-        };
-      });
-
-      setStockItems(formattedItems);
-      setSummary({
-        inventoryValue: totalValue,
-        lowStockProducts: lowCount,
-        outOfStock: outCount,
-        lastStockCount: formatShortDate(new Date()),
-      });
-
+      applyInventory(await loadInventory(storeId, token));
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchInventory();
-  }, [storeId]);
+  }, [storeId, token, applyInventory]);
 
   const closePopup = useCallback(() => setOpenPopup(null), []);
 
+  // Clears the "open popup" hint that other pages pass in the navigation state
   useEffect(() => {
     if (location.state?.openPopup === "in") {
       navigate(location.pathname, { replace: true, state: null });
@@ -112,37 +143,28 @@ const StoreOwnerInventory = () => {
   }, [location.pathname, location.state, navigate]);
 
   // --- 2. SUBMIT MOVEMENT TO BACKEND ---
-  const handleSaveMovement = async (productId, quantityChange, type, details) => {
-    try {
-      const payload = {
-        storeId,
-        productId,
-        type, // 'Stock in', 'Stock out', 'Adjustment'
-        quantityChange, // Positive for in, negative for out
-        details
-      };
+  // Throws on failure so the popup can stay open and show the message.
+  // The popup closes itself when this finishes without an error.
+  const handleSaveMovement = async (movement) => {
+    const response = await fetch("http://localhost:5000/api/inventory/movement", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ storeId: Number(storeId), ...movement }),
+    });
 
-      const response = await fetch("http://localhost:5000/api/inventory/movement", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to update stock");
-
-      closePopup();
-      fetchInventory(); // Refresh table and summary cards from DB
-      
-    } catch (err) {
-      alert(err.message);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const fieldMessages = data.errors ? Object.values(data.errors).join(" ") : "";
+      throw new Error(fieldMessages || data.message || "Failed to update stock");
     }
+
+    await refreshInventory(); // refresh table and summary cards from the database
   };
 
-  if (loading) return <div style={{ padding: '50px' }}>Loading inventory...</div>;
+  if (loading) return <div style={{ padding: "50px" }}>Loading inventory...</div>;
 
   return (
     <div className="so-layout">
@@ -162,7 +184,7 @@ const StoreOwnerInventory = () => {
         </header>
 
         {error && (
-          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+          <div style={{ color: "red", backgroundColor: "#ffebee", padding: "10px", borderRadius: "5px", marginBottom: "15px" }}>
             {error}
           </div>
         )}
@@ -209,7 +231,7 @@ const StoreOwnerInventory = () => {
               </thead>
               <tbody>
                 {stockItems.length === 0 ? (
-                  <tr><td colSpan="5" style={{textAlign: "center", padding: "20px"}}>No products found. Add products first.</td></tr>
+                  <tr><td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>No products found. Add products first.</td></tr>
                 ) : (
                   stockItems.map((item) => {
                     const status = getStatus(item.onHand, item.reorderLevel);
@@ -232,14 +254,18 @@ const StoreOwnerInventory = () => {
         </section>
       </main>
 
-      {/* POPUPS */}
+      {/* POPUPS: each one closes itself after a successful save */}
       {openPopup === "in" && (
         <StockInPopup
           products={stockItems}
           onClose={closePopup}
-          onSave={({ productId, quantity, supplier }) => 
-            // Pass the supplier as the details for the movement log
-            handleSaveMovement(productId, quantity, "Stock in", supplier) 
+          onSave={({ productId, quantity, unitCost, supplier }) =>
+            handleSaveMovement({
+              productId,
+              type: "Stock in",
+              quantityChange: quantity,
+              details: `${supplier} (unit cost R${unitCost.toFixed(2)})`,
+            })
           }
         />
       )}
@@ -249,8 +275,12 @@ const StoreOwnerInventory = () => {
           products={stockItems}
           onClose={closePopup}
           onSave={({ productId, quantity, reason }) =>
-            // Pass the reason (e.g., "Damaged") as the details for the log
-            handleSaveMovement(productId, -quantity, "Stock out", reason)
+            handleSaveMovement({
+              productId,
+              type: "Stock out",
+              quantityChange: -quantity,
+              details: reason,
+            })
           }
         />
       )}
@@ -259,11 +289,14 @@ const StoreOwnerInventory = () => {
         <StockAdjustmentPopup
           products={stockItems}
           onClose={closePopup}
-          onSave={({ productId, quantityBefore, quantityAfter, reason }) => {
-            const diff = quantityAfter - quantityBefore;
-            // Log the reason along with the difference
-            handleSaveMovement(productId, diff, "Adjustment", `${reason} (was ${quantityBefore})`);
-          }}
+          onSave={({ productId, quantityAfter, reason }) =>
+            handleSaveMovement({
+              productId,
+              type: "Adjustment",
+              newQuantity: quantityAfter,
+              details: reason,
+            })
+          }
         />
       )}
     </div>

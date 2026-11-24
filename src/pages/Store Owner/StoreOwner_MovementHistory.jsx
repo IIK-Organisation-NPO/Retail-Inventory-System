@@ -21,6 +21,17 @@ const MOVEMENT_TYPES = ["Sale", "Stock in", "Stock out", "Adjustment"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const pad = (n) => String(n).padStart(2, "0");
 
+// "2026-11-24" (local date)
+const toISODate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+// Default range for the custom date picker: the last 7 days, ending today
+const defaultCustomRange = () => {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 6);
+  return { from: toISODate(from), to: toISODate(to) };
+};
+
 const formatDateRangeLabel = (from, to) => {
   const formatDate = (date) => {
     const [year, month, day] = date.split("-").map(Number);
@@ -40,17 +51,44 @@ const formatDateTime = (iso) => {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-// "13 Nov 2026, 16:42" — includes the year for the exported file
+// "13 Nov 2026, 16:42" (includes the year for the exported file)
 const formatDateTimeWithYear = (iso) => {
   if (!iso) return "";
   const d = new Date(iso);
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-// "+24" / "−2"
-const formatChange = (change) => (change > 0 ? `+${change}` : `−${Math.abs(change)}`);
+// "+24" / "−2" / "0"
+const formatChange = (change) => {
+  if (change > 0) return `+${change}`;
+  if (change < 0) return `−${Math.abs(change)}`;
+  return "0";
+};
 
 const typeClassName = (type) => `mh-type mh-type-${type.toLowerCase().replace(/\s+/g, "-")}`;
+
+// Makes sure every row has safe values: numbers are numbers, nothing is null
+const normalizeMovements = (rows) =>
+  rows.map((m) => ({
+    id: m.id,
+    date: m.date,
+    product: m.product || "Unknown product",
+    type: m.type || "Unknown",
+    change: Number(m.change) || 0,
+    onHandAfter: Number(m.onHandAfter) || 0,
+    by: m.by || "Unknown",
+    details: m.details || "",
+  }));
+
+// Fetches the history. It never sets state, it only returns data.
+const loadMovements = async (storeId, token) => {
+  const response = await fetch(`http://localhost:5000/api/inventory/history?storeId=${storeId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.message || "Failed to load history");
+  return normalizeMovements(data);
+};
 
 // Export the given movements to an .xlsx file
 const exportMovements = (rows) =>
@@ -73,7 +111,7 @@ const StoreOwner_MovementHistory = () => {
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
+
   const [dateRange, setDateRange] = useState("7");
   const [customRange, setCustomRange] = useState(null);
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
@@ -87,24 +125,26 @@ const StoreOwner_MovementHistory = () => {
   const token = localStorage.getItem("token");
 
   // --- 1. FETCH DATA FROM BACKEND ---
+  // State is only set inside the .then callbacks.
   useEffect(() => {
-    const fetchMovements = async () => {
-      try {
-        const response = await fetch(`http://localhost:5000/api/inventory/history?storeId=${storeId}`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Failed to load history");
-        
-        setMovements(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    let cancelled = false;
+
+    loadMovements(storeId, token)
+      .then((rows) => {
+        if (cancelled) return;
+        setMovements(rows);
+        setError("");
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
     };
-    fetchMovements();
   }, [storeId, token]);
 
   // --- 2. DERIVE FILTER OPTIONS ---
@@ -112,7 +152,7 @@ const StoreOwner_MovementHistory = () => {
     () => [...new Set(movements.map((m) => m.product))].sort((a, b) => a.localeCompare(b)),
     [movements]
   );
-  
+
   const PEOPLE = useMemo(
     () => [...new Set(movements.map((m) => m.by))].sort((a, b) => a.localeCompare(b)),
     [movements]
@@ -135,20 +175,22 @@ const StoreOwner_MovementHistory = () => {
       cutoff = new Date(today.getTime() - Number(dateRange) * 24 * 60 * 60 * 1000);
     }
 
-    return movements.filter((m) => {
-      const movementDate = new Date(m.date);
-      
-      // Date filter
-      if (cutoff && movementDate < cutoff) return false;
-      if (customStart && (movementDate < customStart || movementDate > customEnd)) return false;
-      
-      // Dropdown filters
-      if (product !== "all" && m.product !== product) return false;
-      if (type !== "all" && m.type !== type) return false;
-      if (person !== "all" && m.by !== person) return false;
-      
-      return true;
-    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    return movements
+      .filter((m) => {
+        const movementDate = new Date(m.date);
+
+        // Date filter
+        if (cutoff && movementDate < cutoff) return false;
+        if (customStart && (movementDate < customStart || movementDate > customEnd)) return false;
+
+        // Dropdown filters
+        if (product !== "all" && m.product !== product) return false;
+        if (type !== "all" && m.type !== type) return false;
+        if (person !== "all" && m.by !== person) return false;
+
+        return true;
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [movements, dateRange, customRange, product, type, person]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -177,7 +219,7 @@ const StoreOwner_MovementHistory = () => {
     return (
       <div className="so-layout">
         <StoreOwnerSidebar />
-        <main className="so-main" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <main className="so-main" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
           <p>Loading movement history...</p>
         </main>
       </div>
@@ -209,7 +251,7 @@ const StoreOwner_MovementHistory = () => {
         </header>
 
         {error && (
-          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+          <div style={{ color: "red", backgroundColor: "#ffebee", padding: "10px", borderRadius: "5px", marginBottom: "15px" }}>
             {error}
           </div>
         )}
@@ -240,7 +282,7 @@ const StoreOwner_MovementHistory = () => {
                 value={dateRange}
                 includeAllTime
                 customRange={customRange}
-                defaultRange={{ from: "2026-11-07", to: "2026-11-13" }}
+                defaultRange={defaultCustomRange()}
                 onClose={() => setIsPeriodOpen(false)}
                 onApply={({ value, from, to }) => {
                   setDateRange(value);
@@ -308,7 +350,7 @@ const StoreOwner_MovementHistory = () => {
                       <td>
                         <span className={typeClassName(m.type)}>{m.type}</span>
                       </td>
-                      <td className="mh-change" style={{ color: m.change > 0 ? 'green' : 'inherit' }}>
+                      <td className="mh-change" style={{ color: m.change > 0 ? "green" : "inherit" }}>
                         {formatChange(m.change)}
                       </td>
                       <td>{m.onHandAfter}</td>

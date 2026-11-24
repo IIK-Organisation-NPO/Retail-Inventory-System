@@ -1,5 +1,5 @@
 // src/pages/Store Owner/StoreOwner_Sales.jsx
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import "../../Style/Store Owner/StoreOwnerInventory.css";
 import "../../Style/Store Owner/StoreOwner_Sales.css";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
@@ -9,6 +9,7 @@ import StoreOwner_RecordSale_popup from "../../components/Store Owner/StoreOwner
 import exportToExcel from "../../utils/exportToExcel";
 import formatRand from "../../utils/formatRand";
 
+const API = "http://localhost:5000/api";
 const PAGE_SIZE = 5;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const pad = (n) => String(n).padStart(2, "0");
@@ -25,11 +26,55 @@ const formatDate = (iso) => {
   return `${day} ${MONTHS[month - 1]} ${year}`;
 };
 
+// If the server sends no message (for example a 404 page), the error says
+// which status and which address failed, so the problem is easy to find.
+const fetchJson = async (url, token) => {
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      data?.message ||
+        data?.error ||
+        `Request failed (${response.status}) for ${url.replace("http://localhost:5000", "")}`
+    );
+  }
+  return data;
+};
+
+// Loads the products (for the popup and filter) and the sales history.
+// It never sets state, it only returns data.
+const loadSalesData = async (storeId, token) => {
+  const [productData, salesData] = await Promise.all([
+    fetchJson(`${API}/products?storeId=${storeId}`, token),
+    fetchJson(`${API}/sales/history?storeId=${storeId}`, token),
+  ]);
+
+  return {
+    products: productData.map((p) => ({
+      id: p.ProductID,
+      product: p.Name,
+      price: Number(p.SellingPrice) || 0,
+      onHand: Number(p.OnHand) || 0,
+      barcode: p.Barcode,
+    })),
+    sales: salesData.map((s) => ({
+      id: s.id,
+      date: s.date,
+      time: s.time,
+      cashier: s.cashier || "Unknown",
+      items: s.items || [],
+      itemsText: s.itemsText || "",
+      payment: s.payment,
+      total: Number(s.total) || 0,
+    })),
+  };
+};
+
 const StoreOwner_Sales = () => {
   // --- Real Data State ---
   const [products, setProducts] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // --- Filters & UI State ---
   const [date, setDate] = useState("");
@@ -41,85 +86,71 @@ const StoreOwner_Sales = () => {
 
   const storeId = localStorage.getItem("activeStoreId") || 1;
   const token = localStorage.getItem("token");
+  const [loading, setLoading] = useState(Boolean(token));
 
-  // --- 1. FETCH DATA FROM BACKEND ---
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const headers = { "Authorization": `Bearer ${token}` };
-
-      // Fetch products for the dropdown and the popup
-      const prodRes = await fetch(`http://localhost:5000/api/products?storeId=${storeId}`, { headers });
-      const prodData = await prodRes.json();
-      if (prodRes.ok) {
-        setProducts(prodData.map(p => ({
-          id: p.ProductID,
-          product: p.Name,
-          price: Number(p.SellingPrice),
-          onHand: p.OnHand,
-          barcode: p.Barcode
-        })));
-      }
-
-      // Fetch sales history
-      const salesRes = await fetch(`http://localhost:5000/api/sales/history?storeId=${storeId}`, { headers });
-      const salesData = await salesRes.json();
-      if (salesRes.ok) {
-        // Map backend response to what the table expects
-        const formattedSales = salesData.map(s => ({
-          id: s.id,
-          date: s.date, 
-          time: s.time, 
-          cashier: s.cashier || "Store Owner", 
-          itemsText: s.itemsText, // The backend sends the combined string
-          payment: s.payment,
-          total: Number(s.total)
-        }));
-        setTransactions(formattedSales);
-        
-        // Set default date to the most recent sale date, or today if none
-        if (formattedSales.length > 0 && !date) {
-          setDate(formattedSales[0].date);
-        } else if (formattedSales.length === 0) {
-          setDate(todayISO());
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load sales data", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // --- 1. LOAD DATA WHEN THE PAGE OPENS ---
+  // State is only set inside the .then callbacks.
   useEffect(() => {
-    if (token) fetchData();
+    if (!token) return undefined;
+    let cancelled = false;
+
+    loadSalesData(storeId, token)
+      .then(({ products: productList, sales }) => {
+        if (cancelled) return;
+        setProducts(productList);
+        setTransactions(sales);
+        // Start on the most recent sale date, or today if there are no sales
+        setDate((current) => current || sales[0]?.date || todayISO());
+        setError("");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.message);
+        setDate((current) => current || todayISO());
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId, token]);
+
+  // Reload after a sale (called from the save handler, not from an effect)
+  const refreshData = useCallback(async () => {
+    try {
+      const { products: productList, sales } = await loadSalesData(storeId, token);
+      setProducts(productList);
+      setTransactions(sales);
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    }
   }, [storeId, token]);
 
   // --- 2. FILTER OPTIONS ---
   const dateOptions = useMemo(() => {
     const dates = [...new Set(transactions.map((t) => t.date))].sort().reverse();
-    // Ensure today is always an option even if no sales yet
+    // Ensure today is always an option even if there are no sales yet
     if (!dates.includes(todayISO())) dates.unshift(todayISO());
     return dates;
   }, [transactions]);
 
-  const cashiers = useMemo(() => {
-    return [...new Set(transactions.map((t) => t.cashier))].sort((a, b) => a.localeCompare(b));
-  }, [transactions]);
+  const cashiers = useMemo(
+    () => [...new Set(transactions.map((t) => t.cashier))].sort((a, b) => a.localeCompare(b)),
+    [transactions]
+  );
 
   // --- 3. APPLY FILTERS ---
   const filtered = useMemo(() => {
     return transactions
       .filter((t) => t.date === date)
-      // Filter by searching the itemsText string for the selected product name
-      .filter((t) => {
-        if (productFilter === "all") return true;
-        const p = products.find(prod => String(prod.id) === productFilter);
-        return p ? t.itemsText.includes(p.product) : true;
-      })
+      // Match on the product id, not on text
+      .filter((t) => productFilter === "all" || t.items.some((i) => String(i.productId) === productFilter))
       .filter((t) => userFilter === "all" || t.cashier === userFilter)
       .sort((a, b) => b.time.localeCompare(a.time));
-  }, [transactions, date, productFilter, userFilter, products]);
+  }, [transactions, date, productFilter, userFilter]);
 
   // --- 4. SUMMARY CALCULATIONS ---
   const salesTotal = filtered.reduce((sum, t) => sum + t.total, 0);
@@ -169,46 +200,43 @@ const StoreOwner_Sales = () => {
     }
   };
 
-  // --- 7. COMPLETE SALE (Send to Backend) ---
+  // --- 7. COMPLETE SALE (send to backend) ---
+  // Throws if the server rejects the sale, so the popup stays open and shows the message.
+  // The popup closes itself when this finishes without an error.
   const handleCompleteSale = async (sale) => {
-    try {
-      // Build payload for the backend
-      const payload = {
-        storeId: storeId,
+    const response = await fetch(`${API}/sales`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      // No prices are sent. The server uses the prices in the database.
+      body: JSON.stringify({
+        storeId: Number(storeId),
         paymentMethod: sale.payment,
-        items: sale.items.map(item => ({
-          productId: item.productId,
-          price: item.price,
-          quantity: item.qty
-        }))
-      };
+        amountPaid: sale.amountPaid,
+        items: sale.items.map((item) => ({ productId: item.productId, quantity: item.qty })),
+      }),
+    });
 
-      const response = await fetch("http://localhost:5000/api/sales", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to record sale");
-
-      // Success! Close popup and refresh the page data
-      setShowRecordSale(false);
-      setDate(todayISO());
-      setProductFilter("all");
-      setUserFilter("all");
-      setPage(1);
-      fetchData(); // Reload from DB to show the new sale and updated totals
-
-    } catch (err) {
-      alert("Error recording sale: " + err.message);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const err = new Error(
+        data.message || data.error || `Could not record the sale (error ${response.status}).`
+      );
+      err.fieldErrors = data.errors; // messages for individual fields
+      err.status = response.status;
+      throw err;
     }
+
+    setDate(todayISO());
+    setProductFilter("all");
+    setUserFilter("all");
+    setPage(1);
+    await refreshData(); // show the new sale and the updated stock
   };
 
-  if (loading) return <div style={{ padding: '50px' }}>Loading sales data...</div>;
+  if (loading) return <div style={{ padding: "50px" }}>Loading sales data...</div>;
 
   return (
     <div className="so-layout">
@@ -226,6 +254,12 @@ const StoreOwner_Sales = () => {
             <StoreOwner_UserMenu />
           </div>
         </header>
+
+        {error && (
+          <div style={{ color: "red", backgroundColor: "#ffebee", padding: "10px", borderRadius: "5px", marginBottom: "15px" }}>
+            {error}
+          </div>
+        )}
 
         {/* Summary cards */}
         <section className="sl-stats">
@@ -343,7 +377,7 @@ const StoreOwner_Sales = () => {
         </section>
       </main>
 
-      {/* RECORD SALE POPUP */}
+      {/* RECORD SALE POPUP: closes itself after a successful sale */}
       {showRecordSale && (
         <StoreOwner_RecordSale_popup
           products={products}

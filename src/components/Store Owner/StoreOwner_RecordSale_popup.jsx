@@ -10,23 +10,42 @@ import "../../Style/Store Owner/StoreOwner_RecordSale_popup.css";
 const MAX_RESULTS = 5;
 const PAYMENT_METHODS = ["Cash", "Card"];
 
+// Validation messages: red, directly under the field they belong to
+const ERROR_COLOR = "#c62828";
+const errorStyle = { color: ERROR_COLOR, fontSize: "0.85rem", margin: "6px 0 0" };
+const redBorder = (invalid) => (invalid ? { borderColor: ERROR_COLOR } : undefined);
+
+const FieldError = ({ message }) =>
+  message ? (
+    <p role="alert" style={errorStyle}>
+      {message}
+    </p>
+  ) : null;
+
 // Round to whole cents to avoid floating point drift (e.g. 0.1 + 0.2)
 const roundMoney = (amount) => Math.round(amount * 100) / 100;
+const toCents = (amount) => Math.round(Number(amount) * 100);
 
 /**
  * products:   [{ id, product, price, onHand, barcode }]
- * onComplete: called with { items, payment, total, received, change }
+ * onComplete: async, called with { items, payment, total, amountPaid, change }.
+ *             It throws if the server rejects the sale.
  */
 const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
   const [query, setQuery] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [lines, setLines] = useState([]); // items in this sale
-  const [showOtherItem, setShowOtherItem] = useState(false);
-  const [otherName, setOtherName] = useState("");
-  const [otherAmount, setOtherAmount] = useState("");
   const [payment, setPayment] = useState("Cash");
-  const [received, setReceived] = useState("");
-  const [error, setError] = useState("");
+  // Cash: the amount received. Card: the amount charged on the speed point.
+  const [amountPaid, setAmountPaid] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // One message per place on the form
+  const [searchError, setSearchError] = useState(""); // under the search box
+  const [itemsError, setItemsError] = useState(""); // under the items list
+  const [amountError, setAmountError] = useState(""); // under the amount field
+  const [formError, setFormError] = useState(""); // above the buttons
+
   const searchRef = useRef(null);
 
   // How many of a product are already in this sale
@@ -42,16 +61,21 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
     : [];
 
   const total = roundMoney(lines.reduce((sum, line) => sum + line.price * line.qty, 0));
-  const receivedAmount = Number(received);
-  const change = received !== "" && receivedAmount >= total ? roundMoney(receivedAmount - total) : null;
+  const paidAmount = Number(amountPaid);
+  const change =
+    payment === "Cash" && amountPaid !== "" && paidAmount >= total
+      ? roundMoney(paidAmount - total)
+      : null;
 
   /* ---------- Items ---------- */
   const addProduct = (product) => {
     if (qtyInSale(product.id) >= product.onHand) {
-      setError(`No more ${product.product} in stock.`);
+      setSearchError(`No more ${product.product} in stock.`);
       return;
     }
-    setError("");
+    setSearchError("");
+    setItemsError("");
+    setFormError("");
     setLines((current) => {
       const existing = current.find((line) => line.productId === product.id);
       if (existing) {
@@ -73,38 +97,17 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
     const nextQty = line.qty + delta;
     if (nextQty < 1) return;
     if (product && nextQty > product.onHand) {
-      setError(`Only ${product.onHand} of ${product.product} in stock.`);
+      setItemsError(`Only ${product.onHand} of ${product.product} in stock.`);
       return;
     }
-    setError("");
+    setItemsError("");
+    setFormError("");
     setLines((current) => current.map((l) => (l.key === line.key ? { ...l, qty: nextQty } : l)));
   };
 
   const removeLine = (key) => {
+    setItemsError("");
     setLines((current) => current.filter((line) => line.key !== key));
-  };
-
-  // An item that isn't in the product list (e.g. loose sweets)
-  const addOtherItem = () => {
-    const amount = Number(otherAmount);
-    if (otherAmount === "" || Number.isNaN(amount) || amount <= 0) {
-      setError("Enter an amount for the additional item.");
-      return;
-    }
-    setError("");
-    setLines((current) => [
-      ...current,
-      {
-        key: `o-${Date.now()}`,
-        productId: null,
-        name: otherName.trim() || "Additional item",
-        price: roundMoney(amount),
-        qty: 1,
-      },
-    ]);
-    setOtherName("");
-    setOtherAmount("");
-    setShowOtherItem(false);
   };
 
   /* ---------- Search box ---------- */
@@ -115,12 +118,12 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
     const byBarcode = products.find((p) => p.barcode === query.trim());
     if (byBarcode) addProduct(byBarcode);
     else if (matches.length === 1) addProduct(matches[0]);
-    else if (query.trim()) setError("No product matches that barcode or name.");
+    else if (query.trim()) setSearchError("No product matches that barcode or name.");
   };
 
   /* ---------- Scan barcode popup ---------- */
   const openScanner = () => {
-    setError("");
+    setSearchError("");
     setShowScanner(true);
   };
 
@@ -140,30 +143,82 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
       });
       return next;
     });
+    setItemsError("");
+    setFormError("");
     setShowScanner(false);
   };
 
-  /* ---------- Complete ---------- */
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (lines.length === 0) {
-      setError("Add at least one item to the sale.");
-      return;
-    }
-    if (payment === "Cash" && (received === "" || Number.isNaN(receivedAmount) || receivedAmount < total)) {
-      setError(`Amount received must be at least ${formatRand(total)}.`);
-      return;
-    }
+  /* ---------- Payment ---------- */
+  const choosePayment = (method) => {
+    setPayment(method);
+    setAmountPaid(""); // the field means something different for each method
+    setAmountError("");
+    setFormError("");
+  };
 
-    // Pass the data back to the parent (StoreOwner_Sales.jsx) which sends it to the backend
-    onComplete?.({
-      items: lines.map(({ productId, name, price, qty }) => ({ productId, name, price, qty })),
-      payment,
-      total,
-      received: payment === "Cash" ? receivedAmount : total,
-      change: payment === "Cash" ? change : 0,
-    });
-    onClose();
+  // Returns an error message, or "" if the amount is fine
+  const checkAmount = () => {
+    if (amountPaid.trim() === "" || Number.isNaN(paidAmount) || paidAmount <= 0) {
+      return payment === "Card"
+        ? "Enter the amount charged on the speed point."
+        : "Enter the amount received.";
+    }
+    if (Math.abs(paidAmount * 100 - Math.round(paidAmount * 100)) > 1e-6) {
+      return "The amount can have at most 2 decimal places.";
+    }
+    if (lines.length > 0) {
+      if (payment === "Cash" && toCents(paidAmount) < toCents(total)) {
+        return `Amount received must be at least ${formatRand(total)}.`;
+      }
+      if (payment === "Card" && toCents(paidAmount) !== toCents(total)) {
+        return `The card amount must match the sale total of ${formatRand(total)}.`;
+      }
+    }
+    return "";
+  };
+
+  /* ---------- Complete ---------- */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    // Check everything at once so every problem shows under its own field
+    let itemsMessage = "";
+    if (lines.length === 0) {
+      itemsMessage = "Add at least one item to the sale.";
+    } else {
+      const tooMany = lines.find((line) => {
+        const product = products.find((p) => p.id === line.productId);
+        return product && line.qty > product.onHand;
+      });
+      if (tooMany) itemsMessage = `Only ${products.find((p) => p.id === tooMany.productId).onHand} of ${tooMany.name} in stock.`;
+    }
+    const amountMessage = checkAmount();
+
+    setItemsError(itemsMessage);
+    setAmountError(amountMessage);
+    setFormError("");
+    if (itemsMessage || amountMessage) return;
+
+    setSubmitting(true);
+    try {
+      // The parent (StoreOwner_Sales.jsx) sends this to the backend and throws if it fails
+      await onComplete?.({
+        items: lines.map(({ productId, name, price, qty }) => ({ productId, name, price, qty })),
+        payment,
+        total,
+        amountPaid: roundMoney(paidAmount),
+        change: payment === "Cash" ? roundMoney(paidAmount - total) : 0,
+      });
+      onClose();
+    } catch (err) {
+      const fieldErrors = err.fieldErrors || {};
+      if (fieldErrors.amountPaid) setAmountError(fieldErrors.amountPaid);
+      else if (fieldErrors.items || err.status === 404 || err.status === 409)
+        setItemsError(fieldErrors.items || err.message); // e.g. not enough stock
+      else setFormError(err.message || "Could not record the sale. Please try again.");
+      setSubmitting(false);
+    }
   };
 
   // While scanning, hide this popup and show the Scan barcode popup instead.
@@ -193,10 +248,11 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
               ref={searchRef}
               type="text"
               className="sp-input"
+              style={redBorder(Boolean(searchError))}
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setError("");
+                setSearchError("");
               }}
               onKeyDown={handleSearchKeyDown}
               autoComplete="off"
@@ -206,10 +262,12 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
               type="button"
               className="sp-btn sp-btn-outline rs-scan-btn"
               onClick={openScanner}
+              disabled={submitting}
             >
               Scan barcode
             </button>
           </div>
+          <FieldError message={searchError} />
 
           {/* Search results */}
           {matches.length > 0 && (
@@ -238,7 +296,7 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
             </ul>
           )}
           {search && matches.length === 0 && (
-            <p className="rs-no-results">No products match “{query.trim()}”.</p>
+            <FieldError message={`No products match “${query.trim()}”.`} />
           )}
         </div>
 
@@ -255,18 +313,14 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
               <li key={line.key} className="rs-line">
                 <div className="rs-line-info">
                   <span className="rs-line-name">{line.name}</span>
-                  <span className="rs-line-meta">
-                    {line.productId ? `${formatRand(line.price)} each` : "Included in sale"}
-                  </span>
+                  <span className="rs-line-meta">{formatRand(line.price)} each</span>
                 </div>
 
-                {line.productId && (
-                  <div className="rs-stepper" aria-label={`Quantity of ${line.name}`}>
-                    <button type="button" onClick={() => changeQty(line, -1)} aria-label="Decrease quantity">−</button>
-                    <span className="rs-qty">{line.qty}</span>
-                    <button type="button" onClick={() => changeQty(line, 1)} aria-label="Increase quantity">+</button>
-                  </div>
-                )}
+                <div className="rs-stepper" aria-label={`Quantity of ${line.name}`}>
+                  <button type="button" onClick={() => changeQty(line, -1)} aria-label="Decrease quantity">−</button>
+                  <span className="rs-qty">{line.qty}</span>
+                  <button type="button" onClick={() => changeQty(line, 1)} aria-label="Increase quantity">+</button>
+                </div>
 
                 <span className="rs-line-total">{formatRand(line.price * line.qty)}</span>
                 <button type="button" className="rs-remove" onClick={() => removeLine(line.key)}>
@@ -276,36 +330,7 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
             ))}
           </ul>
         )}
-
-        {/* Additional item not in the product list */}
-        {showOtherItem ? (
-          <div className="rs-other">
-            <input
-              type="text"
-              className="sp-input"
-              placeholder="Description (optional)"
-              value={otherName}
-              onChange={(e) => setOtherName(e.target.value)}
-              aria-label="Additional item description"
-            />
-            <input
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              className="sp-input rs-other-amount"
-              placeholder="Amount (R)"
-              value={otherAmount}
-              onChange={(e) => setOtherAmount(e.target.value)}
-              aria-label="Additional item amount in rand"
-            />
-            <button type="button" className="sp-btn sp-btn-primary" onClick={addOtherItem}>Add</button>
-          </div>
-        ) : (
-          <button type="button" className="rs-link-btn" onClick={() => setShowOtherItem(true)}>
-            + Add an item not in the list
-          </button>
-        )}
+        <FieldError message={itemsError} />
 
         {/* =========================================
             PAYMENT
@@ -319,33 +344,33 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
               role="radio"
               aria-checked={payment === method}
               className={`sp-btn ${payment === method ? "sp-btn-primary" : "sp-btn-outline"}`}
-              onClick={() => {
-                setPayment(method);
-                setError("");
-              }}
+              onClick={() => choosePayment(method)}
+              disabled={submitting}
             >
               {method}
             </button>
           ))}
         </div>
 
-        {payment === "Cash" && (
+        {payment === "Cash" ? (
           <div className="sp-row">
             <div className="sp-field">
-              <label htmlFor="rs-received">Amount received (R)</label>
+              <label htmlFor="rs-paid">Amount received (R)</label>
               <input
-                id="rs-received"
+                id="rs-paid"
                 type="number"
                 inputMode="decimal"
                 min="0"
                 step="0.01"
                 className="sp-input"
-                value={received}
+                style={redBorder(Boolean(amountError))}
+                value={amountPaid}
                 onChange={(e) => {
-                  setReceived(e.target.value);
-                  setError("");
+                  setAmountPaid(e.target.value);
+                  setAmountError("");
                 }}
               />
+              <FieldError message={amountError} />
             </div>
             <div className="sp-field">
               <label htmlFor="rs-change">Change</label>
@@ -359,6 +384,29 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
               />
             </div>
           </div>
+        ) : (
+          // Card: one field for the amount on the speed point, and no change
+          <div className="sp-field">
+            <label htmlFor="rs-paid">Amount on the speed point (R)</label>
+            <input
+              id="rs-paid"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              className="sp-input"
+              style={redBorder(Boolean(amountError))}
+              value={amountPaid}
+              onChange={(e) => {
+                setAmountPaid(e.target.value);
+                setAmountError("");
+              }}
+            />
+            <FieldError message={amountError} />
+            {!amountError && (
+              <p className="rs-note">Type the amount charged on the card machine. It must match the total.</p>
+            )}
+          </div>
         )}
 
         {/* =========================================
@@ -371,11 +419,15 @@ const StoreOwner_RecordSale_popup = ({ products, onComplete, onClose }) => {
 
         <p className="rs-note">Stock goes down automatically when you complete the sale.</p>
 
-        {error && <p className="sp-error">{error}</p>}
+        <FieldError message={formError} />
 
         <div className="sp-actions">
-          <button type="submit" className="sp-btn sp-btn-primary">Complete sale</button>
-          <button type="button" className="sp-btn sp-btn-outline" onClick={onClose}>Cancel</button>
+          <button type="submit" className="sp-btn sp-btn-primary" disabled={submitting}>
+            {submitting ? "Saving..." : "Complete sale"}
+          </button>
+          <button type="button" className="sp-btn sp-btn-outline" onClick={onClose} disabled={submitting}>
+            Cancel
+          </button>
         </div>
       </form>
     </PopupShell>
