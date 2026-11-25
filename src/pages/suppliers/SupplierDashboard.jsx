@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
 import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
 import "../../Style/components/Supplier/SupplierDashboard.css";
@@ -67,10 +67,14 @@ const SupplierApprovedDashboard = ({ onOpenRequest }) => (
     <header className="supplier-dashboard-header">
       <h1>Dashboard</h1>
       <div className="supplier-dashboard-account">
-        <div className="supplier-company-pill">
-          <span className="supplier-company-initials">TB</span>
+        <Link
+          to="/supplier/company-profile"
+          className="supplier-company-pill"
+          aria-label="Tiger Brands Ltd company profile"
+        >
+          <span className="supplier-company-initials" aria-hidden="true">TB</span>
           <span>Tiger Brands Ltd</span>
-        </div>
+        </Link>
         <SupplierUserMenu />
       </div>
     </header>
@@ -304,10 +308,14 @@ const SupplierDashboard = () => {
         <header className="supplier-dashboard-header">
           <h1>Welcome</h1>
           <div className="supplier-dashboard-account">
-            <div className="supplier-company-pill">
-              <span className="supplier-company-initials">TB</span>
+            <Link
+              to="/supplier/company-profile"
+              className="supplier-company-pill"
+              aria-label="Tiger Brands Ltd company profile"
+            >
+              <span className="supplier-company-initials" aria-hidden="true">TB</span>
               <span>Tiger Brands Ltd</span>
-            </div>
+            </Link>
             <SupplierUserMenu />
           </div>
         </header>
