@@ -6,7 +6,7 @@ const isCount = (v) => Number.isInteger(Number(v)) && Number(v) >= 0 && Number(v
 
 const ownsStore = async (conn, storeId, ownerId) => {
   const [rows] = await conn.query(
-    "SELECT StoreID FROM STORES WHERE StoreID = ? AND OwnerID = ?",
+    "SELECT StoreID FROM stores WHERE StoreID = ? AND OwnerID = ?",
     [storeId, ownerId]
   );
   return rows.length > 0;
@@ -32,13 +32,13 @@ const validateProductBody = (b) => {
 const lookupErrors = async (conn, categoryId, unitId) => {
   const errors = {};
   const [cats] = await conn.query(
-    "SELECT CategoryID FROM Category WHERE CategoryID = ? AND IsActive = 1",
+    "SELECT CategoryID FROM category WHERE CategoryID = ? AND IsActive = 1",
     [Number(categoryId)]
   );
   if (cats.length === 0) errors.categoryId = "Selected category does not exist";
 
   const [units] = await conn.query(
-    "SELECT UnitOfMeasureID FROM UnitOfMeasure WHERE UnitOfMeasureID = ?",
+    "SELECT UnitOfMeasureID FROM unitofmeasure WHERE UnitOfMeasureID = ?",
     [Number(unitId)]
   );
   if (units.length === 0) errors.unitOfMeasure = "Selected unit does not exist";
@@ -49,7 +49,7 @@ const lookupErrors = async (conn, categoryId, unitId) => {
 exports.getCategories = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT CategoryID, CategoryName FROM Category WHERE IsActive = 1 ORDER BY CategoryName"
+      "SELECT CategoryID, CategoryName FROM category WHERE IsActive = 1 ORDER BY CategoryName"
     );
     res.status(200).json(rows);
   } catch (error) {
@@ -61,7 +61,7 @@ exports.getCategories = async (req, res) => {
 exports.getUnits = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT UnitOfMeasureID, UnitName FROM UnitOfMeasure ORDER BY UnitName"
+      "SELECT UnitOfMeasureID, UnitName FROM unitofmeasure ORDER BY UnitName"
     );
     res.status(200).json(rows);
   } catch (error) {
@@ -89,12 +89,12 @@ exports.getProducts = async (req, res) => {
               p.UnitCost AS CostPrice,
               i.Quantity AS OnHand,
               i.ReorderLevel,
-              (SELECT MAX(m.CreatedAt) FROM InventoryMovement m
+              (SELECT MAX(m.CreatedAt) FROM inventorymovement m
                 WHERE m.StoreID = i.StoreID AND m.ProductID = i.ProductID) AS LastMovementDate
-       FROM Inventory i
-       JOIN PRODUCTS p ON p.ProductID = i.ProductID
-       LEFT JOIN Category c ON c.CategoryID = p.CategoryID
-       LEFT JOIN UnitOfMeasure u ON u.UnitOfMeasureID = p.UnitOfMeasure
+       FROM inventory i
+       JOIN products p ON p.ProductID = i.ProductID
+       LEFT JOIN category c ON c.CategoryID = p.CategoryID
+       LEFT JOIN unitofmeasure u ON u.UnitOfMeasureID = p.UnitOfMeasure
        WHERE i.StoreID = ?
        ORDER BY p.ProductName`,
       [storeId]
@@ -129,8 +129,8 @@ exports.addProduct = async (req, res) => {
 
     // The same barcode can't be used twice in one store
     const [dupes] = await conn.query(
-      `SELECT p.ProductID FROM PRODUCTS p
-       JOIN Inventory i ON i.ProductID = p.ProductID
+      `SELECT p.ProductID FROM products p
+       JOIN inventory i ON i.ProductID = p.ProductID
        WHERE i.StoreID = ? AND p.Barcode = ?`,
       [storeId, barcode]
     );
@@ -140,20 +140,22 @@ exports.addProduct = async (req, res) => {
     await conn.beginTransaction();
 
     const [result] = await conn.query(
-      `INSERT INTO PRODUCTS (ProductName, CategoryID, UnitCost, SellingPrice, Barcode, UnitOfMeasure)
+      `INSERT INTO products (ProductName, CategoryID, UnitCost, SellingPrice, Barcode, UnitOfMeasure)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [name, Number(categoryId), Number(costPrice), Number(sellingPrice), barcode, Number(unitOfMeasure)]
     );
     const productId = result.insertId;
 
     await conn.query(
-      "INSERT INTO Inventory (StoreID, ProductID, Quantity, ReorderLevel) VALUES (?, ?, ?, ?)",
+      "INSERT INTO inventory (StoreID, ProductID, Quantity, ReorderLevel) VALUES (?, ?, ?, ?)",
       [storeId, productId, onHand, reorderLevel]
     );
 
     if (onHand > 0) {
+      // StaffID is NULL because the owner made this entry.
+      // inventorymovement.StaffID must allow NULL (ALTER TABLE inventorymovement MODIFY StaffID INT NULL).
       await conn.query(
-        `INSERT INTO InventoryMovement (StoreID, ProductID, OwnerID, StaffID, MovementType, Quantity, Reason)
+        `INSERT INTO inventorymovement (StoreID, ProductID, OwnerID, StaffID, MovementType, Quantity, Reason)
          VALUES (?, ?, ?, NULL, 'Stock in', ?, 'Opening stock')`,
         [storeId, productId, req.user.id, onHand]
       );
@@ -187,7 +189,7 @@ exports.updateProduct = async (req, res) => {
       return res.status(403).json({ message: "You do not own this store" });
 
     const [stocked] = await conn.query(
-      "SELECT InventoryID FROM Inventory WHERE StoreID = ? AND ProductID = ?",
+      "SELECT InventoryID FROM inventory WHERE StoreID = ? AND ProductID = ?",
       [storeId, productId]
     );
     if (stocked.length === 0) return res.status(404).json({ message: "Product not found in this store" });
@@ -198,8 +200,8 @@ exports.updateProduct = async (req, res) => {
 
     // Barcode must not clash with another product in this store
     const [dupes] = await conn.query(
-      `SELECT p.ProductID FROM PRODUCTS p
-       JOIN Inventory i ON i.ProductID = p.ProductID
+      `SELECT p.ProductID FROM products p
+       JOIN inventory i ON i.ProductID = p.ProductID
        WHERE i.StoreID = ? AND p.Barcode = ? AND p.ProductID <> ?`,
       [storeId, barcode, productId]
     );
@@ -208,14 +210,14 @@ exports.updateProduct = async (req, res) => {
 
     await conn.beginTransaction();
     await conn.query(
-      `UPDATE PRODUCTS
+      `UPDATE products
        SET ProductName = ?, CategoryID = ?, Barcode = ?, UnitOfMeasure = ?, UnitCost = ?, SellingPrice = ?
        WHERE ProductID = ?`,
       [name, Number(categoryId), barcode, Number(unitOfMeasure), Number(costPrice), Number(sellingPrice), productId]
     );
     if (req.body.reorderLevel !== undefined && req.body.reorderLevel !== "") {
       await conn.query(
-        "UPDATE Inventory SET ReorderLevel = ? WHERE InventoryID = ?",
+        "UPDATE inventory SET ReorderLevel = ? WHERE InventoryID = ?",
         [Number(req.body.reorderLevel), stocked[0].InventoryID]
       );
     }

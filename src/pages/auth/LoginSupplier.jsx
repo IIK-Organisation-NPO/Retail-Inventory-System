@@ -107,10 +107,13 @@ const LoginSupplier = () => {
         throw new Error(data.message || "Login failed");
       }
 
-      // Success! Save the token and role to local storage
+            // Success! Save the token, role and identity to local storage
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("userName", data.user.name);
+      localStorage.setItem("userSurname", data.user.surname || "");
+      localStorage.setItem("userEmail", data.user.email || "");
+      localStorage.setItem("companyName", data.user.companyName || "");
 
       alert(`Welcome back, ${data.user.name}!`);
       

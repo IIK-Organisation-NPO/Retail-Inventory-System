@@ -1,0 +1,319 @@
+/* Layout, header, company pill and table styles come from SupplierDashboard.css */
+
+.scp .supplier-dashboard-header {
+  margin-bottom: 16px;
+}
+
+/* Cards */
+.scp-card {
+  margin-bottom: 16px;
+  padding: 18px 20px;
+  border: 1px solid #dedede;
+  border-radius: 9px;
+  background-color: #fff;
+}
+
+.scp-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.scp-card-title {
+  margin: 0 0 12px;
+  color: #111;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.scp-card-header .scp-card-title {
+  margin: 0;
+}
+
+.scp-depots {
+  min-height: 160px;
+}
+
+/* Company identity */
+.scp-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.scp-avatar {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: #090909;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.scp-identity-name {
+  margin: 0;
+  color: #111;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.scp-identity-role {
+  margin: 2px 0 0;
+  color: #666;
+  font-size: 12px;
+}
+
+/* CIPC read-only box */
+.scp-cipc {
+  margin-bottom: 18px;
+  padding: 10px 12px 4px;
+  border-radius: 8px;
+  background-color: #f5f5f6;
+}
+
+.scp-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background-color: #e9efff;
+  color: #2452c6;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.scp-cipc dl {
+  margin: 6px 0 0;
+}
+
+.scp-cipc dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.scp-cipc dl div + div {
+  border-top: 1px solid #e4e4e6;
+}
+
+.scp-cipc dt {
+  color: #666;
+}
+
+.scp-cipc dd {
+  margin: 0;
+  color: #111;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* Form fields */
+.scp-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+  margin-bottom: 16px;
+}
+
+.scp-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.scp-field label,
+.scp-categories legend {
+  margin-bottom: 5px;
+  padding: 0;
+  color: #555;
+  font-size: 11px;
+}
+
+.scp-field input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #999;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #111;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.scp-field input:focus {
+  border-color: #111;
+  box-shadow: 0 0 0 1px #111;
+}
+
+.scp-field input.error {
+  border-color: #d10a3c;
+}
+
+.scp-error {
+  margin: 5px 0 0;
+  color: #d10a3c;
+  font-size: 12px;
+}
+
+.scp-hint {
+  margin: 8px 0 0;
+  color: #666;
+  font-size: 11px;
+}
+
+/* Categories and areas */
+.scp-categories {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.scp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scp-category,
+.scp-area {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid #111;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scp-category {
+  background-color: #fff;
+  color: #111;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.scp-category:hover:not(.selected) {
+  background-color: #f0f0f1;
+}
+
+.scp-category.selected,
+.scp-area {
+  background-color: #090909;
+  color: #fff;
+}
+
+/* Buttons */
+.scp-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.scp-button {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.scp-button-primary {
+  border: 1px solid #090909;
+  background-color: #090909;
+  color: #fff;
+}
+
+.scp-button-primary:hover:not(:disabled) {
+  background-color: #333;
+}
+
+.scp-button-outline {
+  border: 1px solid #111;
+  background-color: #fff;
+  color: #111;
+}
+
+.scp-button-outline:hover:not(:disabled) {
+  background-color: #f0f0f1;
+}
+
+.scp-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.scp-saved {
+  color: #1a7f37;
+  font-size: 13px;
+}
+
+/* Depot table actions */
+.scp-row-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.scp-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #2452c6;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.scp-link + .scp-link {
+  margin-left: 12px;
+}
+
+.scp-link-danger {
+  color: #d10a3c;
+}
+
+.scp-empty {
+  margin: 0;
+  padding: 20px 0;
+  color: #555;
+  font-size: 14px;
+  text-align: center;
+}
+
+.scp-category:focus-visible,
+.scp-button:focus-visible,
+.scp-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .scp .supplier-dashboard-header {
+    flex-wrap: wrap;
+  }
+
+  .scp-fields {
+    grid-template-columns: 1fr;
+  }
+}

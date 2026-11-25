@@ -130,7 +130,18 @@ const processLogin = async (user, actualRole, providedPassword, res) => {
       { expiresIn: '1d' }
     );
 
-    res.status(200).json({ message: "Login successful", token, role: actualRole, user: { name: user.Name, surname: user.Surname } });
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      role: actualRole,
+      user: {
+        id: userId,
+        name: user.Name,
+        surname: user.Surname,
+        email: user.Email,
+        companyName: user.CompanyName || null, // ← new
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }

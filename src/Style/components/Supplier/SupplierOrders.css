@@ -1,0 +1,204 @@
+/* Layout, header, panels, tables, status pills and come from SupplierDashboard.css */
+
+.supplier-orders .supplier-dashboard-header {
+  margin-bottom: 16px;
+}
+
+/* Filter tabs */
+.supplier-orders-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.supplier-orders-filter {
+  min-height: 34px;
+  padding: 0 16px;
+  border: 1px solid #111;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #111;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.supplier-orders-filter:hover:not(.active) {
+  background-color: #f0f0f1;
+}
+
+.supplier-orders-filter.active {
+  background-color: #090909;
+  color: #fff;
+}
+
+/* Orders table */
+.supplier-orders-panel {
+  min-height: 160px;
+  margin-bottom: 14px;
+}
+
+.supplier-orders-panel > h2 {
+  margin-bottom: 10px;
+}
+
+.supplier-orders-list tbody tr.selected td {
+  background-color: #fafafa;
+}
+
+.supplier-orders-action {
+  text-align: right;
+}
+
+.supplier-orders-status.awaiting {
+  background-color: #e9efff;
+  color: #2452c6;
+}
+
+.supplier-orders-status.declined {
+  background-color: #fdecec;
+  color: #b42318;
+}
+
+.supplier-orders-confirm-button {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background-color: #090909;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.supplier-orders-confirm-button:hover {
+  background-color: #333;
+}
+
+.supplier-orders-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #2452c6;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.supplier-orders-empty {
+  margin: 0;
+  padding: 24px 0;
+  color: #555;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Acceptance summary */
+.supplier-orders-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  color: #666;
+  font-size: 12px;
+}
+
+.supplier-orders-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background-color: #e9efff;
+  color: #2452c6;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Delivery list */
+.supplier-orders-delivery {
+  min-height: 160px;
+  margin-bottom: 14px;
+}
+
+.supplier-orders-delivery-table tfoot th,
+.supplier-orders-delivery-table tfoot td {
+  color: #111;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.supplier-orders-excluded {
+  margin: 12px 0 0;
+  color: #666;
+  font-size: 12px;
+}
+
+.supplier-orders-excluded strong {
+  color: #111;
+}
+
+/* Notes at the bottom */
+.supplier-orders-notice {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background-color: #e9efff;
+  color: #2452c6;
+  font-size: 13px;
+}
+
+.supplier-orders-footnote {
+  margin: 0;
+  color: #555;
+  font-size: 11px;
+}
+
+.supplier-orders-filter:focus-visible,
+.supplier-orders-confirm-button:focus-visible,
+.supplier-orders-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .supplier-orders .supplier-dashboard-header {
+    flex-wrap: wrap;
+  }
+}
+
+/* "Print list" prints only the delivery list */
+@media print {
+  .supplier-sidebar,
+  .supplier-orders .supplier-dashboard-header,
+  .supplier-orders-filters,
+  .supplier-orders-panel,
+  .supplier-orders-summary,
+  .supplier-orders-notice,
+  .supplier-orders-footnote,
+  .supplier-orders-delivery .supplier-orders-link {
+    display: none !important;
+  }
+
+  .supplier-dashboard-layout,
+  .supplier-dashboard-main {
+    padding: 0;
+    background: #fff;
+  }
+
+  .supplier-orders-delivery {
+    border: 0;
+  }
+}

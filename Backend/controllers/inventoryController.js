@@ -3,7 +3,7 @@ const db = require("../config/db");
 // Checks the store belongs to the signed-in owner. Returns the store row or null.
 const getOwnedStore = async (conn, storeId, ownerId) => {
   const [rows] = await conn.query(
-    "SELECT StoreID, Status FROM STORES WHERE StoreID = ? AND OwnerID = ?",
+    "SELECT StoreID, Status FROM stores WHERE StoreID = ? AND OwnerID = ?",
     [storeId, ownerId]
   );
   return rows[0] || null;
@@ -28,9 +28,9 @@ exports.recordMovement = async (req, res) => {
     await conn.beginTransaction();
 
     // 2. Lock this product's stock row for this store.
-    //    A product only belongs to a store if it has an Inventory row there.
+    //    A product only belongs to a store if it has an inventory row there.
     const [rows] = await conn.query(
-      "SELECT InventoryID, Quantity FROM Inventory WHERE StoreID = ? AND ProductID = ? FOR UPDATE",
+      "SELECT InventoryID, Quantity FROM inventory WHERE StoreID = ? AND ProductID = ? FOR UPDATE",
       [storeId, productId]
     );
     if (rows.length === 0) {
@@ -57,14 +57,16 @@ exports.recordMovement = async (req, res) => {
 
     // 4. Update the inventory row
     await conn.query(
-      "UPDATE Inventory SET Quantity = ?, UpdatedAt = NOW() WHERE InventoryID = ?",
+      "UPDATE inventory SET Quantity = ?, UpdatedAt = NOW() WHERE InventoryID = ?",
       [newQty, rows[0].InventoryID]
     );
 
-    // 5. Log the movement (StaffID must be nullable: ask the DB developers)
+    // 5. Log the movement.
+    //    StaffID is NULL because the owner made this entry.
+    //    inventorymovement.StaffID must allow NULL (ALTER TABLE inventorymovement MODIFY StaffID INT NULL).
     const reason = type === "Adjustment" ? `${details} (was ${current})` : details;
     await conn.query(
-      `INSERT INTO InventoryMovement
+      `INSERT INTO inventorymovement
          (StoreID, ProductID, OwnerID, StaffID, MovementType, Quantity, Reason)
        VALUES (?, ?, ?, NULL, ?, ?, ?)`,
       [storeId, productId, ownerId, type, change, reason || null]
@@ -109,11 +111,11 @@ exports.getMovementHistory = async (req, res) => {
                 ) - m.Quantity) AS onHandAfter,
            COALESCE(CONCAT(o.Name, ' ', o.Surname), CONCAT(s.Name, ' ', s.Surname)) AS \`by\`,
            m.Reason       AS details
-         FROM InventoryMovement m
-         JOIN PRODUCTS p ON p.ProductID = m.ProductID
-         LEFT JOIN Inventory i ON i.StoreID = m.StoreID AND i.ProductID = m.ProductID
-         LEFT JOIN Owner o ON o.OwnerID = m.OwnerID
-         LEFT JOIN Staff s ON s.StaffID = m.StaffID
+         FROM inventorymovement m
+         JOIN products p ON p.ProductID = m.ProductID
+         LEFT JOIN inventory i ON i.StoreID = m.StoreID AND i.ProductID = m.ProductID
+         LEFT JOIN owner o ON o.OwnerID = m.OwnerID
+         LEFT JOIN staff s ON s.StaffID = m.StaffID
          WHERE m.StoreID = ?
        ) t
        ORDER BY date DESC, id DESC

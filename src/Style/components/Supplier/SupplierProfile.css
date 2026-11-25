@@ -1,0 +1,155 @@
+.supplier-profile-card {
+  box-sizing: border-box;
+  width: min(810px, 100%);
+  padding: 24px;
+  border: 1px solid #dedede;
+  border-radius: 9px;
+  background-color: #fff;
+}
+
+.supplier-profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.supplier-profile-initials {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #090909;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.supplier-profile-identity h2 {
+  margin: 0 0 2px;
+  color: #111;
+  font-size: 16px;
+}
+
+.supplier-profile-identity p {
+  margin: 0;
+  color: #666;
+  font-size: 12px;
+}
+
+.supplier-profile-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 12px;
+}
+
+.supplier-profile-fields label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  color: #555;
+  font-size: 12px;
+}
+
+.supplier-profile-fields input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid #aaa;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 16px;
+}
+
+.supplier-profile-fields input[readonly] {
+  background-color: #f7f7f8;
+  color: #555;
+}
+
+.supplier-profile-password-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #ededed;
+  border-bottom: 1px solid #ededed;
+}
+
+.supplier-profile-password-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #111;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.supplier-profile-error,
+.supplier-profile-feedback {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+.supplier-profile-error {
+  color: #a90d27;
+}
+
+.supplier-profile-feedback {
+  color: #176b3a;
+}
+
+.supplier-profile-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.supplier-profile-save,
+.supplier-profile-cancel {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #090909;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.supplier-profile-save {
+  background-color: #090909;
+  color: #fff;
+}
+
+.supplier-profile-cancel {
+  background-color: #fff;
+  color: #111;
+}
+
+.supplier-profile-save:hover {
+  background-color: #333;
+}
+
+.supplier-profile-cancel:hover {
+  background-color: #f0f0f1;
+}
+
+@media (max-width: 560px) {
+  .supplier-profile-card {
+    padding: 18px;
+  }
+
+  .supplier-profile-fields {
+    grid-template-columns: 1fr;
+  }
+}

@@ -171,23 +171,3 @@ exports.getOwnerDashboard = async (req, res) => {
     res.status(500).json({ message: "Database error" });
   }
 };
-
-// --- SUPPLIER DASHBOARD ---
-exports.getSupplierDashboard = async (req, res) => {
-  try {
-    const supplierId = req.user.id;
-    const [results] = await db.query('SELECT CompanyName, Name FROM Supplier WHERE SupplierID = ?', [supplierId]);
-
-    if (results.length === 0) return res.status(404).json({ message: "Supplier not found" });
-
-    const supplier = results[0];
-    res.status(200).json({
-      message: `Welcome back, ${supplier.CompanyName}!`,
-      profile: { companyName: supplier.CompanyName, contactPerson: supplier.Name },
-      stats: { pendingRequests: 0, submittedQuotes: 0 }
-    });
-  } catch (error) {
-    console.error("SUPPLIER DASHBOARD ERROR:", error);
-    res.status(500).json({ message: "Database error" });
-  }
-};
