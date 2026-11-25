@@ -57,11 +57,50 @@ exports.getProducts = async (req, res) => {
   }
 };
 
+// --- HELPER: Convert Units Automatically ---
+const convertUnit = (unitString) => {
+  const cleanString = unitString.trim().toLowerCase();
+  const match = cleanString.match(/^([\d.]+)\s*([a-z]+)$/);
+  
+  if (match) {
+    let value = parseFloat(match[1]);
+    let unit = match[2];
+    
+    if (["g", "gram", "grams"].includes(unit) && value >= 1000) {
+      value = value / 1000;
+      unit = "kg";
+    } else if (["ml", "milliliter", "milliliters"].includes(unit) && value >= 1000) {
+      value = value / 1000;
+      unit = "l";
+    } else if (["mg", "milligram", "milligrams"].includes(unit) && value >= 1000) {
+      value = value / 1000;
+      unit = "g";
+    } else if (["kg", "kilogram", "kilograms"].includes(unit)) {
+      unit = "kg";
+    } else if (["l", "liter", "liters"].includes(unit)) {
+      unit = "l";
+    } else if (["g", "gram", "grams"].includes(unit)) {
+      unit = "g";
+    } else if (["ml", "milliliter", "milliliters"].includes(unit)) {
+      unit = "ml";
+    } else if (["mg", "milligram", "milligrams"].includes(unit)) {
+      unit = "mg";
+    } else if (["un", "unit", "units", "each", "ea"].includes(unit)) {
+      unit = "unit";
+    }
+
+    const formattedValue = value % 1 === 0 ? value.toFixed(0) : value.toFixed(2);
+    return `${formattedValue}${unit}`;
+  }
+
+  return unitString;
+};
+
 // --- HELPER: Get or Create Unit ID ---
-// This looks up the text string (e.g., "500ml") in the DB. 
-// If it doesn't exist, it creates it and returns the new ID.
 const getOrCreateUnitId = async (unitName) => {
-  const cleanName = unitName.trim();
+  // 1. Convert the unit first (e.g., "7000g" -> "7kg")
+  const convertedName = convertUnit(unitName);
+  const cleanName = convertedName.trim();
   if (!cleanName) return null;
 
   // Check if it exists
@@ -77,7 +116,6 @@ const getOrCreateUnitId = async (unitName) => {
 
 // --- ADD A NEW PRODUCT ---
 exports.addProduct = async (req, res) => {
-  // The frontend sends 'unitOfMeasureName' as a text string now
   const { storeId, name, categoryId, barcode, unitOfMeasureName, costPrice, sellingPrice, onHand, reorderLevel } = req.body;
 
   if (!storeId || !name || !categoryId || !unitOfMeasureName || costPrice === undefined || sellingPrice === undefined) {
@@ -85,10 +123,8 @@ exports.addProduct = async (req, res) => {
   }
 
   try {
-    // 1. Resolve the Unit Name to an ID
     const unitId = await getOrCreateUnitId(unitOfMeasureName);
 
-    // 2. Insert the product
     const [result] = await db.query(
       `INSERT INTO Products 
       (StoreID, Name, CategoryID, Barcode, UnitOfMeasure, CostPrice, SellingPrice, OnHand, ReorderLevel) 
@@ -99,7 +135,6 @@ exports.addProduct = async (req, res) => {
     res.status(201).json({ message: "Product added successfully", productId: result.insertId });
   } catch (error) {
     console.error("ADD PRODUCT ERROR:", error);
-    // Handle duplicate barcode error
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ message: "A product with this barcode already exists." });
     }
@@ -113,13 +148,11 @@ exports.updateProduct = async (req, res) => {
   const { name, categoryId, barcode, unitOfMeasureName, costPrice, sellingPrice, reorderLevel } = req.body;
 
   try {
-    // 1. Resolve the Unit Name to an ID
     const unitId = await getOrCreateUnitId(unitOfMeasureName);
 
-    // 2. Update the product (We do NOT update OnHand here, as it's read-only in the UI)
     await db.query(
       `UPDATE Products 
-       SET Name = ?, CategoryID = ?, Barcode = ?, UnitOfMeasure = ?, CostPrice = ?, SellingPrice = ?, ReorderLevel = ? 
+       SET Name = ?, CategoryId = ?, Barcode = ?, UnitOfMeasure = ?, CostPrice = ?, SellingPrice = ?, ReorderLevel = ? 
        WHERE ProductID = ?`,
       [name, categoryId, barcode || null, unitId, costPrice, sellingPrice, reorderLevel, productId]
     );

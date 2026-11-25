@@ -14,11 +14,16 @@ exports.getSalesReport = async (req, res) => {
       [storeId]
     );
 
-    // 2. Chart Data (Sales per day)
+    // 2. Chart Data (Sales per day) - FIXED FOR ONLY_FULL_GROUP_BY
     const [chartData] = await db.query(
-      `SELECT DATE_FORMAT(SaleDate, '%a') as day, SUM(TotalAmount) as amount 
-       FROM Sales WHERE StoreID = ? 
-       GROUP BY DATE(SaleDate) ORDER BY SaleDate ASC LIMIT 7`,
+      `SELECT 
+         DATE_FORMAT(SaleDate, '%a') as day, 
+         SUM(TotalAmount) as amount 
+       FROM Sales 
+       WHERE StoreID = ? 
+       GROUP BY DATE(SaleDate), DATE_FORMAT(SaleDate, '%a') 
+       ORDER BY DATE(SaleDate) ASC 
+       LIMIT 7`,
       [storeId]
     );
 
@@ -29,14 +34,18 @@ exports.getSalesReport = async (req, res) => {
        JOIN Products p ON si.ProductID = p.ProductID
        JOIN Sales s ON si.SaleID = s.SaleID
        WHERE s.StoreID = ? 
-       GROUP BY p.ProductID ORDER BY units DESC LIMIT 5`,
+       GROUP BY p.ProductID, p.Name 
+       ORDER BY units DESC 
+       LIMIT 5`,
       [storeId]
     );
 
     // 4. Payment Methods
     const [payments] = await db.query(
       `SELECT PaymentMethod as method, SUM(TotalAmount) as amount 
-       FROM Sales WHERE StoreID = ? GROUP BY PaymentMethod`,
+       FROM Sales 
+       WHERE StoreID = ? 
+       GROUP BY PaymentMethod`,
       [storeId]
     );
 

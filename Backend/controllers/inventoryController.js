@@ -3,14 +3,13 @@ const db = require("../config/db");
 // Checks the store belongs to the signed-in owner. Returns the store row or null.
 const getOwnedStore = async (conn, storeId, ownerId) => {
   const [rows] = await conn.query(
-    "SELECT StoreID, Status FROM STORES WHERE StoreID = ? AND OwnerID = ?",
+    "SELECT StoreID, Status FROM Stores WHERE StoreID = ? AND OwnerID = ?", // FIXED: 'Stores' not 'STORES'
     [storeId, ownerId]
   );
   return rows[0] || null;
 };
 
-// --- RECORD A STOCK MOVEMENT (Stock in, Stock out, Adjustment) ---
-// Input is already validated by middleware/validateMovement.js
+// --- RECORD A STOCK MOVEMENT ---
 exports.recordMovement = async (req, res) => {
   const storeId = Number(req.body.storeId);
   const productId = Number(req.body.productId);
@@ -19,7 +18,6 @@ exports.recordMovement = async (req, res) => {
 
   const conn = await db.getConnection();
   try {
-    // 1. Store must belong to this owner and be approved
     const store = await getOwnedStore(conn, storeId, ownerId);
     if (!store) return res.status(403).json({ message: "You do not own this store" });
     if (store.Status !== "Approved")
@@ -27,23 +25,40 @@ exports.recordMovement = async (req, res) => {
 
     await conn.beginTransaction();
 
-    // 2. Lock this product's stock row for this store.
-    //    A product only belongs to a store if it has an Inventory row there.
+    // 1. Lock this product's stock row
     const [rows] = await conn.query(
       "SELECT InventoryID, Quantity FROM Inventory WHERE StoreID = ? AND ProductID = ? FOR UPDATE",
       [storeId, productId]
     );
+    
+    // If it doesn't exist in Inventory yet, create it based on the Product's OnHand
     if (rows.length === 0) {
-      await conn.rollback();
-      return res.status(404).json({ message: "This product is not stocked in this store" });
+      const [prodRows] = await conn.query("SELECT OnHand FROM Products WHERE ProductID = ? AND StoreID = ?", [productId, storeId]);
+      if (prodRows.length === 0) {
+        await conn.rollback();
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      await conn.query(
+        "INSERT INTO Inventory (StoreID, ProductID, Quantity, ReorderLevel) VALUES (?, ?, ?, ?)",
+        [storeId, productId, prodRows[0].OnHand, 15]
+      );
+      
+      const [newRows] = await conn.query(
+        "SELECT InventoryID, Quantity FROM Inventory WHERE StoreID = ? AND ProductID = ? FOR UPDATE",
+        [storeId, productId]
+      );
+      rows.push(newRows[0]);
     }
+
     const current = rows[0].Quantity;
 
-    // 3. Work out the signed change
+    // 2. Work out the signed change
     const change =
       type === "Adjustment"
         ? Number(req.body.newQuantity) - current
         : Number(req.body.quantityChange);
+        
     const newQty = current + change;
 
     if (change === 0) {
@@ -55,13 +70,13 @@ exports.recordMovement = async (req, res) => {
       return res.status(409).json({ message: `Not enough stock. Only ${current} on hand.` });
     }
 
-    // 4. Update the inventory row
+    // 3. Update the inventory row
     await conn.query(
       "UPDATE Inventory SET Quantity = ?, UpdatedAt = NOW() WHERE InventoryID = ?",
       [newQty, rows[0].InventoryID]
     );
 
-    // 5. Log the movement (StaffID must be nullable: ask the DB developers)
+    // 4. Log the movement 
     const reason = type === "Adjustment" ? `${details} (was ${current})` : details;
     await conn.query(
       `INSERT INTO InventoryMovement
@@ -91,15 +106,14 @@ exports.getMovementHistory = async (req, res) => {
     const store = await getOwnedStore(db, storeId, req.user.id);
     if (!store) return res.status(403).json({ message: "You do not own this store" });
 
-    // onHandAfter = current stock minus every movement that happened after this one.
-    // (Window functions need MySQL 8+.)
+    // FIXED: Changed 'PRODUCTS' to 'Products' and 'p.ProductName' to 'p.Name'
     const [movements] = await db.query(
       `SELECT id, date, product, type, \`change\`, onHandAfter, \`by\`, details
        FROM (
          SELECT
            m.MovementID   AS id,
            m.CreatedAt    AS date,
-           p.ProductName  AS product,
+           p.Name         AS product, 
            m.MovementType AS type,
            m.Quantity     AS \`change\`,
            COALESCE(i.Quantity, 0)
@@ -110,7 +124,7 @@ exports.getMovementHistory = async (req, res) => {
            COALESCE(CONCAT(o.Name, ' ', o.Surname), CONCAT(s.Name, ' ', s.Surname)) AS \`by\`,
            m.Reason       AS details
          FROM InventoryMovement m
-         JOIN PRODUCTS p ON p.ProductID = m.ProductID
+         JOIN Products p ON p.ProductID = m.ProductID 
          LEFT JOIN Inventory i ON i.StoreID = m.StoreID AND i.ProductID = m.ProductID
          LEFT JOIN Owner o ON o.OwnerID = m.OwnerID
          LEFT JOIN Staff s ON s.StaffID = m.StaffID

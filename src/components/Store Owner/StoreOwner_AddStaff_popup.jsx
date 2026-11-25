@@ -1,5 +1,4 @@
 // src/components/Store Owner/StoreOwner_AddStaff_popup.jsx
-// "Add staff member" popup — also used to edit an existing staff member
 import { useState } from "react";
 import { PopupShell } from "./StoreOwner_StockIn_popup";
 import "../../Style/Store Owner/StoreOwner_StockIn_popup.css";
@@ -14,6 +13,14 @@ const GENDERS = [
 const CODE_LENGTH = 6;
 
 const digitsOnly = (value) => value.replace(/\D/g, "");
+
+// Helper for 6-digit code validation
+const isSequentialOrRepeating = (code) => {
+  if (/^(\d)\1{5}$/.test(code)) return true; // 111111
+  if ("0123456789".includes(code)) return true; // 012345, 123456
+  if ("9876543210".includes(code)) return true; // 987654, 876543
+  return false;
+};
 
 const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobileTaken, onSave, onClose }) => {
   const isEdit = Boolean(staffMember);
@@ -34,6 +41,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
   
   // State for validation errors
   const [validationErrors, setValidationErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const update = (field) => (e) => {
     const value = field === "code" || field === "confirmCode"
@@ -95,7 +103,10 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
     if (codeRequired) {
       if (form.code.length !== CODE_LENGTH) {
         errors.code = "The user code must be exactly 6 digits.";
+      } else if (isSequentialOrRepeating(form.code)) {
+        errors.code = "Can not proceed ascending/descending order or (e.g. 6 same number (111111)";
       }
+      
       if (!form.confirmCode) {
         errors.confirmCode = "Please confirm a user code";
       } else if (form.code !== form.confirmCode) {
@@ -106,7 +117,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
     return errors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const errors = validate();
@@ -116,27 +127,52 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
     }
 
     setValidationErrors({});
+    setIsSubmitting(true);
 
-    // Pass all data, including the new code, up to the parent
-    onSave({
-      ...(staffMember ?? {}),
-      name: form.name.trim(),
-      surname: form.surname.trim(),
-      email: form.email.trim(),
-      mobile: digitsOnly(form.mobile),
-      gender: form.gender,
-      hasDisability: form.hasDisability,
-      disabilityType: form.hasDisability ? form.disabilityType.trim() : "",
-      role: form.role,
-      storeId: form.storeId,
-      code: form.code,
-    });
-    onClose();
+    try {
+      // Wait for the parent component to finish the API call
+      await onSave({
+        ...(staffMember ?? {}),
+        name: form.name.trim(),
+        surname: form.surname.trim(),
+        email: form.email.trim(),
+        mobile: digitsOnly(form.mobile),
+        gender: form.gender,
+        hasDisability: form.hasDisability,
+        disabilityType: form.hasDisability ? form.disabilityType.trim() : "",
+        role: form.role,
+        storeId: form.storeId,
+        code: form.code,
+      });
+      
+      onClose(); // Close the modal only if the API call was successful
+    } catch (err) {
+      // Catch backend errors and place them under the correct field
+      if (err.field === "email") {
+        setValidationErrors({ email: err.message });
+      } else if (err.field === "mobile") {
+        setValidationErrors({ mobile: err.message });
+      } else if (err.field === "code") {
+        setValidationErrors({ code: err.message });
+      } else {
+        setValidationErrors({ general: err.message });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <PopupShell title={isEdit ? "Edit staff member" : "Add staff member"} onClose={onClose}>
       <form onSubmit={handleSubmit} noValidate>
+        
+        {/* General Error Banner */}
+        {validationErrors.general && (
+          <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px' }}>
+            {validationErrors.general}
+          </div>
+        )}
+
         {/* Name & Surname */}
         <div className="sp-row">
           <div className="sp-field">
@@ -257,6 +293,7 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
           />
           {validationErrors.code && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.code}</span>}
         </div>
+        
         <div className="sp-field">
           <label htmlFor="staff-confirm-code">Confirm user code</label>
           <input
@@ -273,10 +310,10 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
         </div>
 
         <div className="sp-actions">
-          <button type="submit" className="sp-btn sp-btn-primary">
-            {isEdit ? "Save changes" : "Create account"}
+          <button type="submit" className="sp-btn sp-btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Create account"}
           </button>
-          <button type="button" className="sp-btn sp-btn-outline" onClick={onClose}>Cancel</button>
+          <button type="button" className="sp-btn sp-btn-outline" onClick={onClose} disabled={isSubmitting}>Cancel</button>
         </div>
       </form>
     </PopupShell>

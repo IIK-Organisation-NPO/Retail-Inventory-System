@@ -44,7 +44,6 @@ const StoreOwner_Staff = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to load staff");
 
-      // Map DB columns to match the frontend's expected structure
       const formatted = data.map((s) => ({
         id: s.id,
         name: s.name,
@@ -52,7 +51,6 @@ const StoreOwner_Staff = () => {
         email: s.email,
         mobile: s.mobile,
         role: s.role,
-        // The backend now returns IsActive from the StoreUsers table
         status: s.IsActive ? "Active" : "Disabled", 
         storeId: storeId 
       }));
@@ -93,6 +91,9 @@ const StoreOwner_Staff = () => {
         surname: member.surname,
         email: member.email,
         mobile: member.mobile,
+        gender: member.gender,
+        hasDisability: member.hasDisability,
+        disabilityType: member.disabilityType,
         role: member.role,
         password: member.code 
       };
@@ -120,14 +121,21 @@ const StoreOwner_Staff = () => {
       }
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to save staff");
+      
+      // CRITICAL FIX: Throw the error back to the popup
+      if (!response.ok) {
+        const err = new Error(data.message || "Failed to save staff");
+        err.field = data.field; // Pass the field name ("email" or "mobile")
+        throw err;
+      }
 
       setToast(member.id ? `${fullName(member)}'s details were updated.` : `${fullName(member)} was added.`);
       closePopup();
       fetchStaff(); 
 
     } catch (err) {
-      alert(err.message); 
+      // Re-throw so the popup's catch block can handle it and show the red text
+      throw err;
     }
   };
 
@@ -143,7 +151,6 @@ const StoreOwner_Staff = () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        // CRITICAL FIX: Send storeId so the backend knows which StoreUsers record to update
         body: JSON.stringify({ isActive, storeId }) 
       });
 

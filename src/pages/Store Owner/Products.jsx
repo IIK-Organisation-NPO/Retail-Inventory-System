@@ -20,6 +20,37 @@ const FieldError = ({ message }) =>
     </span>
   ) : null;
 
+// --- Category Mapping for Match Validation ---
+const categoryKeywords = {
+  "Groceries": ["milk", "bread", "rice", "flour", "sugar", "oil", "maize", "meal", "coke", "simba", "chips", "sasko", "rama", "clover", "white star", "food", "drink", "juice", "water", "tea", "coffee", "apple", "banana", "orange", "fruit", "vegetable", "salt", "pepper", "spice", "sauce", "cereal", "snack", "biscuit", "cookie", "candy", "sweet"],
+  "Toiletries": ["soap", "shampoo", "toothpaste", "toothbrush", "deodorant", "lotion", "sanitary", "pads", "tissue", "toilet", "shower", "gel", "wash", "cream", "razor", "comb"],
+  "Household": ["detergent", "washing", "bleach", "dish", "cleaner", "mop", "broom", "candle", "matches", "batteries", "sponge", "cloth", "trash", "bin", "bag", "foil", "wrap"],
+  "Stationery": ["pen", "pencil", "paper", "book", "eraser", "ruler", "sharpener", "notebook", "file", "folder", "glue", "scissors", "tape", "marker", "crayon", "envelope"],
+  "Agriculture": ["seed", "fertilizer", "pesticide", "animal", "feed", "chicken", "cow", "goat", "tractor", "hoe", "spade", "shovel", "rake", "watering", "plant", "soil", "compost", "farming"],
+  "Hardware": ["hammer", "nails", "screws", "paint", "brush", "wire", "tape", "tool", "wrench", "pliers", "drill", "saw", "bolt", "nut", "hinge", "lock", "key", "sandpaper", "cement", "brick"]
+};
+
+const checkCategoryMatch = (productName, selectedCategory) => {
+  if (!productName || !selectedCategory) return true;
+
+  const nameLower = productName.toLowerCase();
+  
+  let matchedCategory = null;
+  for (const [cat, keywords] of Object.entries(categoryKeywords)) {
+    if (keywords.some(kw => nameLower.includes(kw))) {
+      matchedCategory = cat;
+      break; // Stop at the first match found
+    }
+  }
+
+  // If a keyword was found, but it belongs to a DIFFERENT category than the one selected
+  if (matchedCategory && matchedCategory !== selectedCategory) {
+    return false;
+  }
+
+  return true;
+};
+
 // ---------- helpers (outside the component, they never set state) ----------
 
 const fetchJson = async (url, token) => {
@@ -50,8 +81,8 @@ const loadProducts = async (storeId, token) => {
       id: p.ProductID,
       name: p.Name,
       categoryId: p.CategoryID,
-      category: p.CategoryName || "Uncategorised",
-      unit: p.UnitName || "", // String name from backend
+      category: p.Category || "Uncategorised",
+      unit: p.UnitName || "", 
       barcode: p.Barcode,
       cost: `R${Number(p.CostPrice).toFixed(2)}`,
       price: `R${Number(p.SellingPrice).toFixed(2)}`,
@@ -68,7 +99,7 @@ const emptyForm = {
   name: "",
   barcode: "",
   categoryId: "",
-  unitOfMeasure: "", // Now holds the text string
+  unitOfMeasure: "", 
   costPrice: "",
   sellingPrice: "",
   reorderLevel: "",
@@ -80,7 +111,8 @@ const isWholeNumber = (value, min, max) =>
   !isBlank(value) && Number.isInteger(Number(value)) && Number(value) >= min && Number(value) <= max;
 const isMoney = (value) => !isBlank(value) && !Number.isNaN(Number(value)) && Number(value) >= 0;
 
-const validateForm = (form, isEditing) => {
+// --- UPDATED VALIDATION FUNCTION ---
+const validateForm = (form, isEditing, categoryOptions, editingOnHand) => {
   const errors = {};
   const name = form.name.trim();
   const barcode = form.barcode.trim();
@@ -88,8 +120,9 @@ const validateForm = (form, isEditing) => {
   if (!name) errors.name = "Please enter a product name.";
   else if (name.length > 50) errors.name = "Product name must be 50 characters or less.";
 
-  if (!barcode) errors.barcode = "Please enter or scan the barcode.";
-  else if (barcode.length > 50) errors.barcode = "Barcode must be 50 characters or less.";
+  if (barcode && barcode.length > 50) {
+    errors.barcode = "Barcode must be 50 characters or less.";
+  }
 
   if (!form.categoryId) errors.categoryId = "Please select a category.";
   
@@ -124,6 +157,20 @@ const validateForm = (form, isEditing) => {
       errors.onHand = `Enter a whole number between 0 and ${MAX_QTY}.`;
   }
 
+  // NEW: Reorder level must be less than Current quantity
+  const compareOnHand = isEditing ? Number(editingOnHand) : Number(form.onHand);
+  if (!errors.reorderLevel && !isBlank(compareOnHand) && !isNaN(compareOnHand) && Number(form.reorderLevel) >= compareOnHand) {
+    errors.reorderLevel = "Reorder level must be less than a Current quantity";
+  }
+
+  // NEW: Category match validation
+  if (!errors.name && !errors.categoryId && form.name && form.categoryId) {
+    const selectedCatObj = categoryOptions.find(c => String(c.CategoryID) === String(form.categoryId));
+    if (selectedCatObj && !checkCategoryMatch(form.name, selectedCatObj.CategoryName)) {
+      errors.categoryId = "Selected product does not match category";
+    }
+  }
+
   return errors;
 };
 
@@ -156,7 +203,6 @@ const Products = () => {
     Promise.all([
       loadProducts(storeId, token),
       fetchJson(`${API}/categories`, token),
-      // Removed /units fetch since it's a text input now
     ])
       .then(([productList, categories]) => {
         if (cancelled) return;
@@ -205,7 +251,7 @@ const Products = () => {
       name: product.name ?? "",
       barcode: product.barcode ?? "",
       categoryId: String(product.categoryId ?? ""),
-      unitOfMeasure: product.unit ?? "", // Map from string
+      unitOfMeasure: product.unit ?? "", 
       costPrice: String(product.rawCost ?? ""),
       sellingPrice: String(product.rawPrice ?? ""),
       reorderLevel: String(product.reorder ?? ""),
@@ -238,12 +284,12 @@ const Products = () => {
     event.preventDefault();
     if (submitting) return;
 
-    const found = validateForm(form, Boolean(editingProduct));
+    // Pass categoryOptions and editingOnHand to the validator
+    const found = validateForm(form, Boolean(editingProduct), categoryOptions, editingProduct?.onHand);
     setValidationErrors(found);
     setFormError("");
     if (Object.keys(found).length > 0) return; 
 
-    // Send unitOfMeasureName instead of unitOfMeasureId
     const payload = {
       storeId: Number(storeId),
       name: form.name.trim(),
@@ -464,7 +510,7 @@ const Products = () => {
                   <FieldError message={validationErrors.categoryId} />
                 </div>
                 <div className="input-group">
-                  <label htmlFor="product-barcode">Barcode (optional)</label>
+                  <label htmlFor="product-barcode">Barcode</label>
                   <input
                     id="product-barcode"
                     type="text"
@@ -481,7 +527,6 @@ const Products = () => {
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-unit">Unit of measure</label>
-                  {/* CHANGED BACK TO TEXT INPUT */}
                   <input
                     id="product-unit"
                     type="text"

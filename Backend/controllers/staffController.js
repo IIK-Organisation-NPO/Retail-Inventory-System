@@ -1,7 +1,15 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 
-// --- GET ALL STAFF FOR A STORE (JOIN with StoreUsers) ---
+// Helper to check if code is sequential or repeating
+const isSequentialOrRepeating = (code) => {
+  if (/^(\d)\1{5}$/.test(code)) return true; // 111111
+  if ("0123456789".includes(code)) return true; // 012345, 123456
+  if ("9876543210".includes(code)) return true; // 987654, 876543
+  return false;
+};
+
+// --- GET ALL STAFF FOR A STORE ---
 exports.getStaff = async (req, res) => {
   const { storeId } = req.query;
   try {
@@ -12,7 +20,6 @@ exports.getStaff = async (req, res) => {
         s.Surname as surname, 
         s.Email as email, 
         s.MobileNumber as mobile, 
-        s.Role as role, 
         su.IsActive
       FROM Staff s
       JOIN StoreUsers su ON s.StaffID = su.StaffID
@@ -26,12 +33,20 @@ exports.getStaff = async (req, res) => {
   }
 };
 
-// --- ADD NEW STAFF (Insert into Staff AND StoreUsers) ---
+// --- ADD NEW STAFF ---
 exports.addStaff = async (req, res) => {
-  const { storeId, name, surname, email, mobile, role, password } = req.body;
+  const { storeId, name, surname, gender, email, mobile, role, password, hasDisability, disabilityType } = req.body;
 
   if (!storeId || !name || !surname || !mobile || !password) {
-    return res.status(400).json({ message: "Missing required fields (including password code)" });
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  // 1. Validate the 6-digit code format
+  if (isSequentialOrRepeating(password)) {
+    return res.status(400).json({ 
+      message: "Can not proceed ascending/descending order or (e.g. 6 same number (111111)", 
+      field: "code" 
+    });
   }
 
   const connection = await db.getConnection();
@@ -39,27 +54,35 @@ exports.addStaff = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 1. Check if email is already in use
+    // 2. Check if email OR mobile is already in use
     if (email) {
-      const [existing] = await connection.query('SELECT StaffID FROM Staff WHERE Email = ?', [email]);
-      if (existing.length > 0) {
-        throw new Error("This email is already registered to another user.");
+      const [existingEmail] = await connection.query('SELECT StaffID FROM Staff WHERE Email = ?', [email]);
+      if (existingEmail.length > 0) {
+        return res.status(409).json({ message: "This user already exist", field: "email" });
       }
     }
+    
+    const [existingMobile] = await connection.query('SELECT StaffID FROM Staff WHERE MobileNumber = ?', [mobile]);
+    if (existingMobile.length > 0) {
+      return res.status(409).json({ message: "This user already exist", field: "mobile" });
+    }
 
-    // 2. Hash the 6-digit code
+    // 3. Hash the 6-digit code
     const salt = await bcrypt.genSalt(10);
     const hashedCode = await bcrypt.hash(password, salt);
 
-    // 3. Insert into Staff table (No StoreID or IsActive here anymore)
+    // 4. Map Role string to RoleID (Assuming Staff = 3 based on your schema)
+    const roleId = 3; 
+
+    // 5. Insert into Staff table matching your exact schema
     const [result] = await connection.query(
-      `INSERT INTO Staff (Name, Surname, Email, MobileNumber, PasswordHash, Role) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, surname, email || null, mobile, hashedCode, role || 'Cashier']
+      `INSERT INTO Staff (Name, Surname, Email, MobileNumber, Gender, Disability, DisabilityDescription, PasswordHash, RoleID) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, surname, email || null, mobile, gender || 'other', hasDisability || false, disabilityType || null, hashedCode, roleId]
     );
     const newStaffId = result.insertId;
 
-    // 4. Insert into StoreUsers table to link them to the store
+    // 6. Link to Store
     await connection.query(
       `INSERT INTO StoreUsers (StoreID, StaffID, IsActive) VALUES (?, ?, 1)`,
       [storeId, newStaffId]
@@ -71,32 +94,36 @@ exports.addStaff = async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error("ADD STAFF ERROR:", error);
-    res.status(500).json({ message: error.message || "Database error" });
+    res.status(500).json({ message: "Database error" });
   } finally {
     connection.release();
   }
 };
 
-// --- UPDATE EXISTING STAFF (Updates global Staff details) ---
+// --- UPDATE EXISTING STAFF ---
 exports.updateStaff = async (req, res) => {
   const { staffId } = req.params;
   const { name, surname, email, mobile, role, password } = req.body;
 
   try {
-    // If a new 6-digit code was typed in, hash it and update it
     if (password) {
+      if (isSequentialOrRepeating(password)) {
+        return res.status(400).json({ 
+          message: "Can not proceed ascending/descending order or (e.g. 6 same number (111111)", 
+          field: "code" 
+        });
+      }
       const salt = await bcrypt.genSalt(10);
       const hashedCode = await bcrypt.hash(password, salt);
       
       await db.query(
-        `UPDATE Staff SET Name = ?, Surname = ?, Email = ?, MobileNumber = ?, Role = ?, PasswordHash = ? WHERE StaffID = ?`,
-        [name, surname, email || null, mobile, role, hashedCode, staffId]
+        `UPDATE Staff SET Name = ?, Surname = ?, Email = ?, MobileNumber = ?, PasswordHash = ? WHERE StaffID = ?`,
+        [name, surname, email || null, mobile, hashedCode, staffId]
       );
     } else {
-      // Update details without changing the password/code
       await db.query(
-        `UPDATE Staff SET Name = ?, Surname = ?, Email = ?, MobileNumber = ?, Role = ? WHERE StaffID = ?`,
-        [name, surname, email || null, mobile, role, staffId]
+        `UPDATE Staff SET Name = ?, Surname = ?, Email = ?, MobileNumber = ? WHERE StaffID = ?`,
+        [name, surname, email || null, mobile, staffId]
       );
     }
     
@@ -107,54 +134,34 @@ exports.updateStaff = async (req, res) => {
   }
 };
 
-// --- TOGGLE STAFF STATUS (Updates StoreUsers for specific store) ---
+// --- OTHER FUNCTIONS (Keep as is) ---
 exports.toggleStaffStatus = async (req, res) => {
   const { staffId } = req.params;
-  // The frontend now sends storeId so we know which assignment to toggle
   const { isActive, storeId } = req.body; 
-
   try {
-    await db.query(
-      'UPDATE StoreUsers SET IsActive = ? WHERE StaffID = ? AND StoreID = ?', 
-      [isActive, staffId, storeId]
-    );
+    await db.query('UPDATE StoreUsers SET IsActive = ? WHERE StaffID = ? AND StoreID = ?', [isActive, staffId, storeId]);
     res.status(200).json({ message: `Staff account ${isActive ? 'enabled' : 'disabled'}` });
   } catch (error) {
-    console.error("TOGGLE STAFF ERROR:", error);
     res.status(500).json({ message: "Database error" });
   }
 };
 
-// --- GET LOGGED-IN STAFF PROFILE (Used by Staff My Account) ---
 exports.getMyProfile = async (req, res) => {
   try {
-    const [staff] = await db.query(
-      'SELECT StaffID, Name, Surname, Email, MobileNumber, Role FROM Staff WHERE StaffID = ?',
-      [req.user.id]
-    );
-    
+    const [staff] = await db.query('SELECT StaffID, Name, Surname, Email, MobileNumber FROM Staff WHERE StaffID = ?', [req.user.id]);
     if (staff.length === 0) return res.status(404).json({ message: "Staff member not found" });
-    
     res.status(200).json(staff[0]);
   } catch (error) {
-    console.error("GET STAFF PROFILE ERROR:", error);
     res.status(500).json({ message: "Database error" });
   }
 };
 
-// --- UPDATE LOGGED-IN STAFF PROFILE (Used by Staff My Account) ---
 exports.updateMyProfile = async (req, res) => {
   const { name, surname, mobile } = req.body;
-  
   try {
-    await db.query(
-      'UPDATE Staff SET Name = ?, Surname = ?, MobileNumber = ? WHERE StaffID = ?',
-      [name, surname, mobile, req.user.id]
-    );
-    
+    await db.query('UPDATE Staff SET Name = ?, Surname = ?, MobileNumber = ? WHERE StaffID = ?', [name, surname, mobile, req.user.id]);
     res.status(200).json({ message: "Profile updated successfully" });
   } catch (error) {
-    console.error("UPDATE STAFF PROFILE ERROR:", error);
     res.status(500).json({ message: "Database error" });
   }
 };
