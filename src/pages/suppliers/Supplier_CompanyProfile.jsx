@@ -6,13 +6,14 @@ import {
   SupplierDepotFormPopup,
   SupplierDeleteDepotPopup,
   SupplierAddAreaPopup,
+  SupplierRemoveAreaPopup,
 } from "../../components/Supplier/SupplierDepotPopups";
 import "../../Style/components/Supplier/SupplierDashboard.css";
 import "../../Style/components/Supplier/Supplier_CompanyProfile.css";
 
 const PRODUCT_CATEGORIES = [
   "Groceries",
-  "Drinks",
+  "Beveragers",
   "Snacks",
   "Household",
   "Toiletries",
@@ -32,7 +33,7 @@ const INITIAL_PROFILE = {
   contactPerson: "Nandi Mokoena",
   email: "info@tigerbrands.com",
   mobile: "011 840 4000",
-  categories: ["Groceries", "Drinks", "Snacks"],
+  categories: ["Groceries", "Beveragers", "Snacks"],
 };
 
 const INITIAL_AREAS = ["Msunduzi", "Mkhambathini", "uMngeni"];
@@ -96,7 +97,7 @@ const Supplier_CompanyProfile = () => {
 
   const [areas, setAreas] = useState(INITIAL_AREAS);
   const [depots, setDepots] = useState(INITIAL_DEPOTS);
-  // Which popup is open: { type: "addDepot" | "editDepot" | "deleteDepot" | "addArea", depot? }
+  // Which popup is open: { type: "addDepot" | "editDepot" | "deleteDepot" | "addArea" | "removeArea", depot?, area? }
   const [popup, setPopup] = useState(null);
 
   const hasChanges = !sameProfile(profile, savedProfile);
@@ -164,6 +165,12 @@ const Supplier_CompanyProfile = () => {
   const handleAddArea = (area) => {
     // TODO: save the delivery area to the API
     setAreas((items) => [...items, area]);
+    closePopup();
+  };
+
+  const handleRemoveArea = () => {
+    // TODO: remove the delivery area in the API
+    setAreas((items) => items.filter((item) => item !== popup.area));
     closePopup();
   };
 
@@ -277,7 +284,16 @@ const Supplier_CompanyProfile = () => {
           <h2 id="scp-areas-title" className="scp-card-title">Delivery areas</h2>
           <div className="scp-chips">
             {areas.map((area) => (
-              <span key={area} className="scp-area">{area}</span>
+              <button
+                key={area}
+                type="button"
+                className="scp-area"
+                onClick={() => setPopup({ type: "removeArea", area })}
+                aria-label={`Remove ${area}`}
+              >
+                {area}
+                <span className="scp-area-remove" aria-hidden="true">×</span>
+              </button>
             ))}
             <button
               type="button"
@@ -287,7 +303,11 @@ const Supplier_CompanyProfile = () => {
               Add area
             </button>
           </div>
-          <p className="scp-hint">You see demand requests only in these areas.</p>
+          <p className="scp-hint">
+            {areas.length === 0
+              ? "No delivery areas yet. Add an area to start seeing demand requests."
+              : "You see demand requests only in these areas. Select an area to remove it."}
+          </p>
         </section>
 
         {/* Depots and branches */}
@@ -365,6 +385,10 @@ const Supplier_CompanyProfile = () => {
 
       {popup?.type === "addArea" && (
         <SupplierAddAreaPopup existingAreas={areas} onClose={closePopup} onAdd={handleAddArea} />
+      )}
+
+      {popup?.type === "removeArea" && (
+        <SupplierRemoveAreaPopup area={popup.area} onClose={closePopup} onRemove={handleRemoveArea} />
       )}
     </div>
   );
