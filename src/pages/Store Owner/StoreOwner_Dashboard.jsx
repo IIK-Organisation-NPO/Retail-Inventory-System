@@ -11,17 +11,6 @@ import "../../Style/Store Owner/StoreOwner_Dashboard.css";
 
 const API = "http://localhost:5000/api";
 
-// Sample products for the Record sale popup. Replace when the products API is ready.
-const DASHBOARD_PRODUCTS = [
-  { id: 1, product: "Coca-Cola 500ml", price: 26.5, onHand: 89, barcode: "5449000000996" },
-  { id: 2, product: "Simba Chips Original", price: 14.63, onHand: 38, barcode: "6001234500028" },
-  { id: 3, product: "Sprite 500ml", price: 21.45, onHand: 55, barcode: "6001234500035" },
-  { id: 4, product: "NikNaks Cheese", price: 15, onHand: 66, barcode: "6001234500042" },
-  { id: 5, product: "Fanta Orange 500ml", price: 20.55, onHand: 12, barcode: "6001234500059" },
-  { id: 6, product: "Ace Maize Meal 2.5kg", price: 64.03, onHand: 20, barcode: "6001234500066" },
-  { id: 7, product: "Lay's Salt & Vinegar", price: 18.99, onHand: 24, barcode: "6001234500073" },
-];
-
 // Sends a GET request to the backend with the login token
 const apiGet = async (path, token) => {
   const response = await fetch(`${API}${path}`, {
@@ -43,6 +32,10 @@ const Dashboard = () => {
   const [stores, setStores] = useState([]);
   const [storeId, setStoreId] = useState(null);
   const [dashboard, setDashboard] = useState(null);
+  
+  // NEW: State for real products fetched from the backend
+  const [realProducts, setRealProducts] = useState([]);
+  
   // Starts as true when the user is logged in, so no effect has to set it
   const [loading, setLoading] = useState(Boolean(token));
   const [fetchError, setFetchError] = useState("");
@@ -87,16 +80,33 @@ const Dashboard = () => {
     return () => { cancelled = true; };
   }, [token]);
 
-  // Step 2: once we know the store, load its dashboard
+  // Step 2: once we know the store, load its dashboard and real products
   useEffect(() => {
     if (!storeId) return;
     let cancelled = false;
 
-    const loadDashboard = async () => {
+    const loadDashboardAndProducts = async () => {
       try {
-        const data = await apiGet(`/owner/dashboard?storeId=${storeId}`, token);
+        // Fetch dashboard data and real products at the same time
+        const [dashboardData, productData] = await Promise.all([
+          apiGet(`/owner/dashboard?storeId=${storeId}`, token),
+          apiGet(`/products?storeId=${storeId}`, token)
+        ]);
+
         if (cancelled) return;
-        setDashboard(data.dashboardData);
+        
+        setDashboard(dashboardData.dashboardData);
+        
+        // Map the real DB products to match what the RecordSale popup expects
+        const mappedProducts = productData.map((p) => ({
+          id: p.ProductID,
+          product: p.Name,
+          price: Number(p.SellingPrice) || 0,
+          onHand: Number(p.OnHand) || 0,
+          barcode: p.Barcode,
+        }));
+        
+        setRealProducts(mappedProducts);
         setFetchError("");
         setUpdatedAt(new Date().toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }));
       } catch (err) {
@@ -106,7 +116,7 @@ const Dashboard = () => {
       }
     };
 
-    loadDashboard();
+    loadDashboardAndProducts();
     return () => { cancelled = true; };
   }, [storeId, token]);
 
@@ -134,6 +144,53 @@ const Dashboard = () => {
   });
 
   const isMobileTaken = (mobile) => staff.some((member) => member.mobile === mobile);
+
+  // Refreshes products after a sale is recorded so stock counts update instantly
+  const refreshProducts = async () => {
+    try {
+      const productData = await apiGet(`/products?storeId=${storeId}`, token);
+      const mappedProducts = productData.map((p) => ({
+        id: p.ProductID,
+        product: p.Name,
+        price: Number(p.SellingPrice) || 0,
+        onHand: Number(p.OnHand) || 0,
+        barcode: p.Barcode,
+      }));
+      setRealProducts(mappedProducts);
+    } catch (err) {
+      console.error("Failed to refresh products", err);
+    }
+  };
+
+  // Sends the sale to the backend
+  const handleCompleteSale = async (sale) => {
+    const response = await fetch(`${API}/sales`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        storeId: Number(storeId),
+        paymentMethod: sale.payment,
+        amountPaid: sale.amountPaid,
+        items: sale.items.map((item) => ({ productId: item.productId, quantity: item.qty })),
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const err = new Error(
+        data.message || data.error || `Could not record the sale (error ${response.status}).`
+      );
+      err.fieldErrors = data.errors;
+      err.status = response.status;
+      throw err;
+    }
+
+    // Refresh products so the stock numbers in the popup are accurate for the next sale
+    await refreshProducts();
+  };
 
   return (
     <div className="app-layout">
@@ -378,7 +435,8 @@ const Dashboard = () => {
 
       {showRecordSale && (
         <StoreOwner_RecordSale_popup
-          products={DASHBOARD_PRODUCTS}
+          products={realProducts}
+          onComplete={handleCompleteSale}
           onClose={() => setShowRecordSale(false)}
         />
       )}

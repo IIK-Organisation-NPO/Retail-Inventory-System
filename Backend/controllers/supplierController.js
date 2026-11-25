@@ -12,11 +12,18 @@ const generateOTP = () =>
 // GET /api/supplier/dashboard
 exports.getDashboard = async (req, res) => {
   try {
-    const supplierId = req.user.id;
-    const { role } = req.user;
+    const supplierId = req.user && req.user.id;
+    const role = req.user && req.user.role;
 
     if (role !== 'SUPPLIER') {
       return res.status(403).json({ message: 'Access denied. Supplier role required.' });
+    }
+
+    // mysql2 throws "Bind parameters must not contain undefined" if the
+    // token payload uses a different key (e.g. userId instead of id).
+    if (supplierId === undefined || supplierId === null) {
+      console.error('SUPPLIER DASHBOARD: req.user has no id. req.user =', req.user);
+      return res.status(401).json({ message: 'Invalid token. Please log in again.' });
     }
 
     const [[profile]] = await db.query(
@@ -31,28 +38,48 @@ exports.getDashboard = async (req, res) => {
       return res.status(404).json({ message: 'Supplier profile not found.' });
     }
 
-    const [[quoteStats]] = await db.query(
-      `SELECT
-         COUNT(*)                                            AS totalQuotes,
-         SUM(CASE WHEN Status = 'Pending'  THEN 1 ELSE 0 END) AS pendingQuotes,
-         SUM(CASE WHEN Status = 'Accepted' THEN 1 ELSE 0 END) AS acceptedQuotes,
-         SUM(CASE WHEN Status = 'Rejected' THEN 1 ELSE 0 END) AS rejectedQuotes,
-         COALESCE(SUM(CASE WHEN Status = 'Accepted' THEN TotalAmount END), 0) AS acceptedValue
-       FROM supplierquotes
-       WHERE SupplierID = ?`,
-      [supplierId]
-    );
+    // Quote stats are optional for the dashboard. If the supplierquotes table
+    // or one of its columns is missing, log the real error and fall back to
+    // zeros so the profile page still loads.
+    let quoteStats = {
+      totalQuotes: 0,
+      pendingQuotes: 0,
+      acceptedQuotes: 0,
+      rejectedQuotes: 0,
+      acceptedValue: 0,
+    };
+    let recentQuotes = [];
+    let quotesError = null;
 
-    const [recentQuotes] = await db.query(
-      `SELECT QuoteID, RequestID, QuoteDate, TotalAmount, Status
+    try {
+      const [[stats]] = await db.query(
+        `SELECT
+           COUNT(*)                                            AS totalQuotes,
+           SUM(CASE WHEN Status = 'Pending'  THEN 1 ELSE 0 END) AS pendingQuotes,
+           SUM(CASE WHEN Status = 'Accepted' THEN 1 ELSE 0 END) AS acceptedQuotes,
+           SUM(CASE WHEN Status = 'Rejected' THEN 1 ELSE 0 END) AS rejectedQuotes,
+           COALESCE(SUM(CASE WHEN Status = 'Accepted' THEN TotalAmount END), 0) AS acceptedValue
          FROM supplierquotes
-        WHERE SupplierID = ?
-        ORDER BY QuoteDate DESC
-        LIMIT 5`,
-      [supplierId]
-    );
+         WHERE SupplierID = ?`,
+        [supplierId]
+      );
+      quoteStats = stats;
 
-    return res.status(200).json({
+      const [rows] = await db.query(
+        `SELECT QuoteID, RequestID, QuoteDate, TotalAmount, Status
+           FROM supplierquotes
+          WHERE SupplierID = ?
+          ORDER BY QuoteDate DESC
+          LIMIT 5`,
+        [supplierId]
+      );
+      recentQuotes = rows;
+    } catch (quoteErr) {
+      quotesError = quoteErr;
+      console.error('SUPPLIER DASHBOARD QUOTES ERROR:', quoteErr);
+    }
+
+    const response = {
       supplier: {
         id:              profile.SupplierID,
         companyName:     profile.CompanyName,
@@ -71,10 +98,21 @@ exports.getDashboard = async (req, res) => {
         acceptedValue:  Number(quoteStats.acceptedValue)  || 0,
       },
       recentQuotes,
-    });
+    };
+
+    if (quotesError) {
+      response.quotesDebug = quotesError.message;
+    }
+
+    return res.status(200).json(response);
   } catch (err) {
     console.error('SUPPLIER DASHBOARD ERROR:', err);
-    return res.status(500).json({ message: 'Server error.' });
+    return res.status(500).json({
+      message: 'Server error.',
+      debug: err && err.message,
+      debugCode: err && err.code,
+      debugSql: err && err.sql,
+    });
   }
 };
 
