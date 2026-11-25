@@ -218,6 +218,26 @@
   color: #fff;
 }
 
+.scp-area {
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.scp-area:hover {
+  background-color: #333;
+}
+
+.scp-area-remove {
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.scp-area:hover .scp-area-remove {
+  opacity: 1;
+}
+
 /* Buttons */
 .scp-form-actions {
   display: flex;
@@ -302,6 +322,7 @@
 }
 
 .scp-category:focus-visible,
+.scp-area:focus-visible,
 .scp-button:focus-visible,
 .scp-link:focus-visible {
   outline: 2px solid #2563eb;
