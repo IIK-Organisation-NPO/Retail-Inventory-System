@@ -3,6 +3,16 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 // Import your Login page from the auth folder
 import AdminLogin from '../pages/auth/AdminLogin';
+import AdminDashboard from '../pages/Admin/AdminDashboard';
+import AdminStores from '../pages/Admin/AdminStores';
+import AdminSuppliers from '../pages/Admin/AdminSuppliers';
+import AdminUsers from '../pages/Admin/AdminUsers';
+import AdminReports from '../pages/Admin/AdminReports';
+import AuditLog from '../pages/Admin/AuditLog';
+import SystemHealth from '../pages/Admin/SystemHealth';
+import AdminAnnouncements from '../pages/Admin/AdminAnnouncements';
+import AdminProfile from '../pages/Admin/AdminProfile';
+import AdminSettings from '../pages/Admin/AdminSettings';
 import LoginStoreOwnerStaff from '../pages/auth/LoginStoreOwnerStaff';
 import SignupStoreOwner from '../pages/auth/SignupStoreOwner';
 import LoginSupplier from '../pages/auth/LoginSupplier';
@@ -34,6 +44,13 @@ import Staff_Stock from '../pages/Staff/Staff_Stock';
 import Staff_Alerts from '../pages/Staff/Staff_Alerts';
 import Staff_SalesHistory from '../pages/Staff/Staff_SalesHistory';
 import SupplierDashboard from '../pages/suppliers/SupplierDashboard';
+import SupplierDemandRequests from '../pages/suppliers/SupplierDemandRequests';
+import SupplierQuotations from '../pages/suppliers/SupplierQuotations';
+import SupplierNotifications from '../pages/suppliers/SupplierNotifications';
+import SupplierOrders from '../pages/suppliers/SupplierOrders';
+import Supplier_CompanyProfile from '../pages/suppliers/Supplier_CompanyProfile';
+import SupplierProfile from '../pages/suppliers/SupplierProfile';
+import SupplierSettings from '../pages/suppliers/SupplierSettings';
 
 const AppRoutes = () => {
   return (
@@ -42,12 +59,30 @@ const AppRoutes = () => {
         {/* Set the Login page as the default home page for now */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/stores" element={<AdminStores />} />
+        <Route path="/admin/suppliers" element={<AdminSuppliers />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/reports" element={<AdminReports />} />
+        <Route path="/admin/audit-log" element={<AuditLog />} />
+        <Route path="/admin/system-health" element={<SystemHealth />} />
+        <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+        <Route path="/admin/profile" element={<AdminProfile />} />
+        <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/dashboard" element={<StoreOwner_Dashboard />} />
         <Route path="/login/store-owner-staff" element={<LoginStoreOwnerStaff />} />
         <Route path="/login/supplier" element={<LoginSupplier />} />
         <Route path="/signupstoreowner" element={<SignupStoreOwner />} />
         <Route path="/signupsupplier" element={<SignupSupplier />} />
         <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
+        <Route path="/supplier/demand-requests" element={<SupplierDemandRequests />} />
+        <Route path="/supplier/quotations" element={<SupplierQuotations />} />
+        <Route path="/supplier/orders" element={<SupplierOrders />} />
+        <Route path="/supplier/notifications" element={<SupplierNotifications />} />
+        <Route path="/supplier/company-profile" element={<Supplier_CompanyProfile />} />
+        <Route path="/supplier/profile" element={<SupplierProfile />} />
+        <Route path="/supplier/account" element={<SupplierProfile />} />
+        <Route path="/supplier/settings" element={<SupplierSettings />} />
 
         {/* Store Owner */}
         <Route path="/store-owner/dashboard" element={<StoreOwner_Dashboard />} />

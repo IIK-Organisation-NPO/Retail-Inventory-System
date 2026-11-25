@@ -340,6 +340,18 @@
   outline-offset: 2px;
 }
 
+/* When the company pill is a link to the Company profile page */
+a.supplier-company-pill {
+  color: #111;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+a.supplier-company-pill:hover {
+  background-color: #f0f0f1;
+}
+
 .supplier-modal-overlay {
   position: fixed;
   z-index: 1000;

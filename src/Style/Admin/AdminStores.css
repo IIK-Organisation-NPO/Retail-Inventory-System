@@ -1,0 +1,545 @@
+.admin-stores-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f7f7f8;
+  color: #111;
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.admin-stores-main {
+  flex: 1;
+  min-width: 0;
+  padding: 28px;
+}
+
+.admin-stores-header,
+.admin-stores-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-stores-header {
+  margin-bottom: 20px;
+}
+
+.admin-stores-header h1,
+.admin-store-not-found h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.admin-stores-avatar {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #090909;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-stores-export {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #222;
+  border-radius: 9px;
+  background-color: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-stores-export:hover,
+.admin-store-row-button:hover,
+.admin-store-cancel-button:hover {
+  background-color: #f3f3f3;
+}
+
+.admin-stores-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.admin-stores-toolbar input,
+.admin-stores-toolbar select,
+.admin-store-modal-field select,
+.admin-store-modal-field textarea {
+  box-sizing: border-box;
+  min-height: 40px;
+  border: 1px solid #aaa;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 14px;
+}
+
+.admin-stores-toolbar input {
+  width: min(340px, 100%);
+  padding: 0 12px;
+}
+
+.admin-stores-toolbar input::placeholder {
+  color: #777;
+}
+
+.admin-stores-toolbar select {
+  min-width: 180px;
+  padding: 0 12px;
+}
+
+.admin-store-list-card,
+.admin-store-card {
+  min-width: 0;
+  border: 1px solid #dedede;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.admin-store-list-card {
+  box-sizing: border-box;
+  min-height: 368px;
+  padding: 20px 8px;
+}
+
+.admin-store-list-card > h2 {
+  margin: 0 12px 12px;
+  font-size: 16px;
+}
+
+.admin-stores-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.admin-stores-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.admin-stores-table th,
+.admin-stores-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #ededed;
+  color: #222;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.admin-stores-table th {
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-stores-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-store-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background-color: #efefef;
+  color: #111;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-store-status-pending-approval {
+  background-color: #e9efff;
+  color: #2452c6;
+}
+
+.admin-store-status-suspended,
+.admin-store-status-rejected {
+  background-color: #fff0f1;
+  color: #bb1434;
+}
+
+.admin-store-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.admin-store-row-button {
+  min-height: 30px;
+  min-width: 80px;
+  padding: 0 10px;
+  border: 1px solid #222;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #555;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-store-row-suspend {
+  border-color: #c30f2c;
+  background-color: #b20e27;
+  color: #fff;
+}
+
+.admin-store-row-suspend:hover,
+.admin-store-suspend-button:hover {
+  background-color: #970c22;
+}
+
+.admin-stores-count {
+  margin: 12px;
+  color: #666;
+  font-size: 12px;
+}
+
+.admin-stores-empty {
+  height: 80px;
+  color: #666 !important;
+  text-align: center;
+}
+
+.admin-stores-back {
+  display: inline-block;
+  margin: -4px 0 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #111;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.admin-store-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(250px, 0.68fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.admin-store-card {
+  box-sizing: border-box;
+  padding: 16px;
+}
+
+.admin-store-card h2 {
+  margin: 0 0 3px;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.admin-store-card-subtitle {
+  margin: 0 0 10px;
+  color: #666;
+  font-size: 12px;
+}
+
+.admin-store-fields {
+  margin: 0;
+}
+
+.admin-store-field {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #ededed;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.admin-store-field:last-child {
+  border-bottom: 0;
+}
+
+.admin-store-field dt {
+  flex: 0 1 auto;
+  color: #666;
+}
+
+.admin-store-field dd {
+  flex: 0 1 auto;
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.admin-store-decision-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-store-decision-card .admin-store-status {
+  align-self: stretch;
+}
+
+.admin-store-decision-copy {
+  margin: 2px 0 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.admin-store-action-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-store-approve-button {
+  border: 1px solid #090909;
+  background-color: #090909;
+  color: #fff;
+}
+
+.admin-store-approve-button:hover {
+  background-color: #333;
+}
+
+.admin-store-reject-button {
+  border: 1px solid #d4002e;
+  background-color: #fff;
+  color: #d4002e;
+}
+
+.admin-store-reject-button:hover {
+  background-color: #fff5f6;
+}
+
+.admin-store-suspend-button {
+  border: 1px solid #c30f2c;
+  background-color: #c30f2c;
+  color: #fff;
+}
+
+.admin-store-history {
+  padding: 0;
+  margin: 10px 0 0;
+  list-style: none;
+}
+
+.admin-store-history li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 0;
+  border-top: 1px solid #ededed;
+  font-size: 13px;
+}
+
+.admin-store-history li span {
+  color: #666;
+  font-size: 12px;
+}
+
+.admin-store-not-found {
+  padding: 16px 0;
+}
+
+.admin-store-not-found .admin-stores-back {
+  margin-top: 18px;
+}
+
+.admin-store-modal-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 16px;
+  background-color: rgb(0 0 0 / 72%);
+}
+
+.admin-store-modal {
+  box-sizing: border-box;
+  width: min(100%, 440px);
+  padding: 24px 28px;
+  border-radius: 9px;
+  background-color: #fff;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 25%);
+}
+
+.admin-store-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-store-modal-header h2 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.2;
+}
+
+.admin-store-modal-header button {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #111;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.admin-store-modal-copy {
+  margin: 0 0 14px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.admin-store-modal-note {
+  padding: 14px;
+  margin: 0 0 16px;
+  border-radius: 8px;
+  background-color: #f0f1f3;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.admin-store-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+  color: #555;
+  font-size: 13px;
+}
+
+.admin-store-modal-field select {
+  width: 100%;
+  padding: 0 12px;
+}
+
+.admin-store-modal-field textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.admin-store-modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-store-modal-actions > button {
+  flex: 1 1 0;
+}
+
+.admin-store-cancel-button {
+  border: 1px solid #222;
+  background-color: #fff;
+  color: #111;
+}
+
+.admin-stores-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 1100px) {
+  .admin-stores-main {
+    padding: 20px;
+  }
+
+  .admin-store-detail-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .admin-store-decision-card,
+  .admin-store-history-card {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-stores-layout {
+    flex-direction: column;
+  }
+
+  .admin-store-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-stores-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-stores-toolbar input,
+  .admin-stores-toolbar select {
+    width: 100%;
+  }
+
+  .admin-stores-table {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-stores-main {
+    padding: 14px;
+  }
+
+  .admin-stores-header h1,
+  .admin-store-not-found h1 {
+    font-size: 21px;
+  }
+
+  .admin-store-modal {
+    padding: 20px;
+  }
+
+  .admin-store-modal-header h2 {
+    font-size: 20px;
+  }
+
+  .admin-store-modal-actions {
+    flex-direction: column;
+  }
+}

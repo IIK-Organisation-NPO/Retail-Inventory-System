@@ -18,44 +18,39 @@ const AdminLogin = () => {
   const [error, setError] = useState(""); // For network errors (backend offline)
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  
-  // State for field-specific validation errors
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Clear specific field error as the user types
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
     if (validationErrors.email) {
-      setValidationErrors({ ...validationErrors, email: "" });
+      setValidationErrors((current) => ({ ...current, email: "" }));
     }
-    setError(""); // Clear network error if they start typing
+    setError("");
   };
 
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
     if (validationErrors.password) {
-      setValidationErrors({ ...validationErrors, password: "" });
+      setValidationErrors((current) => ({ ...current, password: "" }));
     }
-    setError(""); 
+    setError("");
   };
 
   const validateForm = () => {
     const errors = {};
     const input = email.trim();
 
-    // 1. Validate Email or Mobile Number format
     if (!input) {
       errors.email = "Please enter a valid email address";
     } else {
       const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
-      const isPhone = /^(?:\+27|0)[6-8][0-9]{8}$/.test(input.replace(/\s/g, ''));
+      const isPhone = /^(?:\+27|0)[6-8][0-9]{8}$/.test(input.replace(/\s/g, ""));
 
       if (!isEmail && !isPhone) {
         errors.email = "Please enter a valid email address or mobile number";
       }
     }
 
-    // 2. Validate Password is not empty
     if (!password) {
       errors.password = "Invalid password or passcode";
     }
@@ -65,13 +60,12 @@ const AdminLogin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Clear network errors
+    setError("");
 
-    // Run custom frontend validations (format checks)
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      return; // Stop submission
+      return;
     }
 
     setValidationErrors({});
@@ -82,42 +76,32 @@ const AdminLogin = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: email,
-          password: password,
-          role: "ADMIN" // <--- This tells the backend to check the Admin table
-        })
+          email,
+          password,
+          role: "ADMIN",
+        }),
       });
 
       const data = await response.json();
 
-      // Handle specific errors based on backend status codes
       if (!response.ok) {
         if (response.status === 404) {
           setValidationErrors({ email: data.message });
-          setLoading(false);
           return;
         }
-        
+
         if (response.status === 401) {
           setValidationErrors({ password: data.message });
-          setLoading(false);
           return;
         }
 
         throw new Error(data.message || "Login failed");
       }
 
-      // Success! Save the token and role to local storage
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("userName", data.user.name);
-
-      alert(`Welcome back, Admin ${data.user.name}!`);
-      
-      // Redirect to the Admin Dashboard
-      // Make sure this route exists in your AppRoutes.jsx!
-      navigate("/admin/dashboard"); 
-      
+      navigate("/admin/dashboard");
     } catch (err) {
       if (err.message === "Failed to fetch") {
         setError("Cannot connect to the server. Please ensure the backend is running.");
@@ -166,10 +150,8 @@ const AdminLogin = () => {
             </div>
 
             <form onSubmit={handleSubmit} noValidate>
-              
-              {/* Network Error Banner (Only shows if backend is offline) */}
               {error && (
-                <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '14px' }}>
+                <div style={{ color: "red", backgroundColor: "#ffebee", padding: "10px", borderRadius: "5px", marginBottom: "15px", fontSize: "14px" }}>
                   {error}
                 </div>
               )}

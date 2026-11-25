@@ -22,7 +22,6 @@ const FieldError = ({ message }) =>
 
 // ---------- helpers (outside the component, they never set state) ----------
 
-// If the server sends no message, the error says which status and address failed
 const fetchJson = async (url, token) => {
   const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   const data = await response.json().catch(() => null);
@@ -36,14 +35,12 @@ const fetchJson = async (url, token) => {
   return data;
 };
 
-// Same status rules as the Inventory page
 const getStatus = (onHand, reorder) => {
   if (onHand === 0) return "Out";
   if (onHand < reorder) return "Low";
   return "OK";
 };
 
-// Loads the products and maps database columns to what the table expects
 const loadProducts = async (storeId, token) => {
   const data = await fetchJson(`${API}?storeId=${storeId}`, token);
   return data.map((p) => {
@@ -54,12 +51,11 @@ const loadProducts = async (storeId, token) => {
       name: p.Name,
       categoryId: p.CategoryID,
       category: p.CategoryName || "Uncategorised",
-      unitId: p.UnitOfMeasure,
-      unit: p.UnitName || "",
+      unit: p.UnitName || "", // String name from backend
       barcode: p.Barcode,
       cost: `R${Number(p.CostPrice).toFixed(2)}`,
       price: `R${Number(p.SellingPrice).toFixed(2)}`,
-      rawCost: p.CostPrice, // plain numbers for the edit form
+      rawCost: p.CostPrice,
       rawPrice: p.SellingPrice,
       onHand,
       reorder,
@@ -68,12 +64,11 @@ const loadProducts = async (storeId, token) => {
   });
 };
 
-// The form keys match the names the backend uses, so server messages land on the right field
 const emptyForm = {
   name: "",
   barcode: "",
   categoryId: "",
-  unitOfMeasure: "",
+  unitOfMeasure: "", // Now holds the text string
   costPrice: "",
   sellingPrice: "",
   reorderLevel: "",
@@ -81,13 +76,10 @@ const emptyForm = {
 };
 
 const isBlank = (value) => String(value).trim() === "";
-
 const isWholeNumber = (value, min, max) =>
   !isBlank(value) && Number.isInteger(Number(value)) && Number(value) >= min && Number(value) <= max;
-
 const isMoney = (value) => !isBlank(value) && !Number.isNaN(Number(value)) && Number(value) >= 0;
 
-// Returns an object like { name: "message" } (empty object = valid)
 const validateForm = (form, isEditing) => {
   const errors = {};
   const name = form.name.trim();
@@ -100,7 +92,16 @@ const validateForm = (form, isEditing) => {
   else if (barcode.length > 50) errors.barcode = "Barcode must be 50 characters or less.";
 
   if (!form.categoryId) errors.categoryId = "Please select a category.";
-  if (!form.unitOfMeasure) errors.unitOfMeasure = "Please select a unit of measure.";
+  
+  // Text validation for Unit
+  if (!form.unitOfMeasure) {
+    errors.unitOfMeasure = "Please enter a required unit";
+  } else {
+    const unitRegex = /^(?=.*[0-9])(?=.*[a-zA-Z]).+$/;
+    if (!unitRegex.test(form.unitOfMeasure)) {
+      errors.unitOfMeasure = "Please enter unit (e.g. 500ml, 1kg)";
+    }
+  }
 
   if (isBlank(form.costPrice)) errors.costPrice = "Please enter the unit cost.";
   else if (!isMoney(form.costPrice)) errors.costPrice = "Unit cost must be 0 or more.";
@@ -108,7 +109,6 @@ const validateForm = (form, isEditing) => {
   if (isBlank(form.sellingPrice)) errors.sellingPrice = "Please enter the selling price.";
   else if (!isMoney(form.sellingPrice)) errors.sellingPrice = "Selling price must be 0 or more.";
 
-  // Cross-field rule: only checked when both prices are valid, so it never hides the messages above
   if (!errors.costPrice && !errors.sellingPrice && Number(form.costPrice) > Number(form.sellingPrice)) {
     errors.costPrice = "Unit cost must be less than the selling price.";
     errors.sellingPrice = "Selling price must be more than the unit cost.";
@@ -118,7 +118,6 @@ const validateForm = (form, isEditing) => {
   else if (!isWholeNumber(form.reorderLevel, 0, MAX_QTY))
     errors.reorderLevel = `Enter a whole number between 0 and ${MAX_QTY}.`;
 
-  // Opening stock is only entered when adding a product
   if (!isEditing) {
     if (isBlank(form.onHand)) errors.onHand = "Please enter a quantity.";
     else if (!isWholeNumber(form.onHand, 0, MAX_QTY))
@@ -137,25 +136,19 @@ const Products = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Data
   const [products, setProducts] = useState([]);
   const [categoryOptions, setCategoryOptions] = useState([]);
-  const [unitOptions, setUnitOptions] = useState([]);
   const [error, setError] = useState("");
 
-  // Form
   const [form, setForm] = useState(emptyForm);
   const [validationErrors, setValidationErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Get the active store ID (falls back to 1 if not set yet by the Store Switcher)
   const [storeId] = useState(localStorage.getItem("activeStoreId") || 1);
   const token = localStorage.getItem("token");
   const [loading, setLoading] = useState(Boolean(token));
 
-  // --- 1. LOAD PRODUCTS + DROPDOWN LISTS ON PAGE OPEN ---
-  // State is only set inside the .then callbacks.
   useEffect(() => {
     if (!token) return undefined;
     let cancelled = false;
@@ -163,13 +156,12 @@ const Products = () => {
     Promise.all([
       loadProducts(storeId, token),
       fetchJson(`${API}/categories`, token),
-      fetchJson(`${API}/units`, token),
+      // Removed /units fetch since it's a text input now
     ])
-      .then(([productList, categories, units]) => {
+      .then(([productList, categories]) => {
         if (cancelled) return;
         setProducts(productList);
         setCategoryOptions(categories);
-        setUnitOptions(units);
         setError("");
       })
       .catch((err) => {
@@ -184,7 +176,6 @@ const Products = () => {
     };
   }, [storeId, token]);
 
-  // Reload the table after a save (called from the save handler, not from an effect)
   const refreshProducts = useCallback(async () => {
     try {
       setProducts(await loadProducts(storeId, token));
@@ -194,7 +185,6 @@ const Products = () => {
     }
   }, [storeId, token]);
 
-  // --- MODAL OPEN / CLOSE ---
   const resetFormState = () => {
     setValidationErrors({});
     setFormError("");
@@ -215,7 +205,7 @@ const Products = () => {
       name: product.name ?? "",
       barcode: product.barcode ?? "",
       categoryId: String(product.categoryId ?? ""),
-      unitOfMeasure: String(product.unitId ?? ""),
+      unitOfMeasure: product.unit ?? "", // Map from string
       costPrice: String(product.rawCost ?? ""),
       sellingPrice: String(product.rawPrice ?? ""),
       reorderLevel: String(product.reorder ?? ""),
@@ -232,7 +222,6 @@ const Products = () => {
     resetFormState();
   };
 
-  // Updates one field and clears its message (and the messages of related fields)
   const setField = (field, alsoClear = []) => (event) => {
     const value = event.target.value;
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -245,7 +234,6 @@ const Products = () => {
     });
   };
 
-  // --- 2. SAVE PRODUCT TO DATABASE ---
   const handleSaveProduct = async (event) => {
     event.preventDefault();
     if (submitting) return;
@@ -253,20 +241,20 @@ const Products = () => {
     const found = validateForm(form, Boolean(editingProduct));
     setValidationErrors(found);
     setFormError("");
-    if (Object.keys(found).length > 0) return; // stop submission
+    if (Object.keys(found).length > 0) return; 
 
+    // Send unitOfMeasureName instead of unitOfMeasureId
     const payload = {
       storeId: Number(storeId),
       name: form.name.trim(),
       barcode: form.barcode.trim(),
       categoryId: Number(form.categoryId),
-      unitOfMeasure: Number(form.unitOfMeasure),
+      unitOfMeasureName: form.unitOfMeasure.trim(), 
       costPrice: Number(form.costPrice),
       sellingPrice: Number(form.sellingPrice),
       reorderLevel: Number(form.reorderLevel),
     };
-    // Stock is only set when a product is created. After that it changes
-    // through the Inventory page so every change is logged.
+    
     if (!editingProduct) payload.onHand = Number(form.onHand);
 
     setSubmitting(true);
@@ -284,11 +272,9 @@ const Products = () => {
 
       if (!response.ok) {
         if (data.errors) {
-          // Messages from the server go under the matching fields
           setValidationErrors(data.errors);
           setFormError("Please fix the highlighted fields.");
         } else if (response.status === 409) {
-          // Duplicate barcode
           setValidationErrors({ barcode: data.message });
         } else {
           setFormError(data.message || data.error || `Failed to save product (error ${response.status}).`);
@@ -312,7 +298,6 @@ const Products = () => {
     }
   };
 
-  // --- Filtering Logic ---
   const categories = [...new Set(products.map((product) => product.category))];
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
@@ -329,10 +314,7 @@ const Products = () => {
     return (
       <div className="app-layout">
         <StoreOwnerSidebar />
-        <main
-          className="main-content"
-          style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}
-        >
+        <main className="main-content" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
           <p>Loading products...</p>
         </main>
       </div>
@@ -344,24 +326,20 @@ const Products = () => {
       <StoreOwnerSidebar notificationCount={products.filter((p) => p.status !== "OK").length} />
 
       <main className="main-content">
-        {/* Page Header */}
         <header className="page-header">
           <h1 className="page-title">Products</h1>
-
           <div className="header-actions">
             <StoreOwner_StoreSwitcher />
             <StoreOwner_UserMenu />
           </div>
         </header>
 
-        {/* Error Banner */}
         {error && (
           <div style={{ color: "red", backgroundColor: "#ffebee", padding: "10px", borderRadius: "5px", marginBottom: "15px" }}>
             {error}
           </div>
         )}
 
-        {/* Filters Row */}
         <div className="filters-row">
           <input
             type="text"
@@ -382,7 +360,6 @@ const Products = () => {
           </select>
         </div>
 
-        {/* Product Catalogue Card */}
         <div className="card products-card">
           <div className="card-header">
             <h3>Product catalogue</h3>
@@ -427,11 +404,7 @@ const Products = () => {
                     </span>
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className="btn-outline edit-btn"
-                      onClick={() => openEditProductModal(product)}
-                    >
+                    <button type="button" className="btn-outline edit-btn" onClick={() => openEditProductModal(product)}>
                       Edit
                     </button>
                   </td>
@@ -449,28 +422,17 @@ const Products = () => {
         </div>
       </main>
 
-      {/* =========================================
-          ADD / EDIT PRODUCT MODAL
-          ========================================= */}
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content add-product-modal">
-            {/* Modal Header */}
             <div className="modal-header">
               <h2>{editingProduct ? "Edit Product" : "Add Product"}</h2>
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={closeProductModal}
-                aria-label="Close modal"
-              >
+              <button type="button" className="modal-close-btn" onClick={closeProductModal} aria-label="Close modal">
                 ✕
               </button>
             </div>
 
-            {/* Modal Form */}
             <form onSubmit={handleSaveProduct} noValidate>
-              {/* Product Name */}
               <div className="input-group">
                 <label htmlFor="product-name">Product name</label>
                 <input
@@ -484,7 +446,6 @@ const Products = () => {
                 <FieldError message={validationErrors.name} />
               </div>
 
-              {/* Category & Barcode Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-category">Category</label>
@@ -503,7 +464,7 @@ const Products = () => {
                   <FieldError message={validationErrors.categoryId} />
                 </div>
                 <div className="input-group">
-                  <label htmlFor="product-barcode">Barcode</label>
+                  <label htmlFor="product-barcode">Barcode (optional)</label>
                   <input
                     id="product-barcode"
                     type="text"
@@ -517,22 +478,19 @@ const Products = () => {
                 </div>
               </div>
 
-              {/* Unit of Measure & Reorder Level Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-unit">Unit of measure</label>
-                  <select
+                  {/* CHANGED BACK TO TEXT INPUT */}
+                  <input
                     id="product-unit"
-                    className="form-input select-input"
+                    type="text"
+                    className="form-input"
                     style={redBorder(Boolean(validationErrors.unitOfMeasure))}
+                    placeholder="e.g. 500ml, 1kg"
                     value={form.unitOfMeasure}
                     onChange={setField("unitOfMeasure")}
-                  >
-                    <option value="">Select a unit</option>
-                    {unitOptions.map((u) => (
-                      <option key={u.UnitOfMeasureID} value={String(u.UnitOfMeasureID)}>{u.UnitName}</option>
-                    ))}
-                  </select>
+                  />
                   <FieldError message={validationErrors.unitOfMeasure} />
                 </div>
                 <div className="input-group">
@@ -551,7 +509,6 @@ const Products = () => {
                 </div>
               </div>
 
-              {/* Unit Cost & Selling Price Row */}
               <div className="form-row">
                 <div className="input-group">
                   <label htmlFor="product-cost">Unit cost (R)</label>
@@ -583,11 +540,10 @@ const Products = () => {
                 </div>
               </div>
 
-              {/* Quantity: opening stock when adding, read-only when editing */}
               <div className="input-group">
                 <label htmlFor="product-on-hand">
-                  {editingProduct ? "Current quantity" : "Opening quantity"}
-                </label>
+                 Current quantity
+                  </label>
                 <input
                   id="product-on-hand"
                   type="number"
@@ -610,17 +566,11 @@ const Products = () => {
 
               <FieldError message={formError} />
 
-              {/* Form Actions (Buttons) */}
               <div className="modal-actions">
                 <button type="submit" className="btn-primary save-btn" disabled={submitting}>
                   {submitting ? "Saving..." : editingProduct ? "Save changes" : "Save product"}
                 </button>
-                <button
-                  type="button"
-                  className="btn-outline cancel-btn"
-                  onClick={closeProductModal}
-                  disabled={submitting}
-                >
+                <button type="button" className="btn-outline cancel-btn" onClick={closeProductModal} disabled={submitting}>
                   Cancel
                 </button>
               </div>

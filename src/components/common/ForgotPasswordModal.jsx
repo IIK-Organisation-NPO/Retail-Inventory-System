@@ -1,4 +1,5 @@
 // src/components/common/ForgotPasswordModal.jsx
+// Forgot password popup flow: email address -> OTP code -> new password
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../../Style/components/auth.css";
@@ -9,19 +10,19 @@ const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
 
 const TITLES = {
-  mobile: "Forgot your password?",
+  email: "Forgot your password?",
   code: "Enter your code",
   reset: "Create a new password",
 };
 
-const maskNumber = (number) => {
-  const digits = number.replace(/\D/g, "");
-  return `${digits.slice(0, 3)} *** ${digits.slice(-4)}`;
+const maskEmail = (email) => {
+  const [name, domain] = email.split("@");
+  return `${name.slice(0, 1)}***@${domain}`;
 };
 
-const ForgotPasswordModal = ({ role = "OWNER", onClose }) => {
-  const [step, setStep] = useState("mobile");
-  const [mobile, setMobile] = useState("");
+const ForgotPasswordModal = ({ onClose }) => {
+  const [step, setStep] = useState("email");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState(Array(OTP_LENGTH).fill(""));
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [password, setPassword] = useState("");
@@ -54,40 +55,23 @@ const ForgotPasswordModal = ({ role = "OWNER", onClose }) => {
     setStep(nextStep);
   };
 
-  // ==========================================
-  // STEP 1: REQUEST OTP API CALL
-  // ==========================================
-  const sendCode = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/api/auth/forgot-password/request-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobileNumber: mobile, role: role })
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) throw new Error(data.message);
-
-      setCode(Array(OTP_LENGTH).fill(""));
-      setSecondsLeft(RESEND_SECONDS);
-      goTo("code");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const sendCode = (recipient = email) => {
+    setEmail(recipient);
+    // TODO: call the API to send the OTP to `recipient`
+    setCode(Array(OTP_LENGTH).fill(""));
+    setSecondsLeft(RESEND_SECONDS);
+    goTo("code");
   };
 
+  // --- Step 1: Email address ---
   const handleSendOtp = (e) => {
     e.preventDefault();
-    if (mobile.replace(/\D/g, "").length < 10) {
-      setError("Enter a valid 10-digit mobile number.");
+    const recipient = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+      setError("Enter a valid email address.");
       return;
     }
-    sendCode();
+    sendCode(recipient);
   };
 
   // ==========================================
@@ -195,21 +179,24 @@ const ForgotPasswordModal = ({ role = "OWNER", onClose }) => {
           </button>
         </div>
 
-        {/* STEP 1: MOBILE */}
-        {step === "mobile" && (
+        {step === "email" && (
           <form onSubmit={handleSendOtp} noValidate>
             <p className="auth-modal-text">
-              Enter your Mobile Number and we will send you an OTP to reset your password.
+              Enter your email address and we will send you an OTP to reset your password.
             </p>
 
             <div className="input-group">
-              <label htmlFor="reset-mobile">Mobile number</label>
+              <label htmlFor="reset-email">Email address</label>
               <input
-                id="reset-mobile"
-                type="tel"
+                id="reset-email"
+                type="email"
                 className="form-input"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError("");
+                }}
+                autoComplete="email"
                 autoFocus
                 disabled={loading}
               />
@@ -230,7 +217,7 @@ const ForgotPasswordModal = ({ role = "OWNER", onClose }) => {
         {step === "code" && (
           <form onSubmit={handleVerifyCode} noValidate>
             <p className="auth-modal-text">
-              We sent a 6-digit code to <strong>{maskNumber(mobile)}</strong>. Enter it below to continue.
+              We sent a 6-digit code to <strong>{maskEmail(email)}</strong>. Enter it below to continue.
             </p>
 
             <div className="otp-inputs" onPaste={handleCodePaste}>
@@ -266,8 +253,8 @@ const ForgotPasswordModal = ({ role = "OWNER", onClose }) => {
             {error && <p className="field-error">{error}</p>}
 
             <button type="submit" className="submit-btn">Verify code</button>
-            <button type="button" className="outline-btn" onClick={() => goTo("mobile")}>
-              Change number
+            <button type="button" className="outline-btn" onClick={() => goTo("email")}>
+              Change email address
             </button>
           </form>
         )}

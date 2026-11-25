@@ -65,10 +65,12 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
       errors.surname = "Please enter a surname";
     }
     
-    if (!form.email.trim()) {
+    if (!form.email.trim() && !isEdit) {
       errors.email = "Please enter an email";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      errors.email = "Enter a valid email address.";
+      if (form.email.trim()) {
+        errors.email = "Enter a valid email address.";
+      }
     }
 
     const mobile = digitsOnly(form.mobile);
@@ -151,8 +153,16 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
 
         {/* Email */}
         <div className="sp-field">
-          <label htmlFor="staff-email">Email</label>
-          <input id="staff-email" type="email" className="sp-input" value={form.email} onChange={update("email")} autoComplete="off" />
+          <label htmlFor="staff-email">Email address{isEdit ? "" : " *"}</label>
+          <input
+            id="staff-email"
+            type="email"
+            className="sp-input"
+            value={form.email}
+            onChange={update("email")}
+            autoComplete="email"
+            required={!isEdit}
+          />
           {validationErrors.email && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.email}</span>}
         </div>
 

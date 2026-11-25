@@ -1,0 +1,36 @@
+.admin-suppliers-table {
+  min-width: 850px;
+}
+
+.admin-suppliers-table th:first-child,
+.admin-suppliers-table td:first-child {
+  min-width: 210px;
+}
+
+.admin-suppliers-table th:nth-child(2),
+.admin-suppliers-table td:nth-child(2) {
+  min-width: 150px;
+}
+
+.admin-suppliers-table th:nth-child(3),
+.admin-suppliers-table td:nth-child(3) {
+  min-width: 210px;
+}
+
+.admin-suppliers-table th:nth-child(4),
+.admin-suppliers-table td:nth-child(4) {
+  min-width: 120px;
+}
+
+.admin-suppliers-table th:last-child,
+.admin-suppliers-table td:last-child {
+  min-width: 172px;
+}
+
+.admin-supplier-back {
+  color: #2452c6;
+}
+
+.admin-supplier-back:hover {
+  color: #173c9b;
+}
