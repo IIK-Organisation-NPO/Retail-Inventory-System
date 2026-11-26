@@ -1,27 +1,29 @@
 // src/components/Supplier/SupplierUserMenu.jsx
-// Avatar button in the supplier header that opens the account menu (user info, account, settings, sign out)
 import { useNavigate } from "react-router-dom";
 import useDropdown from "../../hooks/useDropdown";
 import "../../Style/components/Supplier/SupplierUserMenu.css";
 
-// "Nandi Mokoena" -> "NM"
-const getInitials = (name) =>
+const getInitials = (name = "") =>
   name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((word) => word[0].toUpperCase())
-    .join("");
+    .join("") || "??";
 
 const MENU_ITEMS = [
   { title: "Profile", subtitle: "Your details and password", to: "/supplier/profile" },
   { title: "Settings", subtitle: "Notification preferences", to: "/supplier/settings" },
 ];
 
-// Mock user. Replace with the signed-in supplier from the API.
-const SupplierUserMenu = ({ name = "Nandi Mokoena", role = "Supplier" }) => {
+const SupplierUserMenu = ({ name, role } = {}) => {
   const navigate = useNavigate();
   const { ref, isOpen, toggle, close } = useDropdown();
+
+  const storedFirst = localStorage.getItem("userName") || "";
+  const storedSurname = localStorage.getItem("userSurname") || "";
+  const fullName = name || `${storedFirst} ${storedSurname}`.trim() || "Supplier";
+  const displayRole = role || (localStorage.getItem("role") === "SUPPLIER" ? "Supplier" : "Supplier");
 
   const goTo = (path) => {
     close();
@@ -30,7 +32,14 @@ const SupplierUserMenu = ({ name = "Nandi Mokoena", role = "Supplier" }) => {
 
   const handleSignOut = () => {
     close();
-    // TODO: end the session with the API and clear any saved login token
+    // Clear both the legacy and current token keys, plus cached user info.
+    localStorage.removeItem("token");
+    localStorage.removeItem("supplierToken");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userSurname");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("companyName");
     navigate("/login/supplier", { replace: true });
   };
 
@@ -41,17 +50,17 @@ const SupplierUserMenu = ({ name = "Nandi Mokoena", role = "Supplier" }) => {
         className={`supplier-user-menu-trigger${isOpen ? " open" : ""}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        aria-label={`Account menu for ${name}`}
+        aria-label={`Account menu for ${fullName}`}
         onClick={toggle}
       >
-        {getInitials(name)}
+        {getInitials(fullName)}
       </button>
 
       {isOpen && (
         <div className="supplier-user-menu-panel" role="menu" aria-label="Account">
           <div className="supplier-user-menu-info">
-            <p className="supplier-user-menu-name">{name}</p>
-            <p className="supplier-user-menu-role">{role}</p>
+            <p className="supplier-user-menu-name">{fullName}</p>
+            <p className="supplier-user-menu-role">{displayRole}</p>
           </div>
 
           {MENU_ITEMS.map((item) => (

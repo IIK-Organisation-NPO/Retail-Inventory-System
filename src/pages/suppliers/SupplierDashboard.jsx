@@ -4,6 +4,8 @@ import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
 import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
 import "../../Style/components/Supplier/SupplierDashboard.css";
 
+const API_BASE = "http://localhost:5000";
+
 const REGISTRATION_STEPS = [
   "Enter your company’s CIPC registration number",
   "Check the details we find at CIPC",
@@ -40,163 +42,240 @@ const MOCK_CIPC_COMPANY = {
   registeredAddress: "1 Sample Road, Sandton, Gauteng, 2191",
 };
 
-const APPROVED_DASHBOARD_STATS = [
-  { label: "Open demand requests", value: 3 },
-  { label: "Not quoted yet", value: 2 },
-  { label: "Quotes accepted", value: 1 },
-  { label: "Orders to confirm", value: 1 },
-];
+// --- helpers ---
+const getInitials = (companyName = "") =>
+  companyName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase() || "??";
 
-const OPEN_DEMAND_REQUESTS = [
-  { id: "coca-cola-500", product: "Coca-Cola 500ml", demand: "72 units", stores: 2, closes: "Sun 22 Nov", status: "New", action: "View and quote" },
-  { id: "ace-maize-meal-25", product: "Ace Maize Meal 2.5kg", demand: "100 units", stores: 3, closes: "Fri 20 Nov", status: "Quote submitted", action: "View" },
-  { id: "sunflower-oil-5l", product: "Sunflower oil 5L", demand: "60 L", stores: 4, closes: "Wed 25 Nov", status: "New", action: "View and quote" },
-];
+const formatRand = (value) => {
+  const num = Number(value) || 0;
+  return (
+    "R" +
+    num.toLocaleString("en-ZA", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
+};
 
-const WAITING_ORDERS = [
-  { order: "ORD-001", product: "Ace Maize Meal 2.5kg", quantity: 70, total: "R3,640.00", deliverBy: "20 Nov" },
-];
+const formatDate = (iso) => {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("en-ZA", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+};
 
-const RECENT_QUOTES = [
-  { product: "Ace Maize Meal 2.5kg", unitPrice: "R52.00", status: "Accepted" },
-  { product: "Fanta Orange 500ml", unitPrice: "R14.50", status: "Declined" },
-];
+// --- APPROVED (post-login) DASHBOARD ---
+const SupplierApprovedDashboard = ({
+  onOpenRequest,
+  data,
+  loading,
+  error,
+  onRetry,
+}) => {
+  const supplier = data?.supplier;
+  const stats = data?.stats;
+  const recentQuotes = data?.recentQuotes ?? [];
 
-const SupplierApprovedDashboard = ({ onOpenRequest }) => (
-  <main className="supplier-dashboard-main supplier-approved-dashboard">
-    <header className="supplier-dashboard-header">
-      <h1>Dashboard</h1>
-      <div className="supplier-dashboard-account">
-        <div className="supplier-company-pill">
-          <span className="supplier-company-initials">TB</span>
-          <span>Tiger Brands Ltd</span>
+  const storedCompany = localStorage.getItem("companyName") || "";
+  const companyName = supplier?.companyName || storedCompany || "Supplier";
+  const initials = getInitials(companyName);
+
+  const statCards = [
+    { label: "Total quotes", value: stats?.totalQuotes ?? 0 },
+    { label: "Pending", value: stats?.pendingQuotes ?? 0 },
+    { label: "Accepted", value: stats?.acceptedQuotes ?? 0 },
+    { label: "Accepted value", value: formatRand(stats?.acceptedValue) },
+  ];
+
+  return (
+    <main className="supplier-dashboard-main supplier-approved-dashboard">
+      <header className="supplier-dashboard-header">
+        <h1>Dashboard</h1>
+        <div className="supplier-dashboard-account">
+          <div className="supplier-company-pill">
+            <span className="supplier-company-initials">{initials}</span>
+            <span>{companyName}</span>
+          </div>
+          <SupplierUserMenu />
         </div>
-        <SupplierUserMenu />
-      </div>
-    </header>
+      </header>
 
-    <p className="supplier-approved-notice" role="status">
-      2 new demand requests match your product categories.
-    </p>
+      {loading && (
+        <p className="supplier-approved-notice" role="status">
+          Loading dashboard…
+        </p>
+      )}
 
-    <section className="supplier-dashboard-stats" aria-label="Supplier activity summary">
-      {APPROVED_DASHBOARD_STATS.map((stat) => (
-        <article className="supplier-dashboard-stat" key={stat.label}>
-          <span>{stat.label}</span>
-          <strong>{stat.value}</strong>
-        </article>
-      ))}
-    </section>
-
-    <section className="supplier-dashboard-panel supplier-demand-panel">
-      <div className="supplier-dashboard-panel-header">
-        <h2>Open demand requests</h2>
-        <button type="button" className="supplier-dashboard-outline-button" onClick={() => onOpenRequest()}>
-          All requests
-        </button>
-      </div>
-      <div className="supplier-dashboard-table-wrap">
-        <table className="supplier-dashboard-table">
-          <thead>
-            <tr>
-              <th scope="col">Product</th>
-              <th scope="col">Combined demand</th>
-              <th scope="col">Stores</th>
-              <th scope="col">Closes</th>
-              <th scope="col">Status</th>
-              <th scope="col"><span className="supplier-visually-hidden">Action</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {OPEN_DEMAND_REQUESTS.map((request) => (
-              <tr key={request.product}>
-                <td>{request.product}</td>
-                <td>{request.demand}</td>
-                <td>{request.stores}</td>
-                <td>{request.closes}</td>
-                <td>
-                  <span className={`supplier-dashboard-status${request.status === "New" ? " new" : ""}`}>
-                    {request.status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    className="supplier-dashboard-text-button"
-                    onClick={() => onOpenRequest(request.id)}
-                  >
-                    {request.action}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <div className="supplier-dashboard-lower-panels">
-      <section className="supplier-dashboard-panel">
-        <h2>Orders waiting for you</h2>
-        <div className="supplier-dashboard-table-wrap">
-          <table className="supplier-dashboard-table supplier-orders-table">
-            <thead>
-              <tr>
-                <th scope="col">Order</th>
-                <th scope="col">Product</th>
-                <th scope="col">Quantity</th>
-                <th scope="col">Total</th>
-                <th scope="col">Deliver by</th>
-                <th scope="col"><span className="supplier-visually-hidden">Action</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {WAITING_ORDERS.map((order) => (
-                <tr key={order.order}>
-                  <td>{order.order}</td>
-                  <td>{order.product}</td>
-                  <td>{order.quantity}</td>
-                  <td>{order.total}</td>
-                  <td>{order.deliverBy}</td>
-                  <td><button type="button" className="supplier-dashboard-text-button">Confirm order</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {error && (
+        <div
+          role="alert"
+          style={{
+            color: "#b00020",
+            background: "#fdecea",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            marginBottom: "16px",
+          }}
+        >
+          {error}{" "}
+          <button
+            type="button"
+            className="supplier-dashboard-text-button"
+            onClick={onRetry}
+          >
+            Retry
+          </button>
         </div>
+      )}
+
+      {!loading && !error && (
+        <p className="supplier-approved-notice" role="status">
+          {stats?.pendingQuotes > 0
+            ? `${stats.pendingQuotes} quote${
+                stats.pendingQuotes === 1 ? "" : "s"
+              } awaiting a response.`
+            : "No pending quotations right now."}
+        </p>
+      )}
+
+      <section
+        className="supplier-dashboard-stats"
+        aria-label="Supplier activity summary"
+      >
+        {statCards.map((stat) => (
+          <article className="supplier-dashboard-stat" key={stat.label}>
+            <span>{stat.label}</span>
+            <strong>{loading ? "…" : stat.value}</strong>
+          </article>
+        ))}
       </section>
 
-      <section className="supplier-dashboard-panel">
-        <h2>Recent quotations</h2>
+      <section className="supplier-dashboard-panel supplier-demand-panel">
+        <div className="supplier-dashboard-panel-header">
+          <h2>Open demand requests</h2>
+          <button
+            type="button"
+            className="supplier-dashboard-outline-button"
+            onClick={() => onOpenRequest()}
+          >
+            All requests
+          </button>
+        </div>
         <div className="supplier-dashboard-table-wrap">
           <table className="supplier-dashboard-table">
             <thead>
               <tr>
                 <th scope="col">Product</th>
-                <th scope="col">Unit price</th>
+                <th scope="col">Combined demand</th>
+                <th scope="col">Stores</th>
+                <th scope="col">Closes</th>
                 <th scope="col">Status</th>
+                <th scope="col">
+                  <span className="supplier-visually-hidden">Action</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {RECENT_QUOTES.map((quote) => (
-                <tr key={quote.product}>
-                  <td>{quote.product}</td>
-                  <td>{quote.unitPrice}</td>
-                  <td>
-                    <span className={`supplier-dashboard-status ${quote.status.toLowerCase()}`}>
-                      {quote.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center", color: "#666" }}>
+                  No demand requests yet.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
       </section>
-    </div>
-  </main>
-);
 
+      <div className="supplier-dashboard-lower-panels">
+        <section className="supplier-dashboard-panel">
+          <h2>Orders waiting for you</h2>
+          <div className="supplier-dashboard-table-wrap">
+            <table className="supplier-dashboard-table supplier-orders-table">
+              <thead>
+                <tr>
+                  <th scope="col">Order</th>
+                  <th scope="col">Product</th>
+                  <th scope="col">Quantity</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Deliver by</th>
+                  <th scope="col">
+                    <span className="supplier-visually-hidden">Action</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", color: "#666" }}>
+                    No orders yet.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="supplier-dashboard-panel">
+          <h2>Recent quotations</h2>
+          <div className="supplier-dashboard-table-wrap">
+            <table className="supplier-dashboard-table">
+              <thead>
+                <tr>
+                  <th scope="col">Quote #</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentQuotes.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      style={{ textAlign: "center", color: "#666" }}
+                    >
+                      No quotations yet.
+                    </td>
+                  </tr>
+                ) : (
+                  recentQuotes.map((q) => (
+                    <tr key={q.QuoteID}>
+                      <td>Q-{String(q.QuoteID).padStart(4, "0")}</td>
+                      <td>{formatRand(q.TotalAmount)}</td>
+                      <td>{formatDate(q.QuoteDate)}</td>
+                      <td>
+                        <span
+                          className={`supplier-dashboard-status ${String(
+                            q.Status || ""
+                          ).toLowerCase()}`}
+                        >
+                          {q.Status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+};
+
+// --- MAIN DASHBOARD COMPONENT ---
 const SupplierDashboard = () => {
   const navigate = useNavigate();
   const [showVerification, setShowVerification] = useState(false);
@@ -210,25 +289,86 @@ const SupplierDashboard = () => {
   const [contactMobile, setContactMobile] = useState("011 840 4000");
   const [contactEmail, setContactEmail] = useState("info@tigerbrands.com");
   const [website, setWebsite] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState(["Groceries", "Drinks", "Snacks"]);
-  const [deliveryAreas, setDeliveryAreas] = useState(["Msunduzi", "Mkhambathini", "uMngeni"]);
+  const [selectedCategories, setSelectedCategories] = useState([
+    "Groceries",
+    "Drinks",
+    "Snacks",
+  ]);
+  const [deliveryAreas, setDeliveryAreas] = useState([
+    "Msunduzi",
+    "Mkhambathini",
+    "uMngeni",
+  ]);
   const [showAddArea, setShowAddArea] = useState(false);
   const [newDeliveryArea, setNewDeliveryArea] = useState("");
   const [sameRegisteredAddress, setSameRegisteredAddress] = useState(true);
-  const [businessAddress, setBusinessAddress] = useState("1 Sample Road, Sandton, Gauteng, 2191");
-  const [postalAddress, setPostalAddress] = useState("PO Box 100, Sandton, 2146");
+  const [businessAddress, setBusinessAddress] = useState(
+    "1 Sample Road, Sandton, Gauteng, 2191"
+  );
+  const [postalAddress, setPostalAddress] = useState(
+    "PO Box 100, Sandton, 2146"
+  );
   const [province, setProvince] = useState("Gauteng");
   const [showApplicationReview, setShowApplicationReview] = useState(false);
   const [acceptedSupplierTerms, setAcceptedSupplierTerms] = useState(false);
-  const [confirmedApplicationDetails, setConfirmedApplicationDetails] = useState(false);
+  const [confirmedApplicationDetails, setConfirmedApplicationDetails] =
+    useState(false);
   const [applicationSubmitted, setApplicationSubmitted] = useState(false);
   const [applicationApproved, setApplicationApproved] = useState(
     () => sessionStorage.getItem("supplierApplicationApproved") === "true"
   );
 
+  // --- dashboard data from API ---
+  const [dashboard, setDashboard] = useState(null);
+  const [dashLoading, setDashLoading] = useState(false);
+  const [dashError, setDashError] = useState("");
+
+  const loadDashboard = async () => {
+    setDashLoading(true);
+    setDashError("");
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token. Please log in again.");
+
+      const res = await fetch(
+        `${API_BASE}/api/supplier/dashboard?cb=${Date.now()}`,
+        {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message || "Failed to load dashboard.");
+      setDashboard(body);
+    } catch (err) {
+      setDashError(err.message || "Failed to load dashboard.");
+    } finally {
+      setDashLoading(false);
+    }
+  };
+
+  // Fetch dashboard when approved (deferred + cancellable so React's
+  // "setState synchronously in effect" warning does not fire)
+  useEffect(() => {
+    if (!applicationApproved) return undefined;
+
+    let cancelled = false;
+    const run = async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      await loadDashboard();
+    };
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+     
+  }, [applicationApproved]);
+
+  // CIPC mock check (uses setTimeout — already async, no warning)
   useEffect(() => {
     if (!isCheckingCipc) return undefined;
-
     const timer = setTimeout(() => {
       setVerifiedCompany({
         ...MOCK_CIPC_COMPANY,
@@ -236,17 +376,17 @@ const SupplierDashboard = () => {
       });
       setIsCheckingCipc(false);
     }, 2000);
-
     return () => clearTimeout(timer);
   }, [cipcNumber, isCheckingCipc]);
 
   const handleVerifyCompany = (event) => {
     event.preventDefault();
     if (!/^\d{4}\/\d{6}\/\d{2}$/.test(cipcNumber.trim())) {
-      setVerificationError("Enter the CIPC number in the format YYYY/NNNNNN/NN.");
+      setVerificationError(
+        "Enter the CIPC number in the format YYYY/NNNNNN/NN."
+      );
       return;
     }
-
     setVerificationError("");
     setIsCheckingCipc(true);
   };
@@ -267,7 +407,11 @@ const SupplierDashboard = () => {
 
   const addDeliveryArea = () => {
     const area = newDeliveryArea.trim();
-    if (!area || deliveryAreas.some((entry) => entry.toLowerCase() === area.toLowerCase())) return;
+    if (
+      !area ||
+      deliveryAreas.some((entry) => entry.toLowerCase() === area.toLowerCase())
+    )
+      return;
     setDeliveryAreas((current) => [...current, area]);
     setNewDeliveryArea("");
     setShowAddArea(false);
@@ -275,15 +419,16 @@ const SupplierDashboard = () => {
 
   const canReviewApplication = Boolean(
     contactPerson.trim() &&
-    contactMobile.trim() &&
-    contactEmail.trim() &&
-    selectedCategories.length &&
-    deliveryAreas.length &&
-    businessAddress.trim() &&
-    province
+      contactMobile.trim() &&
+      contactEmail.trim() &&
+      selectedCategories.length &&
+      deliveryAreas.length &&
+      businessAddress.trim() &&
+      province
   );
+
   const companyInitials = verifiedCompany?.name
-    .split(/\s+/)
+    ?.split(/\s+/)
     .slice(0, 2)
     .map((word) => word[0])
     .join("")
@@ -295,72 +440,103 @@ const SupplierDashboard = () => {
 
       {applicationApproved ? (
         <SupplierApprovedDashboard
+          data={dashboard}
+          loading={dashLoading}
+          error={dashError}
+          onRetry={loadDashboard}
           onOpenRequest={(requestId) => {
-            const query = requestId ? `?request=${encodeURIComponent(requestId)}` : "";
+            const query = requestId
+              ? `?request=${encodeURIComponent(requestId)}`
+              : "";
             navigate(`/supplier/demand-requests${query}`);
           }}
         />
-      ) : <main className="supplier-dashboard-main">
-        <header className="supplier-dashboard-header">
-          <h1>Welcome</h1>
-          <div className="supplier-dashboard-account">
-            <div className="supplier-company-pill">
-              <span className="supplier-company-initials">TB</span>
-              <span>Tiger Brands Ltd</span>
+      ) : (
+        <main className="supplier-dashboard-main">
+          <header className="supplier-dashboard-header">
+            <h1>Welcome</h1>
+            <div className="supplier-dashboard-account">
+              <div className="supplier-company-pill">
+                <span className="supplier-company-initials">
+                  {getInitials(
+                    dashboard?.supplier?.companyName ||
+                      localStorage.getItem("companyName") ||
+                      "Supplier"
+                  )}
+                </span>
+                <span>
+                  {dashboard?.supplier?.companyName ||
+                    localStorage.getItem("companyName") ||
+                    "Supplier"}
+                </span>
+              </div>
+              <SupplierUserMenu />
             </div>
-            <SupplierUserMenu />
-          </div>
-        </header>
+          </header>
 
-        <p className="supplier-registration-notice" role="status">
-          {applicationSubmitted
-            ? "Your application is pending approval. You will be notified when it is approved."
-            : "Your company is not registered yet. You cannot see demand requests until it is approved."}
-        </p>
+          <p className="supplier-registration-notice" role="status">
+            {applicationSubmitted
+              ? "Your application is pending approval. You will be notified when it is approved."
+              : "Your company is not registered yet. You cannot see demand requests until it is approved."}
+          </p>
 
-        <section className="supplier-register-card" aria-labelledby="supplier-register-title">
-          {applicationSubmitted ? (
-            <>
-              <h2 id="supplier-register-title">Application submitted</h2>
-              <p className="supplier-register-description">
-                {verifiedCompany.name} is awaiting approval from IIK. You can see demand requests and send
-                quotations after approval.
-              </p>
-              <span className="supplier-application-pending-badge">Pending approval</span>
-            </>
-          ) : (
-            <>
-              <h2 id="supplier-register-title">Register your company</h2>
-              <p className="supplier-register-description">
-                Before you can see demand requests and send quotations, register your company using its CIPC
-                registration number.
-              </p>
+          <section
+            className="supplier-register-card"
+            aria-labelledby="supplier-register-title"
+          >
+            {applicationSubmitted ? (
+              <>
+                <h2 id="supplier-register-title">Application submitted</h2>
+                <p className="supplier-register-description">
+                  {verifiedCompany.name} is awaiting approval from IIK. You can
+                  see demand requests and send quotations after approval.
+                </p>
+                <span className="supplier-application-pending-badge">
+                  Pending approval
+                </span>
+              </>
+            ) : (
+              <>
+                <h2 id="supplier-register-title">Register your company</h2>
+                <p className="supplier-register-description">
+                  Before you can see demand requests and send quotations,
+                  register your company using its CIPC registration number.
+                </p>
 
-              <ol className="supplier-registration-steps">
-                {REGISTRATION_STEPS.map((step, index) => (
-                  <li key={step}>
-                    <span className="supplier-step-number" aria-hidden="true">{index + 1}</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
+                <ol className="supplier-registration-steps">
+                  {REGISTRATION_STEPS.map((step, index) => (
+                    <li key={step}>
+                      <span className="supplier-step-number" aria-hidden="true">
+                        {index + 1}
+                      </span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
 
-              <button
-                type="button"
-                className="supplier-register-button"
-                onClick={() => setShowVerification(true)}
-              >
-                Register your company
-              </button>
-            </>
-          )}
-        </section>
-      </main>}
+                <button
+                  type="button"
+                  className="supplier-register-button"
+                  onClick={() => setShowVerification(true)}
+                >
+                  Register your company
+                </button>
+              </>
+            )}
+          </section>
+        </main>
+      )}
 
       {showVerification && (
         <div className="supplier-modal-overlay">
           <section
-            className={`supplier-verification-modal${showCompanyDetails || showApplicationReview ? " supplier-company-details-modal" : ""}${applicationSubmitted ? " supplier-application-success-modal" : ""}`}
+            className={`supplier-verification-modal${
+              showCompanyDetails || showApplicationReview
+                ? " supplier-company-details-modal"
+                : ""
+            }${
+              applicationSubmitted ? " supplier-application-success-modal" : ""
+            }`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="supplier-verification-title"
@@ -369,12 +545,31 @@ const SupplierDashboard = () => {
               <>
                 <div
                   className="supplier-registration-progress"
-                  aria-label={`Step ${showApplicationReview ? 4 : showCompanyDetails ? 3 : verifiedCompany ? 2 : 1} of 4`}
+                  aria-label={`Step ${
+                    showApplicationReview
+                      ? 4
+                      : showCompanyDetails
+                      ? 3
+                      : verifiedCompany
+                      ? 2
+                      : 1
+                  } of 4`}
                 >
                   {REGISTRATION_STEPS.map((step, index) => (
                     <span
                       key={step}
-                      className={index < (showApplicationReview ? 4 : showCompanyDetails ? 3 : verifiedCompany ? 2 : 1) ? "active" : ""}
+                      className={
+                        index <
+                        (showApplicationReview
+                          ? 4
+                          : showCompanyDetails
+                          ? 3
+                          : verifiedCompany
+                          ? 2
+                          : 1)
+                          ? "active"
+                          : ""
+                      }
                       aria-hidden="true"
                     />
                   ))}
@@ -417,15 +612,21 @@ const SupplierDashboard = () => {
             {applicationSubmitted ? (
               <div className="supplier-application-success" role="status">
                 <p>
-                  {verifiedCompany.name} has been sent to IIK for review. You will get a notification when it is
-                  approved. After that you can see demand requests and send quotations.
+                  {verifiedCompany.name} has been sent to IIK for review. You
+                  will get a notification when it is approved. After that you
+                  can see demand requests and send quotations.
                 </p>
-                <span className="supplier-application-pending-badge">Pending approval</span>
+                <span className="supplier-application-pending-badge">
+                  Pending approval
+                </span>
                 <button
                   type="button"
                   className="supplier-verify-button supplier-success-account-button"
                   onClick={() => {
-                    sessionStorage.setItem("supplierApplicationApproved", "true");
+                    sessionStorage.setItem(
+                      "supplierApplicationApproved",
+                      "true"
+                    );
                     setApplicationApproved(true);
                     closeVerification();
                   }}
@@ -436,8 +637,14 @@ const SupplierDashboard = () => {
             ) : isCheckingCipc ? (
               <>
                 <div className="supplier-cipc-checking">
-                  <span className="supplier-cipc-spinner" role="status" aria-label="Checking CIPC" />
-                  <p>Looking up {cipcNumber.trim()}. This takes a few seconds.</p>
+                  <span
+                    className="supplier-cipc-spinner"
+                    role="status"
+                    aria-label="Checking CIPC"
+                  />
+                  <p>
+                    Looking up {cipcNumber.trim()}. This takes a few seconds.
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -449,25 +656,47 @@ const SupplierDashboard = () => {
               </>
             ) : showApplicationReview ? (
               <div className="supplier-application-review">
-                <p className="supplier-verification-description">Check everything before you submit.</p>
+                <p className="supplier-verification-description">
+                  Check everything before you submit.
+                </p>
 
                 <div className="supplier-review-grid">
                   <section className="supplier-review-card">
                     <h3>Business registration</h3>
                     <dl className="supplier-review-details">
-                      <div><dt>Application type</dt><dd>Supplier</dd></div>
-                      <div><dt>CIPC number</dt><dd>{verifiedCompany.registrationNumber}</dd></div>
+                      <div>
+                        <dt>Application type</dt>
+                        <dd>Supplier</dd>
+                      </div>
+                      <div>
+                        <dt>CIPC number</dt>
+                        <dd>{verifiedCompany.registrationNumber}</dd>
+                      </div>
                     </dl>
                   </section>
 
                   <section className="supplier-review-card">
                     <h3>CIPC verification</h3>
-                    <p className="supplier-review-caption">Read-only. Not account approval</p>
+                    <p className="supplier-review-caption">
+                      Read-only. Not account approval
+                    </p>
                     <dl className="supplier-review-details">
-                      <div><dt>Registered name</dt><dd>{verifiedCompany.name}</dd></div>
-                      <div><dt>Company type</dt><dd>{verifiedCompany.type}</dd></div>
-                      <div><dt>Registration date</dt><dd>{verifiedCompany.registrationDate}</dd></div>
-                      <div><dt>Status</dt><dd>{verifiedCompany.status}</dd></div>
+                      <div>
+                        <dt>Registered name</dt>
+                        <dd>{verifiedCompany.name}</dd>
+                      </div>
+                      <div>
+                        <dt>Company type</dt>
+                        <dd>{verifiedCompany.type}</dd>
+                      </div>
+                      <div>
+                        <dt>Registration date</dt>
+                        <dd>{verifiedCompany.registrationDate}</dd>
+                      </div>
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{verifiedCompany.status}</dd>
+                      </div>
                     </dl>
                   </section>
 
@@ -475,24 +704,36 @@ const SupplierDashboard = () => {
                     <h3>Company profile</h3>
                     <p className="supplier-review-caption">Provided by you</p>
                     <div className="supplier-review-logo-row">
-                      <span className="supplier-review-logo">{companyInitials}</span>
+                      <span className="supplier-review-logo">
+                        {companyInitials}
+                      </span>
                       <div>
                         <label className="supplier-logo-upload">
                           Upload logo
                           <input
                             type="file"
                             accept="image/png,image/jpeg"
-                            onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)}
+                            onChange={(event) =>
+                              setLogoFile(event.target.files?.[0] ?? null)
+                            }
                           />
                         </label>
                         <span className="supplier-logo-hint">
-                          {logoFile ? logoFile.name : "Logo not uploaded: initials will show"}
+                          {logoFile
+                            ? logoFile.name
+                            : "Logo not uploaded: initials will show"}
                         </span>
                       </div>
                     </div>
                     <dl className="supplier-review-details">
-                      <div><dt>Categories</dt><dd>{selectedCategories.join(", ")}</dd></div>
-                      <div><dt>Delivery areas</dt><dd>{deliveryAreas.join(", ")}</dd></div>
+                      <div>
+                        <dt>Categories</dt>
+                        <dd>{selectedCategories.join(", ")}</dd>
+                      </div>
+                      <div>
+                        <dt>Delivery areas</dt>
+                        <dd>{deliveryAreas.join(", ")}</dd>
+                      </div>
                     </dl>
                   </section>
 
@@ -500,23 +741,47 @@ const SupplierDashboard = () => {
                     <h3>Contact information</h3>
                     <p className="supplier-review-caption">Provided by you</p>
                     <dl className="supplier-review-details">
-                      <div><dt>Contact person</dt><dd>{contactPerson}</dd></div>
-                      <div><dt>Email</dt><dd>{contactEmail}</dd></div>
-                      <div><dt>Mobile</dt><dd>{contactMobile}</dd></div>
-                      <div><dt>Website</dt><dd>{website || "Not provided"}</dd></div>
+                      <div>
+                        <dt>Contact person</dt>
+                        <dd>{contactPerson}</dd>
+                      </div>
+                      <div>
+                        <dt>Email</dt>
+                        <dd>{contactEmail}</dd>
+                      </div>
+                      <div>
+                        <dt>Mobile</dt>
+                        <dd>{contactMobile}</dd>
+                      </div>
+                      <div>
+                        <dt>Website</dt>
+                        <dd>{website || "Not provided"}</dd>
+                      </div>
                     </dl>
                   </section>
 
                   <section className="supplier-review-card supplier-review-address-card">
                     <h3>Address information</h3>
-                    <p className="supplier-review-caption">Registered address from CIPC, the rest from you</p>
+                    <p className="supplier-review-caption">
+                      Registered address from CIPC, the rest from you
+                    </p>
                     <dl className="supplier-review-details">
-                      <div><dt>Registered address</dt><dd>{verifiedCompany.registeredAddress}</dd></div>
+                      <div>
+                        <dt>Registered address</dt>
+                        <dd>{verifiedCompany.registeredAddress}</dd>
+                      </div>
                       <div>
                         <dt>Business address</dt>
-                        <dd>{sameRegisteredAddress ? "Same as registered address" : businessAddress}</dd>
+                        <dd>
+                          {sameRegisteredAddress
+                            ? "Same as registered address"
+                            : businessAddress}
+                        </dd>
                       </div>
-                      <div><dt>Postal address</dt><dd>{postalAddress || "Not provided"}</dd></div>
+                      <div>
+                        <dt>Postal address</dt>
+                        <dd>{postalAddress || "Not provided"}</dd>
+                      </div>
                     </dl>
                   </section>
                 </div>
@@ -533,7 +798,9 @@ const SupplierDashboard = () => {
                   <input
                     type="checkbox"
                     checked={acceptedSupplierTerms}
-                    onChange={(event) => setAcceptedSupplierTerms(event.target.checked)}
+                    onChange={(event) =>
+                      setAcceptedSupplierTerms(event.target.checked)
+                    }
                   />
                   <span>I accept the platform’s terms for suppliers.</span>
                 </label>
@@ -541,10 +808,13 @@ const SupplierDashboard = () => {
                   <input
                     type="checkbox"
                     checked={confirmedApplicationDetails}
-                    onChange={(event) => setConfirmedApplicationDetails(event.target.checked)}
+                    onChange={(event) =>
+                      setConfirmedApplicationDetails(event.target.checked)
+                    }
                   />
                   <span>
-                    I confirm that the information is correct and that I am allowed to apply for this company.
+                    I confirm that the information is correct and that I am
+                    allowed to apply for this company.
                   </span>
                 </label>
 
@@ -552,7 +822,9 @@ const SupplierDashboard = () => {
                   <button
                     type="button"
                     className="supplier-verify-button"
-                    disabled={!acceptedSupplierTerms || !confirmedApplicationDetails}
+                    disabled={
+                      !acceptedSupplierTerms || !confirmedApplicationDetails
+                    }
                     onClick={() => {
                       setApplicationSubmitted(true);
                       setShowApplicationReview(false);
@@ -573,8 +845,8 @@ const SupplierDashboard = () => {
             ) : showCompanyDetails ? (
               <>
                 <p className="supplier-verification-description">
-                  You fill in these details. They are kept separate from the read-only CIPC information.
-                  Fields marked * are required.
+                  You fill in these details. They are kept separate from the
+                  read-only CIPC information. Fields marked * are required.
                 </p>
 
                 <form
@@ -594,10 +866,14 @@ const SupplierDashboard = () => {
                         <input
                           type="file"
                           accept="image/png,image/jpeg"
-                          onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)}
+                          onChange={(event) =>
+                            setLogoFile(event.target.files?.[0] ?? null)
+                          }
                         />
                       </label>
-                      <span className="supplier-logo-hint">Company logo. PNG or JPG. Optional.</span>
+                      <span className="supplier-logo-hint">
+                        Company logo. PNG or JPG. Optional.
+                      </span>
                     </div>
                   </div>
 
@@ -607,7 +883,9 @@ const SupplierDashboard = () => {
                       <input
                         type="text"
                         value={contactPerson}
-                        onChange={(event) => setContactPerson(event.target.value)}
+                        onChange={(event) =>
+                          setContactPerson(event.target.value)
+                        }
                         required
                       />
                     </label>
@@ -616,7 +894,9 @@ const SupplierDashboard = () => {
                       <input
                         type="tel"
                         value={contactMobile}
-                        onChange={(event) => setContactMobile(event.target.value)}
+                        onChange={(event) =>
+                          setContactMobile(event.target.value)
+                        }
                         required
                       />
                     </label>
@@ -625,7 +905,9 @@ const SupplierDashboard = () => {
                       <input
                         type="email"
                         value={contactEmail}
-                        onChange={(event) => setContactEmail(event.target.value)}
+                        onChange={(event) =>
+                          setContactEmail(event.target.value)
+                        }
                         required
                       />
                     </label>
@@ -647,7 +929,11 @@ const SupplierDashboard = () => {
                         <button
                           key={category}
                           type="button"
-                          className={`supplier-option-chip${selectedCategories.includes(category) ? " selected" : ""}`}
+                          className={`supplier-option-chip${
+                            selectedCategories.includes(category)
+                              ? " selected"
+                              : ""
+                          }`}
                           aria-pressed={selectedCategories.includes(category)}
                           onClick={() => toggleProductCategory(category)}
                         >
@@ -665,7 +951,11 @@ const SupplierDashboard = () => {
                           key={area}
                           type="button"
                           className="supplier-option-chip selected"
-                          onClick={() => setDeliveryAreas((current) => current.filter((entry) => entry !== area))}
+                          onClick={() =>
+                            setDeliveryAreas((current) =>
+                              current.filter((entry) => entry !== area)
+                            )
+                          }
                           aria-label={`Remove ${area}`}
                         >
                           {area}
@@ -676,11 +966,17 @@ const SupplierDashboard = () => {
                           <input
                             type="text"
                             value={newDeliveryArea}
-                            onChange={(event) => setNewDeliveryArea(event.target.value)}
+                            onChange={(event) =>
+                              setNewDeliveryArea(event.target.value)
+                            }
                             aria-label="New delivery area"
                             autoFocus
                           />
-                          <button type="button" className="supplier-add-area-button" onClick={addDeliveryArea}>
+                          <button
+                            type="button"
+                            className="supplier-add-area-button"
+                            onClick={addDeliveryArea}
+                          >
                             Add
                           </button>
                         </span>
@@ -704,11 +1000,14 @@ const SupplierDashboard = () => {
                       onChange={(event) => {
                         const checked = event.target.checked;
                         setSameRegisteredAddress(checked);
-                        setBusinessAddress(checked ? verifiedCompany.registeredAddress : "");
+                        setBusinessAddress(
+                          checked ? verifiedCompany.registeredAddress : ""
+                        );
                       }}
                     />
                     <label htmlFor="supplier-same-address">
-                      Business address is the same as the company’s registered address
+                      Business address is the same as the company’s registered
+                      address
                     </label>
                   </div>
 
@@ -717,7 +1016,9 @@ const SupplierDashboard = () => {
                     <textarea
                       rows="3"
                       value={businessAddress}
-                      onChange={(event) => setBusinessAddress(event.target.value)}
+                      onChange={(event) =>
+                        setBusinessAddress(event.target.value)
+                      }
                       readOnly={sameRegisteredAddress}
                       required
                     />
@@ -729,12 +1030,18 @@ const SupplierDashboard = () => {
                       <input
                         type="text"
                         value={postalAddress}
-                        onChange={(event) => setPostalAddress(event.target.value)}
+                        onChange={(event) =>
+                          setPostalAddress(event.target.value)
+                        }
                       />
                     </label>
                     <label className="supplier-details-field">
                       Province *
-                      <select value={province} onChange={(event) => setProvince(event.target.value)} required>
+                      <select
+                        value={province}
+                        onChange={(event) => setProvince(event.target.value)}
+                        required
+                      >
                         {SUPPLIER_PROVINCES.map((provinceName) => (
                           <option key={provinceName}>{provinceName}</option>
                         ))}
@@ -762,9 +1069,12 @@ const SupplierDashboard = () => {
               </>
             ) : verifiedCompany ? (
               <>
-                <span className="supplier-cipc-readonly">From CIPC · read-only</span>
+                <span className="supplier-cipc-readonly">
+                  From CIPC · read-only
+                </span>
                 <p className="supplier-verification-description">
-                  These details come from the CIPC lookup. You cannot change them here.
+                  These details come from the CIPC lookup. You cannot change
+                  them here.
                 </p>
                 <dl className="supplier-cipc-details">
                   <div>
@@ -793,7 +1103,8 @@ const SupplierDashboard = () => {
                   </div>
                 </dl>
                 <p className="supplier-cipc-demo-note">
-                  Checking your number does not approve your company. IIK reviews every application.
+                  Checking your number does not approve your company. IIK
+                  reviews every application.
                 </p>
                 <div className="supplier-verification-actions">
                   <button
@@ -818,12 +1129,15 @@ const SupplierDashboard = () => {
             ) : (
               <>
                 <p className="supplier-verification-description">
-                  Enter the CIPC registration number of your company. We check it against CIPC records before
-                  you add your details.
+                  Enter the CIPC registration number of your company. We check
+                  it against CIPC records before you add your details.
                 </p>
 
                 <form onSubmit={handleVerifyCompany}>
-                  <label className="supplier-cipc-label" htmlFor="supplier-cipc-number">
+                  <label
+                    className="supplier-cipc-label"
+                    htmlFor="supplier-cipc-number"
+                  >
                     CIPC registration number *
                   </label>
                   <input
@@ -836,21 +1150,38 @@ const SupplierDashboard = () => {
                       setVerificationError("");
                     }}
                     placeholder="2012/123456/07"
-                    aria-describedby={verificationError ? "supplier-cipc-error" : "supplier-cipc-format"}
+                    aria-describedby={
+                      verificationError
+                        ? "supplier-cipc-error"
+                        : "supplier-cipc-format"
+                    }
                     required
                   />
-                  <span id="supplier-cipc-format" className="supplier-cipc-format">
+                  <span
+                    id="supplier-cipc-format"
+                    className="supplier-cipc-format"
+                  >
                     Format: YYYY/NNNNNN/NN. Example: 2024/123456/07
                   </span>
                   {verificationError && (
-                    <p id="supplier-cipc-error" className="supplier-verification-error" role="alert">
+                    <p
+                      id="supplier-cipc-error"
+                      className="supplier-verification-error"
+                      role="alert"
+                    >
                       {verificationError}
                     </p>
                   )}
 
                   <div className="supplier-verification-actions">
-                    <button type="submit" className="supplier-verify-button">Verify company</button>
-                    <button type="button" className="supplier-cancel-button" onClick={closeVerification}>
+                    <button type="submit" className="supplier-verify-button">
+                      Verify company
+                    </button>
+                    <button
+                      type="button"
+                      className="supplier-cancel-button"
+                      onClick={closeVerification}
+                    >
                       Cancel
                     </button>
                   </div>

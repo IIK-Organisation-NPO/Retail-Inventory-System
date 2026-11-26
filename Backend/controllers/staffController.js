@@ -12,6 +12,11 @@ const isSequentialOrRepeating = (code) => {
 // --- GET ALL STAFF FOR A STORE ---
 exports.getStaff = async (req, res) => {
   const { storeId } = req.query;
+  
+  if (!storeId) {
+    return res.status(400).json({ message: "Store ID is required" });
+  }
+
   try {
     const [staff] = await db.query(`
       SELECT 
@@ -22,7 +27,7 @@ exports.getStaff = async (req, res) => {
         s.MobileNumber as mobile, 
         su.IsActive
       FROM Staff s
-      JOIN StoreUsers su ON s.StaffID = su.StaffID
+      INNER JOIN StoreUsers su ON s.StaffID = su.StaffID
       WHERE su.StoreID = ?
     `, [storeId]);
     
@@ -37,11 +42,16 @@ exports.getStaff = async (req, res) => {
 exports.addStaff = async (req, res) => {
   const { storeId, name, surname, gender, email, mobile, role, password, hasDisability, disabilityType } = req.body;
 
-  if (!storeId || !name || !surname || !mobile || !password) {
+  // 1. Validate required fields (including store)
+  if (!storeId) {
+    return res.status(400).json({ message: "Select a store", field: "storeId" });
+  }
+  
+  if (!name || !surname || !mobile || !password) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // 1. Validate the 6-digit code format
+  // 2. Validate the 6-digit code format
   if (isSequentialOrRepeating(password)) {
     return res.status(400).json({ 
       message: "Can not proceed ascending/descending order or (e.g. 6 same number (111111)", 
@@ -54,27 +64,34 @@ exports.addStaff = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 2. Check if email OR mobile is already in use
+    // 3. Check if email is already in use in Staff OR Owner tables
     if (email) {
-      const [existingEmail] = await connection.query('SELECT StaffID FROM Staff WHERE Email = ?', [email]);
-      if (existingEmail.length > 0) {
-        return res.status(409).json({ message: "This user already exist", field: "email" });
+      const [staffEmail] = await connection.query('SELECT StaffID FROM Staff WHERE Email = ?', [email]);
+      const [ownerEmail] = await connection.query('SELECT OwnerID FROM Owner WHERE Email = ?', [email]);
+      
+      if (staffEmail.length > 0 || ownerEmail.length > 0) {
+        await connection.rollback();
+        return res.status(409).json({ message: "This user is already existing", field: "email" });
       }
     }
     
-    const [existingMobile] = await connection.query('SELECT StaffID FROM Staff WHERE MobileNumber = ?', [mobile]);
-    if (existingMobile.length > 0) {
-      return res.status(409).json({ message: "This user already exist", field: "mobile" });
+    // 4. Check if mobile is already in use in Staff OR Owner tables
+    const [staffMobile] = await connection.query('SELECT StaffID FROM Staff WHERE MobileNumber = ?', [mobile]);
+    const [ownerMobile] = await connection.query('SELECT OwnerID FROM Owner WHERE MobileNumber = ?', [mobile]);
+    
+    if (staffMobile.length > 0 || ownerMobile.length > 0) {
+      await connection.rollback();
+      return res.status(409).json({ message: "This user is already existing", field: "mobile" });
     }
 
-    // 3. Hash the 6-digit code
+    // 5. Hash the 6-digit code
     const salt = await bcrypt.genSalt(10);
     const hashedCode = await bcrypt.hash(password, salt);
 
-    // 4. Map Role string to RoleID (Assuming Staff = 3 based on your schema)
+    // 6. Map Role string to RoleID (Assuming Staff = 3 based on your schema)
     const roleId = 3; 
 
-    // 5. Insert into Staff table matching your exact schema
+    // 7. Insert into Staff table matching your exact schema
     const [result] = await connection.query(
       `INSERT INTO Staff (Name, Surname, Email, MobileNumber, Gender, Disability, DisabilityDescription, PasswordHash, RoleID) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -82,7 +99,7 @@ exports.addStaff = async (req, res) => {
     );
     const newStaffId = result.insertId;
 
-    // 6. Link to Store
+    // 8. Link to Store
     await connection.query(
       `INSERT INTO StoreUsers (StoreID, StaffID, IsActive) VALUES (?, ?, 1)`,
       [storeId, newStaffId]
@@ -134,34 +151,52 @@ exports.updateStaff = async (req, res) => {
   }
 };
 
-// --- OTHER FUNCTIONS (Keep as is) ---
+// --- TOGGLE STAFF STATUS ---
 exports.toggleStaffStatus = async (req, res) => {
   const { staffId } = req.params;
   const { isActive, storeId } = req.body; 
   try {
-    await db.query('UPDATE StoreUsers SET IsActive = ? WHERE StaffID = ? AND StoreID = ?', [isActive, staffId, storeId]);
+    await db.query(
+      'UPDATE StoreUsers SET IsActive = ? WHERE StaffID = ? AND StoreID = ?', 
+      [isActive, staffId, storeId]
+    );
     res.status(200).json({ message: `Staff account ${isActive ? 'enabled' : 'disabled'}` });
   } catch (error) {
+    console.error("TOGGLE STAFF ERROR:", error);
     res.status(500).json({ message: "Database error" });
   }
 };
 
+// --- GET LOGGED-IN STAFF PROFILE ---
 exports.getMyProfile = async (req, res) => {
   try {
-    const [staff] = await db.query('SELECT StaffID, Name, Surname, Email, MobileNumber FROM Staff WHERE StaffID = ?', [req.user.id]);
+    const [staff] = await db.query(
+      'SELECT StaffID, Name, Surname, Email, MobileNumber FROM Staff WHERE StaffID = ?', 
+      [req.user.id]
+    );
+    
     if (staff.length === 0) return res.status(404).json({ message: "Staff member not found" });
+    
     res.status(200).json(staff[0]);
   } catch (error) {
+    console.error("GET STAFF PROFILE ERROR:", error);
     res.status(500).json({ message: "Database error" });
   }
 };
 
+// --- UPDATE LOGGED-IN STAFF PROFILE ---
 exports.updateMyProfile = async (req, res) => {
   const { name, surname, mobile } = req.body;
+  
   try {
-    await db.query('UPDATE Staff SET Name = ?, Surname = ?, MobileNumber = ? WHERE StaffID = ?', [name, surname, mobile, req.user.id]);
+    await db.query(
+      'UPDATE Staff SET Name = ?, Surname = ?, MobileNumber = ? WHERE StaffID = ?', 
+      [name, surname, mobile, req.user.id]
+    );
+    
     res.status(200).json({ message: "Profile updated successfully" });
   } catch (error) {
+    console.error("UPDATE STAFF PROFILE ERROR:", error);
     res.status(500).json({ message: "Database error" });
   }
 };

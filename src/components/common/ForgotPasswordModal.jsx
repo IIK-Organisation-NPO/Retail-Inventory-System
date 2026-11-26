@@ -1,5 +1,4 @@
 // src/components/common/ForgotPasswordModal.jsx
-// Forgot password popup flow: email address -> OTP code -> new password
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../../Style/components/auth.css";
@@ -16,11 +15,13 @@ const TITLES = {
 };
 
 const maskEmail = (email) => {
+  if (!email) return "";
   const [name, domain] = email.split("@");
   return `${name.slice(0, 1)}***@${domain}`;
 };
 
-const ForgotPasswordModal = ({ onClose }) => {
+// ADDED role prop with a default just in case
+const ForgotPasswordModal = ({ onClose, role = "ADMIN" }) => {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState(Array(OTP_LENGTH).fill(""));
@@ -28,7 +29,7 @@ const ForgotPasswordModal = ({ onClose }) => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false); // Added loading state
+  const [loading, setLoading] = useState(false);
   const otpRefs = useRef([]);
 
   useEffect(() => {
@@ -55,15 +56,39 @@ const ForgotPasswordModal = ({ onClose }) => {
     setStep(nextStep);
   };
 
-  const sendCode = (recipient = email) => {
-    setEmail(recipient);
-    // TODO: call the API to send the OTP to `recipient`
-    setCode(Array(OTP_LENGTH).fill(""));
-    setSecondsLeft(RESEND_SECONDS);
-    goTo("code");
+  // ==========================================
+  // STEP 1: SEND OTP API CALL
+  // ==========================================
+  const sendCode = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/forgot-password/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          identifier: email.trim(), 
+          role: role 
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to send OTP");
+      }
+
+      setCode(Array(OTP_LENGTH).fill(""));
+      setSecondsLeft(RESEND_SECONDS);
+      goTo("code");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // --- Step 1: Email address ---
   const handleSendOtp = (e) => {
     e.preventDefault();
     const recipient = email.trim();
@@ -71,7 +96,11 @@ const ForgotPasswordModal = ({ onClose }) => {
       setError("Enter a valid email address.");
       return;
     }
-    sendCode(recipient);
+    sendCode();
+  };
+
+  const handleResendCode = () => {
+    sendCode();
   };
 
   // ==========================================
@@ -103,7 +132,6 @@ const ForgotPasswordModal = ({ onClose }) => {
     otpRefs.current[Math.min(digits.length, OTP_LENGTH - 1)].focus();
   };
 
-  // Move to reset step (Backend will verify OTP in the final step)
   const handleVerifyCode = (e) => {
     e.preventDefault();
     if (code.join("").length !== OTP_LENGTH) {
@@ -141,7 +169,7 @@ const ForgotPasswordModal = ({ onClose }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          mobileNumber: mobile, 
+          identifier: email.trim(), // FIXED: Changed from mobileNumber to identifier
           otp: code.join(""), 
           newPassword: password, 
           role: role 
@@ -213,7 +241,6 @@ const ForgotPasswordModal = ({ onClose }) => {
           </form>
         )}
 
-        {/* STEP 2: OTP CODE */}
         {step === "code" && (
           <form onSubmit={handleVerifyCode} noValidate>
             <p className="auth-modal-text">
@@ -245,7 +272,9 @@ const ForgotPasswordModal = ({ onClose }) => {
               ) : (
                 <>
                   Didn't get a code?{" "}
-                  <button type="button" className="resend-btn" onClick={sendCode}>Resend code</button>
+                  <button type="button" className="resend-btn" onClick={handleResendCode} disabled={loading}>
+                    {loading ? "Resending..." : "Resend code"}
+                  </button>
                 </>
               )}
             </div>
@@ -259,7 +288,6 @@ const ForgotPasswordModal = ({ onClose }) => {
           </form>
         )}
 
-        {/* STEP 3: NEW PASSWORD */}
         {step === "reset" && (
           <form onSubmit={handleResetPassword} noValidate>
             <p className="auth-modal-text">

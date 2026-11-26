@@ -59,6 +59,15 @@ const AppRoutes = () => {
         {/* Set the Login page as the default home page for now */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<AdminLogin />} />
+        
+        {/* Auth Routes */}
+        <Route path="/login/store-owner-staff" element={<LoginStoreOwnerStaff />} />
+        <Route path="/login/staff" element={<LoginStoreOwnerStaff />} /> {/* <-- ADDED THIS */}
+        <Route path="/login/supplier" element={<LoginSupplier />} />
+        <Route path="/signupstoreowner" element={<SignupStoreOwner />} />
+        <Route path="/signupsupplier" element={<SignupSupplier />} />
+
+        {/* Admin Routes */}
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/stores" element={<AdminStores />} />
         <Route path="/admin/suppliers" element={<AdminSuppliers />} />
@@ -69,11 +78,8 @@ const AppRoutes = () => {
         <Route path="/admin/announcements" element={<AdminAnnouncements />} />
         <Route path="/admin/profile" element={<AdminProfile />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
-        <Route path="/dashboard" element={<StoreOwner_Dashboard />} />
-        <Route path="/login/store-owner-staff" element={<LoginStoreOwnerStaff />} />
-        <Route path="/login/supplier" element={<LoginSupplier />} />
-        <Route path="/signupstoreowner" element={<SignupStoreOwner />} />
-        <Route path="/signupsupplier" element={<SignupSupplier />} />
+        
+        {/* Supplier Routes */}
         <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
         <Route path="/supplier/demand-requests" element={<SupplierDemandRequests />} />
         <Route path="/supplier/quotations" element={<SupplierQuotations />} />
@@ -85,6 +91,7 @@ const AppRoutes = () => {
         <Route path="/supplier/settings" element={<SupplierSettings />} />
 
         {/* Store Owner */}
+        <Route path="/dashboard" element={<StoreOwner_Dashboard />} />
         <Route path="/store-owner/dashboard" element={<StoreOwner_Dashboard />} />
         <Route path="/store-owner/products" element={<Products />} />
         <Route path="/store-owner/inventory" element={<StoreOwnerInventory />} />
@@ -102,16 +109,17 @@ const AppRoutes = () => {
         <Route path="/store-owner/settings" element={<StoreOwner_Settings />} />
         <Route path="/store-owner/reports" element={<Reports />} />
      
-       {/* Staff Routes */}
-       <Route path="/staff" element={<StaffDashboard />} />
-       <Route path="/staff/account" element={<StaffMyAccount />} />
-       <Route path="/staff/sell" element={<StaffSell />} />
-
-        {/* Staff */}
+        {/* Staff Routes */}
+        <Route path="/staff" element={<StaffDashboard />} />
+        <Route path="/staff/dashboard" element={<StaffDashboard />} /> {/* <-- ADDED THIS */}
+        <Route path="/staff/account" element={<StaffMyAccount />} />
+        <Route path="/staff/sell" element={<StaffSell />} />
         <Route path="/staff/stock" element={<Staff_Stock />} />
         <Route path="/staff/sales-history" element={<Staff_SalesHistory />} />
         <Route path="/staff/alerts" element={<Staff_Alerts />} />
-
+        
+        {/* Catch-all for 404 - Redirects to login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

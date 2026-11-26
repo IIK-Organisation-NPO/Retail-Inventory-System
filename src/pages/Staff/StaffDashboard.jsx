@@ -1,5 +1,5 @@
 // src/pages/Staff/StaffDashboard.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Staff_Sidebar from "../../components/Staff/Staff_Sidebar";
@@ -31,56 +31,61 @@ const StaffDashboard = () => {
   const userName = localStorage.getItem("userName") || "Staff Member";
 
   // --- 1. FETCH DATA ON LOAD ---
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
+      setLoading(true);
+      setError("");
       const headers = { "Authorization": `Bearer ${token}` };
 
       // Fetch Products
       const prodRes = await fetch(`http://localhost:5000/api/products?storeId=${storeId}`, { headers });
       const prodData = await prodRes.json();
       
-      let lowCount = 0;
-      if (prodRes.ok) {
-        const formattedProds = prodData.map(p => {
-          if (p.OnHand <= p.ReorderLevel) lowCount++;
-          return {
-            id: p.ProductID,
-            product: p.Name,
-            price: Number(p.SellingPrice),
-            onHand: p.OnHand,
-            reorder: p.ReorderLevel,
-            barcode: p.Barcode
-          };
-        });
-        setProducts(formattedProds);
+      if (!prodRes.ok) {
+        throw new Error(prodData.message || `Failed to load products (Status: ${prodRes.status})`);
       }
+
+      let lowCount = 0;
+      const formattedProds = prodData.map(p => {
+        if (p.OnHand <= p.ReorderLevel) lowCount++;
+        return {
+          id: p.ProductID,
+          product: p.Name,
+          price: Number(p.SellingPrice),
+          onHand: p.OnHand,
+          reorder: p.ReorderLevel,
+          barcode: p.Barcode
+        };
+      });
+      setProducts(formattedProds);
 
       // Fetch Sales History
       const salesRes = await fetch(`http://localhost:5000/api/sales/history?storeId=${storeId}`, { headers });
       const salesData = await salesRes.json();
       
+      if (!salesRes.ok) {
+        throw new Error(salesData.message || `Failed to load sales (Status: ${salesRes.status})`);
+      }
+
       let todaySales = 0;
       let todayTransactions = 0;
-      if (salesRes.ok) {
-        // Map and filter only today's sales
-        const todayStr = new Date().toISOString().split('T')[0];
-        
-        const formattedSales = salesData.map(s => {
-          if (s.date === todayStr) {
-            todaySales += Number(s.total);
-            todayTransactions++;
-          }
-          return {
-            id: s.id,
-            time: s.time,
-            items: s.itemsText,
-            payment: s.payment,
-            total: `R${Number(s.total).toFixed(2)}`
-          };
-        });
+      const todayStr = new Date().toISOString().split('T')[0];
+      
+      const formattedSales = salesData.map(s => {
+        if (s.date === todayStr) {
+          todaySales += Number(s.total);
+          todayTransactions++;
+        }
+        return {
+          id: s.id,
+          time: s.time,
+          items: s.itemsText,
+          payment: s.payment,
+          total: `R${Number(s.total).toFixed(2)}`
+        };
+      });
 
-        setRecentSales(formattedSales.slice(0, 5)); // Show only the last 5
-      }
+      setRecentSales(formattedSales.slice(0, 5)); // Show only the last 5
 
       setStats({
         salesToday: todaySales,
@@ -89,15 +94,23 @@ const StaffDashboard = () => {
       });
 
     } catch (err) {
-      setError("Failed to load dashboard data.");
+      console.error("Dashboard Error:", err);
+      setError(err.message || "Failed to load dashboard data.");
     } finally {
-      setLoading(false);
+      setLoading(false); // This will always run, stopping the infinite loader
     }
-  };
+  }, [storeId, token]);
 
   useEffect(() => {
-    if (token) fetchData();
-  }, [storeId, token]);
+    // If no token exists, stop loading and redirect to login immediately
+    if (!token || token === "undefined" || token === "null") {
+      setLoading(false);
+      navigate("/login/store-owner-staff");
+      return;
+    }
+    
+    fetchData();
+  }, [token, navigate, fetchData]);
 
   // --- 2. HANDLE RECORD SALE ---
   const handleRecordSale = async (sale) => {
@@ -121,7 +134,8 @@ const StaffDashboard = () => {
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Failed to save sale");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to save sale");
 
       setOpenPopup(null);
       fetchData(); // Refresh data from DB
@@ -144,7 +158,8 @@ const StaffDashboard = () => {
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Failed to update stock");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to update stock");
 
       setOpenPopup(null);
       fetchData(); // Refresh data from DB
@@ -169,7 +184,6 @@ const StaffDashboard = () => {
           
           <div className="header-actions">
             <span className="sync-status">Synced just now</span>
-            {/* Pass readOnly to prevent staff from switching stores */}
             <StoreOwner_StoreSwitcher readOnly />
             <StoreOwner_UserMenu
               name={userName}
@@ -181,9 +195,10 @@ const StaffDashboard = () => {
           </div>
         </header>
 
+        {/* Error Message Display */}
         {error && (
           <div style={{ color: 'red', backgroundColor: '#ffebee', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
-            {error}
+            <strong>Error:</strong> {error}
           </div>
         )}
 

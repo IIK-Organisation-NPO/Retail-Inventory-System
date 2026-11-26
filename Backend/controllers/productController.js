@@ -98,18 +98,15 @@ const convertUnit = (unitString) => {
 
 // --- HELPER: Get or Create Unit ID ---
 const getOrCreateUnitId = async (unitName) => {
-  // 1. Convert the unit first (e.g., "7000g" -> "7kg")
   const convertedName = convertUnit(unitName);
   const cleanName = convertedName.trim();
   if (!cleanName) return null;
 
-  // Check if it exists
   const [existing] = await db.query('SELECT UnitOfMeasureID FROM UnitOfMeasure WHERE UnitName = ?', [cleanName]);
   if (existing.length > 0) {
     return existing[0].UnitOfMeasureID;
   }
 
-  // If not, create it
   const [result] = await db.query('INSERT INTO UnitOfMeasure (UnitName) VALUES (?)', [cleanName]);
   return result.insertId;
 };
@@ -152,7 +149,7 @@ exports.updateProduct = async (req, res) => {
 
     await db.query(
       `UPDATE Products 
-       SET Name = ?, CategoryId = ?, Barcode = ?, UnitOfMeasure = ?, CostPrice = ?, SellingPrice = ?, ReorderLevel = ? 
+       SET Name = ?, CategoryID = ?, Barcode = ?, UnitOfMeasure = ?, CostPrice = ?, SellingPrice = ?, ReorderLevel = ? 
        WHERE ProductID = ?`,
       [name, categoryId, barcode || null, unitId, costPrice, sellingPrice, reorderLevel, productId]
     );

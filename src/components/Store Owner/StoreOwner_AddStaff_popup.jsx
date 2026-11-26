@@ -34,7 +34,8 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
     hasDisability: staffMember?.hasDisability ?? false,
     disabilityType: staffMember?.disabilityType ?? "",
     role: staffMember?.role ?? STAFF_ROLES[0],
-    storeId: staffMember?.storeId ?? defaultStoreId ?? stores[0]?.id ?? "",
+    // REMOVED stores[0]?.id so it forces the user to select a store
+    storeId: staffMember?.storeId ?? defaultStoreId ?? "", 
     code: "",
     confirmCode: "",
   }));
@@ -98,6 +99,11 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
       errors.disabilityType = "Enter type of disability";
     }
 
+    // NEW: Validate that a store is selected
+    if (!form.storeId) {
+      errors.storeId = "Select a store";
+    }
+
     // When editing, the user code only changes if a new one is entered
     const codeRequired = !isEdit || form.code || form.confirmCode;
     if (codeRequired) {
@@ -154,6 +160,8 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
         setValidationErrors({ mobile: err.message });
       } else if (err.field === "code") {
         setValidationErrors({ code: err.message });
+      } else if (err.field === "storeId") {
+        setValidationErrors({ storeId: err.message });
       } else {
         setValidationErrors({ general: err.message });
       }
@@ -271,10 +279,13 @@ const StoreOwner_AddStaff_popup = ({ stores, defaultStoreId, staffMember, isMobi
           <div className="sp-field">
             <label htmlFor="staff-store">Store</label>
             <select id="staff-store" className="sp-input sp-select" value={form.storeId} onChange={update("storeId")}>
+              {/* ADDED A DISABLED PLACEHOLDER OPTION */}
+              <option value="" disabled>Select a store</option>
               {stores.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
+            {validationErrors.storeId && <span className="field-error" style={{ color: 'red', fontSize: '12px', marginTop: '5px', display: 'block' }}>{validationErrors.storeId}</span>}
           </div>
         </div>
 

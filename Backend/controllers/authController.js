@@ -120,8 +120,11 @@ const processLogin = async (user, actualRole, providedPassword, res) => {
     const isMatch = await bcrypt.compare(providedPassword, user.PasswordHash);
     
     if (!isMatch) {
+      console.log(`❌ [LOGIN FAILED] Password mismatch for ${user.Email}`);
       return res.status(401).json({ message: "Invalid email or password" });
     }
+
+    console.log(`✅ [LOGIN SUCCESS] Password matched for ${user.Email}`);
 
     const userId = user.OwnerID || user.StaffID || user.AdminID || user.SupplierID;
     const token = jwt.sign(
@@ -130,77 +133,118 @@ const processLogin = async (user, actualRole, providedPassword, res) => {
       { expiresIn: '1d' }
     );
 
-    res.status(200).json({ message: "Login successful", token, role: actualRole, user: { name: user.Name, surname: user.Surname } });
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      role: actualRole,
+      user: {
+        id: userId,
+        name: user.Name,
+        surname: user.Surname,
+        email: user.Email,
+        companyName: user.CompanyName || null, 
+      },
+    });
   } catch (error) {
+    console.error("PROCESS LOGIN ERROR:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // --- LOGIN ---
 exports.login = async (req, res) => {
-  const { email, password, role } = req.body;
+  const { email: identifier, password, role } = req.body;
+  
   try {
     const tableName = getTableForRole(role);
     if (!tableName) return res.status(400).json({ message: "Invalid role" });
 
-    const [results] = await db.query(`SELECT * FROM ${tableName} WHERE Email = ?`, [email]);
+    const altNumber = getAlternateNumber(identifier);
+
+    const [results] = await db.query(
+      `SELECT * FROM ${tableName} WHERE Email = ? OR MobileNumber = ? OR MobileNumber = ?`, 
+      [identifier, identifier, altNumber]
+    );
     
     if (results.length === 0 && role === 'STORE') {
-      const [staffResults] = await db.query('SELECT * FROM Staff WHERE Email = ?', [email]);
+      const [staffResults] = await db.query(
+        'SELECT * FROM Staff WHERE Email = ? OR MobileNumber = ? OR MobileNumber = ?', 
+        [identifier, identifier, altNumber]
+      );
       
       if (staffResults.length === 0) {
-        return res.status(401).json({ message: "Invalid email or password" });
+        return res.status(401).json({ message: "Invalid email, mobile number, or password" });
       }
       
       return await processLogin(staffResults[0], 'STAFF', password, res);
     }
 
     if (results.length === 0) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid email, mobile number, or password" });
     }
 
     return await processLogin(results[0], role === 'STORE' ? 'OWNER' : role, password, res);
   } catch (error) {
+    console.error("LOGIN ERROR:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
 // --- REQUEST OTP (FORGOT PASSWORD) ---
 exports.requestOTP = async (req, res) => {
-  const { mobileNumber, role } = req.body;
+  const { identifier, role } = req.body;
   const tableName = getTableForRole(role);
   
   if (!tableName) return res.status(400).json({ message: "Invalid role" });
+  if (!identifier) return res.status(400).json({ message: "Email or mobile number is required" });
 
-  const altNumber = getAlternateNumber(mobileNumber);
+  // Determine if the identifier is an email or phone number
+  const isEmail = identifier.includes('@');
+  const altNumber = isEmail ? null : getAlternateNumber(identifier);
 
   try {
-    const [results] = await db.query(`SELECT * FROM ${tableName} WHERE MobileNumber = ? OR MobileNumber = ?`, [mobileNumber, altNumber]);
+    // 1. Find user by Email OR MobileNumber
+    let query = isEmail 
+      ? `SELECT * FROM ${tableName} WHERE Email = ?`
+      : `SELECT * FROM ${tableName} WHERE MobileNumber = ? OR MobileNumber = ?`;
+      
+    let params = isEmail ? [identifier] : [identifier, altNumber];
+
+    const [results] = await db.query(query, params);
     
-    // Security: Don't reveal if number exists or not
-    if (results.length === 0) return res.status(200).json({ message: "If this number is registered, an OTP has been sent." });
+    // For security, don't reveal if user exists or not
+    if (results.length === 0) {
+      return res.status(200).json({ message: "If this account exists, an OTP has been sent." });
+    }
 
     const user = results[0];
     const userId = user.OwnerID || user.AdminID || user.StaffID || user.SupplierID;
-    const dbNumber = user.MobileNumber;
+    const destination = isEmail ? user.Email : user.MobileNumber;
 
-    // 1. Generate OTP and Hash it
+    const roleIdColumn = role === 'STORE' ? 'OwnerID' : `${role}ID`;
+
+    // 2. Generate OTP and hash it
     const otp = generateOTP();
     const salt = await bcrypt.genSalt(10);
     const hashedOtp = await bcrypt.hash(otp, salt);
     const expiryTime = new Date(Date.now() + 15 * 60000); 
 
-    // 2. Insert into the new PasswordReset table
+    // 3. Save to PasswordReset table
     await db.query(
-      `INSERT INTO PasswordReset (UserType, ${role}ID, ResetMethod, Destination, OTPHash, ExpiresAt) 
-       VALUES (?, ?, 'SMS', ?, ?, ?)`,
-      [role, userId, dbNumber, hashedOtp, expiryTime]
+      `INSERT INTO PasswordReset (UserType, ${roleIdColumn}, ResetMethod, Destination, OTPHash, ExpiresAt) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [role, userId, isEmail ? 'Email' : 'SMS', destination, hashedOtp, expiryTime]
     );
 
-    // 3. Send SMS (Pass the plain OTP, not the hash)
-    await sendSMS(dbNumber, otp);
+    // 4. Send the OTP
+    if (isEmail) {
+      await sendOTPEmail(destination, otp);
+      console.log(`📧 Email OTP sent to ${destination}`);
+    } else {
+      await sendSMS(destination, otp);
+    }
     
-    res.status(200).json({ message: "OTP sent successfully", test_otp: otp });
+    res.status(200).json({ message: "OTP sent successfully" });
   } catch (error) {
     console.error("REQUEST OTP ERROR:", error);
     res.status(500).json({ message: "Database error" });
@@ -209,7 +253,7 @@ exports.requestOTP = async (req, res) => {
 
 // --- RESET PASSWORD ---
 exports.resetPassword = async (req, res) => {
-  const { mobileNumber, otp, newPassword, role } = req.body;
+  const { identifier, otp, newPassword, role } = req.body;
   const tableName = getTableForRole(role);
 
   if (!tableName) return res.status(400).json({ message: "Invalid role" });
@@ -217,17 +261,18 @@ exports.resetPassword = async (req, res) => {
     return res.status(400).json({ message: "Password must be at least 8 characters, include uppercase, lowercase, a number, and a special character." });
   }
 
-  const altNumber = getAlternateNumber(mobileNumber);
+  const isEmail = identifier.includes('@');
+  const altNumber = isEmail ? null : getAlternateNumber(identifier);
 
   try {
     // 1. Find the latest valid reset request
-    const [resetResults] = await db.query(
-      `SELECT * FROM PasswordReset 
-       WHERE UserType = ? AND (Destination = ? OR Destination = ?) 
-         AND ExpiresAt > NOW() AND IsUsed = FALSE
-       ORDER BY CreatedAt DESC LIMIT 1`, 
-      [role, mobileNumber, altNumber]
-    );
+    let query = isEmail
+      ? `SELECT * FROM PasswordReset WHERE UserType = ? AND Destination = ? AND ExpiresAt > NOW() AND IsUsed = FALSE ORDER BY CreatedAt DESC LIMIT 1`
+      : `SELECT * FROM PasswordReset WHERE UserType = ? AND (Destination = ? OR Destination = ?) AND ExpiresAt > NOW() AND IsUsed = FALSE ORDER BY CreatedAt DESC LIMIT 1`;
+      
+    let params = isEmail ? [role, identifier] : [role, identifier, altNumber];
+
+    const [resetResults] = await db.query(query, params);
     
     if (resetResults.length === 0) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -235,24 +280,21 @@ exports.resetPassword = async (req, res) => {
 
     const resetRequest = resetResults[0];
 
-    // 2. Compare the provided OTP with the hash in the database
+    // 2. Compare OTP
     const isValidOTP = await bcrypt.compare(otp, resetRequest.OTPHash);
     if (!isValidOTP) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    // 3. Hash the new password
+    // 3. Hash new password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     
-    // 4. Dynamically get the correct ID column based on role
-    const userIdColumn = `${role === 'STORE' ? 'Owner' : role}ID`; 
+    const userIdColumn = role === 'STORE' ? 'OwnerID' : `${role}ID`; 
     const userId = resetRequest[userIdColumn]; 
 
-    // 5. Update the user's password
+    // 4. Update Password & Mark OTP as used
     await db.query(`UPDATE ${tableName} SET PasswordHash = ? WHERE ${userIdColumn} = ?`, [hashedPassword, userId]);
-
-    // 6. Mark the OTP as used
     await db.query(`UPDATE PasswordReset SET IsUsed = TRUE WHERE ResetID = ?`, [resetRequest.ResetID]);
     
     res.status(200).json({ message: "Password reset successfully" });

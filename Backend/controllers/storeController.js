@@ -34,8 +34,7 @@ exports.createStore = async (req, res) => {
       return res.status(400).json({ message: 'Invalid registration number. Use the format YYYY/NNNNNN/NN.' });
     }
 
-    // PART B: Stop the same owner saving the same store name twice (e.g. a double click).
-    // An owner can have many stores, and a company can have many stores.
+    // PART B: Stop the same owner saving the same store name twice
     const [sameName] = await db.query(
       'SELECT StoreID FROM STORES WHERE OwnerID = ? AND StoreName = ?',
       [ownerId, name]
@@ -54,7 +53,6 @@ exports.createStore = async (req, res) => {
     }
 
     // PART D: Save. Status is left out on purpose: the database fills in 'Pending'.
-    // We have added OperatingHours to the INSERT query here.
     const [result] = await db.query(
       `INSERT INTO STORES
       (OwnerID, StoreName, RegistrationNumber, ContactNumber, Email, Province, Municipality, Address, OperatingHours)
@@ -77,11 +75,12 @@ exports.createStore = async (req, res) => {
 exports.getMyStores = async (req, res) => {
   const ownerId = req.user.id;
   try {
-    // We use a subquery to count how many staff members are assigned to each store
+    // We use a subquery to count how many staff members are assigned to each store.
+    // FIX: We now count from StoreUsers instead of the Staff table.
     const [stores] = await db.query(`
       SELECT 
         s.*, 
-        (SELECT COUNT(*) FROM Staff WHERE StoreID = s.StoreID) as staffCount
+        (SELECT COUNT(*) FROM StoreUsers su WHERE su.StoreID = s.StoreID) as staffCount
       FROM STORES s 
       WHERE s.OwnerID = ? 
       ORDER BY s.CreatedAt DESC

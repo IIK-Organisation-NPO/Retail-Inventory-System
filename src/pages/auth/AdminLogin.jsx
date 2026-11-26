@@ -18,6 +18,7 @@ const AdminLogin = () => {
   const [error, setError] = useState(""); // For network errors (backend offline)
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  // State for field-specific validation errors
   const [validationErrors, setValidationErrors] = useState({});
 
   const handleEmailChange = (e) => {
