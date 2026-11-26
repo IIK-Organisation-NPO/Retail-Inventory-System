@@ -1,7 +1,10 @@
 // src/components/Supplier/SupplierUserMenu.jsx
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useDropdown from "../../hooks/useDropdown";
+import { PopupShell } from "../Store Owner/StoreOwner_StockIn_popup";
 import "../../Style/components/Supplier/SupplierUserMenu.css";
+import "../../Style/components/Supplier/SupplierDepotPopups.css";
 
 const getInitials = (name = "") =>
   name
@@ -19,6 +22,7 @@ const MENU_ITEMS = [
 const SupplierUserMenu = ({ name, role } = {}) => {
   const navigate = useNavigate();
   const { ref, isOpen, toggle, close } = useDropdown();
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
 
   const storedFirst = localStorage.getItem("userName") || "";
   const storedSurname = localStorage.getItem("userSurname") || "";
@@ -30,8 +34,16 @@ const SupplierUserMenu = ({ name, role } = {}) => {
     navigate(path);
   };
 
-  const handleSignOut = () => {
+  // Ask first; the user signs out only after confirming in the popup
+  const askToSignOut = () => {
     close();
+    setConfirmingSignOut(true);
+  };
+
+  const cancelSignOut = () => setConfirmingSignOut(false);
+
+  const handleSignOut = () => {
+    setConfirmingSignOut(false);
     // Clear both the legacy and current token keys, plus cached user info.
     localStorage.removeItem("token");
     localStorage.removeItem("supplierToken");
@@ -40,6 +52,7 @@ const SupplierUserMenu = ({ name, role } = {}) => {
     localStorage.removeItem("userSurname");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("companyName");
+    sessionStorage.removeItem("supplierApplicationApproved");
     navigate("/login/supplier", { replace: true });
   };
 
@@ -80,11 +93,28 @@ const SupplierUserMenu = ({ name, role } = {}) => {
             type="button"
             role="menuitem"
             className="supplier-user-menu-item"
-            onClick={handleSignOut}
+            onClick={askToSignOut}
           >
             <span className="supplier-user-menu-item-title">Sign out</span>
           </button>
         </div>
+      )}
+
+      {confirmingSignOut && (
+        <PopupShell title="Sign out" onClose={cancelSignOut}>
+          <div className="sdp">
+            <p className="sdp-intro">Are you sure you want to sign out?</p>
+
+            <div className="sdp-actions">
+              <button type="button" className="sdp-button sdp-button-danger" onClick={handleSignOut}>
+                Sign out
+              </button>
+              <button type="button" className="sdp-button sdp-button-outline" onClick={cancelSignOut} autoFocus>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </PopupShell>
       )}
     </div>
   );

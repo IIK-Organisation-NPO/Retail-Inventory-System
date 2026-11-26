@@ -207,6 +207,29 @@
   background-color: #f2f2f2;
 }
 
+/* Confirmation popups (e.g. Sign out) */
+.sp-confirm-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #333;
+}
+
+.sp-btn-danger {
+  background-color: #d10a3c;
+  color: #fff;
+  border: 1px solid #d10a3c;
+}
+
+.sp-btn-danger:hover {
+  background-color: #b0082f;
+}
+
+.sp-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 /* =========================================================
    1. STOCK IN POPUP
    Uses only the shared styles above.

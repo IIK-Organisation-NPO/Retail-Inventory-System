@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const sendOTPEmail = require('../config/email');
+const cipcService = require('../services/cipcService'); // Make sure this path is correct
 const {
   validateSupplierProfileUpdate,
   validateCompanyProfileBody,
@@ -19,8 +20,6 @@ exports.getDashboard = async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Supplier role required.' });
     }
 
-    // mysql2 throws "Bind parameters must not contain undefined" if the
-    // token payload uses a different key (e.g. userId instead of id).
     if (supplierId === undefined || supplierId === null) {
       console.error('SUPPLIER DASHBOARD: req.user has no id. req.user =', req.user);
       return res.status(401).json({ message: 'Invalid token. Please log in again.' });
@@ -38,9 +37,6 @@ exports.getDashboard = async (req, res) => {
       return res.status(404).json({ message: 'Supplier profile not found.' });
     }
 
-    // Quote stats are optional for the dashboard. If the supplierquotes table
-    // or one of its columns is missing, log the real error and fall back to
-    // zeros so the profile page still loads.
     let quoteStats = {
       totalQuotes: 0,
       pendingQuotes: 0,
@@ -376,8 +372,6 @@ exports.changePassword = async (req, res) => {
 
 // ------------------------------------------------------------------
 // Step 4C — Company Profile persistence
-// Stored as JSON columns on supplier:
-//   CategoriesJSON, DeliveryAreasJSON, DepotsJSON
 // ------------------------------------------------------------------
 
 const parseJsonColumn = (val, fallback) => {
@@ -393,7 +387,6 @@ const parseJsonColumn = (val, fallback) => {
 };
 
 // GET /api/supplier/company-profile
-// Returns { categories: string[], deliveryAreas: string[], depots: object[] }
 exports.getCompanyProfile = async (req, res) => {
   try {
     const supplierId = req.user.id;
@@ -430,9 +423,6 @@ exports.getCompanyProfile = async (req, res) => {
 };
 
 // PUT /api/supplier/company-profile
-// Body (all optional, partial update):
-//   { categories?: string[], deliveryAreas?: string[], depots?: object[] }
-// Missing keys leave the corresponding column untouched.
 exports.updateCompanyProfile = async (req, res) => {
   try {
     const supplierId = req.user.id;
@@ -447,7 +437,6 @@ exports.updateCompanyProfile = async (req, res) => {
       return res.status(400).json({ message: 'Validation failed.', errors });
     }
 
-    // Build dynamic SET so partial updates work.
     const sets = [];
     const params = [];
 
@@ -460,7 +449,6 @@ exports.updateCompanyProfile = async (req, res) => {
       params.push(JSON.stringify(cleaned.deliveryAreas));
     }
     if (cleaned.depots !== undefined) {
-      // Assign ids where missing (frontend may send id; if not, generate one).
       const withIds = cleaned.depots.map((d) => ({
         id: typeof d.id === 'number' ? d.id : Date.now() + Math.floor(Math.random() * 1000),
         name: d.name,
@@ -473,7 +461,6 @@ exports.updateCompanyProfile = async (req, res) => {
     }
 
     if (sets.length === 0) {
-      // Nothing to update — just echo current state.
       const [[row]] = await db.query(
         `SELECT CategoriesJSON, DeliveryAreasJSON, DepotsJSON
            FROM supplier WHERE SupplierID = ?`,
@@ -501,7 +488,6 @@ exports.updateCompanyProfile = async (req, res) => {
       return res.status(404).json({ message: 'Supplier profile not found.' });
     }
 
-    // Return the canonical post-save state.
     const [[row]] = await db.query(
       `SELECT CategoriesJSON, DeliveryAreasJSON, DepotsJSON
          FROM supplier WHERE SupplierID = ?`,
@@ -522,5 +508,165 @@ exports.updateCompanyProfile = async (req, res) => {
       debugCode: err && err.code,
       debugSql: err && err.sql,
     });
+  }
+};
+
+// ------------------------------------------------------------------
+// NEW: CIPC Verification & Registration
+// ------------------------------------------------------------------
+
+// POST /api/supplier/verify-cipc
+exports.verifyCipc = async (req, res) => {
+  const { cipcNumber } = req.body;
+
+  if (!cipcNumber || !cipcService.isValidRegNumber(cipcNumber)) {
+    return res.status(400).json({ 
+      message: "Invalid CIPC format. Use YYYY/NNNNNN/NN (e.g. 2015/123456/07)." 
+    });
+  }
+
+  try {
+    const company = await cipcService.lookupCompany(cipcNumber);
+
+    if (!company) {
+      return res.status(404).json({ 
+        message: "Company not found in CIPC registry." 
+      });
+    }
+
+    res.status(200).json({
+      companyName: company.companyName,
+      companyType: "Private Company",
+      registrationDate: "Unknown",
+      status: company.status,
+      address: company.address,
+    });
+  } catch (error) {
+    console.error("CIPC LOOKUP ERROR:", error);
+    res.status(500).json({ message: "Failed to verify CIPC number." });
+  }
+};
+
+// POST /api/supplier/register
+exports.registerSupplier = async (req, res) => {
+  const { 
+    cipcNumber, companyName, contactPerson, contactMobile, contactEmail, 
+    website, categories, deliveryAreas, businessAddress, postalAddress, province 
+  } = req.body;
+
+  const supplierId = req.user.id;
+  const conn = await db.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // 1. Update main profile (Assuming you have these columns. If not, add them).
+    // We save categories/areas into the JSON columns based on your existing code.
+    await conn.query(
+      `UPDATE supplier 
+       SET CompanyName = ?, ContactPerson = ?, MobileNumber = ?, Email = ?, 
+           Website = ?, BusinessAddress = ?, PostalAddress = ?, Province = ?, 
+           CipcNumber = ?, Status = 'Pending',
+           CategoriesJSON = ?, DeliveryAreasJSON = ?
+       WHERE SupplierID = ?`,
+      [companyName, contactPerson, contactMobile, contactEmail, website, 
+       businessAddress, postalAddress, province, cipcNumber, 
+       JSON.stringify(categories), JSON.stringify(deliveryAreas), supplierId]
+    );
+
+    await conn.commit();
+    res.status(200).json({ message: "Application submitted successfully." });
+
+  } catch (error) {
+    await conn.rollback();
+    console.error("REGISTRATION ERROR:", error);
+    res.status(500).json({ message: "Failed to submit application." });
+  } finally {
+    conn.release();
+  }
+};
+
+// ... (Keep all your existing functions above this line: getDashboard, getProfile, updateProfile, etc.) ...
+
+// ------------------------------------------------------------------
+// NEW: CIPC Verification & Registration (Using ONLY existing DB columns)
+// ------------------------------------------------------------------
+
+// POST /api/supplier/verify-cipc
+exports.verifyCipc = async (req, res) => {
+  const { cipcNumber } = req.body;
+
+  if (!cipcNumber || !cipcService.isValidRegNumber(cipcNumber)) {
+    return res.status(400).json({ 
+      message: "Invalid CIPC format. Use YYYY/NNNNNN/NN (e.g. 2015/123456/07)." 
+    });
+  }
+
+  try {
+    const company = await cipcService.lookupCompany(cipcNumber);
+
+    if (!company) {
+      return res.status(404).json({ 
+        message: "Company not found in CIPC registry." 
+      });
+    }
+
+    res.status(200).json({
+      companyName: company.companyName,
+      companyType: "Private Company",
+      registrationDate: "Unknown",
+      status: company.status,
+      address: company.address,
+    });
+  } catch (error) {
+    console.error("CIPC LOOKUP ERROR:", error);
+    res.status(500).json({ message: "Failed to verify CIPC number." });
+  }
+};
+
+// POST /api/supplier/register
+exports.registerSupplier = async (req, res) => {
+  const { 
+    companyName, contactPerson, contactMobile, contactEmail, 
+    categories, deliveryAreas 
+  } = req.body;
+
+  const supplierId = req.user.id;
+  const conn = await db.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // We only update columns that actually exist in your current database.
+    // We save the categories and areas into the existing JSON columns.
+    await conn.query(
+      `UPDATE supplier 
+       SET CompanyName = ?, 
+           Name = ?, 
+           MobileNumber = ?, 
+           Email = ?, 
+           CategoriesJSON = ?, 
+           DeliveryAreasJSON = ?
+       WHERE SupplierID = ?`,
+      [
+        companyName, 
+        contactPerson, 
+        contactMobile, 
+        contactEmail, 
+        JSON.stringify(categories || []), 
+        JSON.stringify(deliveryAreas || []), 
+        supplierId
+      ]
+    );
+
+    await conn.commit();
+    res.status(200).json({ message: "Application submitted successfully." });
+
+  } catch (error) {
+    await conn.rollback();
+    console.error("REGISTRATION ERROR:", error);
+    res.status(500).json({ message: "Failed to submit application." });
+  } finally {
+    conn.release();
   }
 };

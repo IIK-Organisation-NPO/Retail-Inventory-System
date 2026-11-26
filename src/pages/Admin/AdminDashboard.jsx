@@ -14,8 +14,8 @@ const METRICS = [
 ];
 
 const ACTIVITY = [
-  { time: "13 Nov, 08:15", user: "Lindiwe Ngecobo", event: "Login", details: "Signed in on tablet" },
-  { time: "13 Nov, 08:02", user: "Sipho Dlamini", event: "Login", details: "Signed in on mobile" },
+  { time: "13 Nov, 08:15", user: "Lindiwe Ngecobo", event: "Login", details: "082 000 0011" },
+  { time: "13 Nov, 08:02", user: "Sipho Dlamini", event: "Login", details: "sipho@gmail.com" },
   { time: "12 Nov, 17:40", user: "Sipho Dlamini", event: "Stock adjustment", details: "Sprite 500ml, Mseleku Tuckshop: 60 to 58" },
   { time: "12 Nov, 10:05", user: "Sipho Dlamini", event: "Price change", details: "Coca-Cola 500ml selling price updated" },
 ];

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
 import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
 import "../../Style/components/Supplier/SupplierQuotations.css";
@@ -25,10 +26,14 @@ const SupplierQuotations = () => {
         <header className="supplier-quotations-header">
           <h1>My quotations</h1>
           <div className="supplier-quotations-account">
-            <div className="supplier-quotations-company-pill">
-              <span className="supplier-quotations-company-initials">TB</span>
+            <Link
+              to="/supplier/company-profile"
+              className="supplier-quotations-company-pill"
+              aria-label="Tiger Brands Ltd company profile"
+            >
+              <span className="supplier-quotations-company-initials" aria-hidden="true">TB</span>
               <span>Tiger Brands Ltd</span>
-            </div>
+            </Link>
             <SupplierUserMenu />
           </div>
         </header>

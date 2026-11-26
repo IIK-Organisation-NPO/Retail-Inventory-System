@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
 import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
 import "../../Style/components/Supplier/SupplierDashboard.css";
@@ -34,24 +34,7 @@ const SUPPLIER_PROVINCES = [
   "Western Cape",
 ];
 
-const MOCK_CIPC_COMPANY = {
-  name: "Tiger Brands Ltd",
-  type: "Public Company",
-  registrationDate: "12 March 2012",
-  status: "In Business",
-  registeredAddress: "1 Sample Road, Sandton, Gauteng, 2191",
-};
-
 // --- helpers ---
-const getInitials = (companyName = "") =>
-  companyName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase() || "??";
-
 const formatRand = (value) => {
   const num = Number(value) || 0;
   return (
@@ -84,30 +67,24 @@ const SupplierApprovedDashboard = ({
   error,
   onRetry,
 }) => {
-  const supplier = data?.supplier;
   const stats = data?.stats;
   const recentQuotes = data?.recentQuotes ?? [];
-
-  const storedCompany = localStorage.getItem("companyName") || "";
-  const companyName = supplier?.companyName || storedCompany || "Supplier";
-  const initials = getInitials(companyName);
-
-  const statCards = [
-    { label: "Total quotes", value: stats?.totalQuotes ?? 0 },
-    { label: "Pending", value: stats?.pendingQuotes ?? 0 },
-    { label: "Accepted", value: stats?.acceptedQuotes ?? 0 },
-    { label: "Accepted value", value: formatRand(stats?.acceptedValue) },
-  ];
 
   return (
     <main className="supplier-dashboard-main supplier-approved-dashboard">
       <header className="supplier-dashboard-header">
         <h1>Dashboard</h1>
         <div className="supplier-dashboard-account">
-          <div className="supplier-company-pill">
-            <span className="supplier-company-initials">{initials}</span>
-            <span>{companyName}</span>
-          </div>
+          <Link
+            to="/supplier/company-profile"
+            className="supplier-company-pill"
+            aria-label="Company profile"
+          >
+            <span className="supplier-company-initials" aria-hidden="true">
+              {localStorage.getItem("companyName")?.[0] || "S"}
+            </span>
+            <span>{localStorage.getItem("companyName") || "Supplier"}</span>
+          </Link>
           <SupplierUserMenu />
         </div>
       </header>
@@ -154,7 +131,7 @@ const SupplierApprovedDashboard = ({
         className="supplier-dashboard-stats"
         aria-label="Supplier activity summary"
       >
-        {statCards.map((stat) => (
+        {stats?.statCards?.map((stat) => (
           <article className="supplier-dashboard-stat" key={stat.label}>
             <span>{stat.label}</span>
             <strong>{loading ? "…" : stat.value}</strong>
@@ -285,37 +262,28 @@ const SupplierDashboard = () => {
   const [verifiedCompany, setVerifiedCompany] = useState(null);
   const [showCompanyDetails, setShowCompanyDetails] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
-  const [contactPerson, setContactPerson] = useState("Nandi Mokoena");
-  const [contactMobile, setContactMobile] = useState("011 840 4000");
-  const [contactEmail, setContactEmail] = useState("info@tigerbrands.com");
+  const [contactPerson, setContactPerson] = useState("");
+  const [contactMobile, setContactMobile] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [website, setWebsite] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState([
-    "Groceries",
-    "Drinks",
-    "Snacks",
-  ]);
-  const [deliveryAreas, setDeliveryAreas] = useState([
-    "Msunduzi",
-    "Mkhambathini",
-    "uMngeni",
-  ]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [deliveryAreas, setDeliveryAreas] = useState([]);
   const [showAddArea, setShowAddArea] = useState(false);
   const [newDeliveryArea, setNewDeliveryArea] = useState("");
   const [sameRegisteredAddress, setSameRegisteredAddress] = useState(true);
-  const [businessAddress, setBusinessAddress] = useState(
-    "1 Sample Road, Sandton, Gauteng, 2191"
-  );
-  const [postalAddress, setPostalAddress] = useState(
-    "PO Box 100, Sandton, 2146"
-  );
+  const [businessAddress, setBusinessAddress] = useState("");
+  const [postalAddress, setPostalAddress] = useState("");
   const [province, setProvince] = useState("Gauteng");
   const [showApplicationReview, setShowApplicationReview] = useState(false);
   const [acceptedSupplierTerms, setAcceptedSupplierTerms] = useState(false);
   const [confirmedApplicationDetails, setConfirmedApplicationDetails] =
     useState(false);
   const [applicationSubmitted, setApplicationSubmitted] = useState(false);
+  const [submittingApplication, setSubmittingApplication] = useState(false);
+
+  // Determine if they are approved based on user session (set during login)
   const [applicationApproved, setApplicationApproved] = useState(
-    () => sessionStorage.getItem("supplierApplicationApproved") === "true"
+    () => localStorage.getItem("supplierApplicationApproved") === "true"
   );
 
   // --- dashboard data from API ---
@@ -327,7 +295,7 @@ const SupplierDashboard = () => {
     setDashLoading(true);
     setDashError("");
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("supplierToken") || localStorage.getItem("token");
       if (!token) throw new Error("No token. Please log in again.");
 
       const res = await fetch(
@@ -347,11 +315,8 @@ const SupplierDashboard = () => {
     }
   };
 
-  // Fetch dashboard when approved (deferred + cancellable so React's
-  // "setState synchronously in effect" warning does not fire)
   useEffect(() => {
-    if (!applicationApproved) return undefined;
-
+    if (!applicationApproved) return;
     let cancelled = false;
     const run = async () => {
       await Promise.resolve();
@@ -359,27 +324,13 @@ const SupplierDashboard = () => {
       await loadDashboard();
     };
     run();
-
     return () => {
       cancelled = true;
     };
-     
   }, [applicationApproved]);
 
-  // CIPC mock check (uses setTimeout — already async, no warning)
-  useEffect(() => {
-    if (!isCheckingCipc) return undefined;
-    const timer = setTimeout(() => {
-      setVerifiedCompany({
-        ...MOCK_CIPC_COMPANY,
-        registrationNumber: cipcNumber.trim(),
-      });
-      setIsCheckingCipc(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [cipcNumber, isCheckingCipc]);
-
-  const handleVerifyCompany = (event) => {
+  // --- REAL CIPC API CALL ---
+  const handleVerifyCompany = async (event) => {
     event.preventDefault();
     if (!/^\d{4}\/\d{6}\/\d{2}$/.test(cipcNumber.trim())) {
       setVerificationError(
@@ -389,6 +340,38 @@ const SupplierDashboard = () => {
     }
     setVerificationError("");
     setIsCheckingCipc(true);
+
+    try {
+      const token = localStorage.getItem("supplierToken") || localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/supplier/verify-cipc`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cipcNumber: cipcNumber.trim() }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "CIPC lookup failed.");
+
+      // Assuming backend returns { companyName, companyType, registrationDate, status, address }
+      setVerifiedCompany({
+        registrationNumber: cipcNumber.trim(),
+        name: data.companyName,
+        type: data.companyType,
+        registrationDate: data.registrationDate,
+        status: data.status,
+        registeredAddress: data.address,
+      });
+      
+      setSameRegisteredAddress(true);
+      setBusinessAddress(data.address);
+    } catch (err) {
+      setVerificationError(err.message);
+    } finally {
+      setIsCheckingCipc(false);
+    }
   };
 
   const closeVerification = () => {
@@ -434,6 +417,53 @@ const SupplierDashboard = () => {
     .join("")
     .toUpperCase();
 
+  // --- REAL SUBMIT APPLICATION API CALL ---
+  const handleSubmitApplication = async () => {
+    setSubmittingApplication(true);
+    try {
+      const token = localStorage.getItem("supplierToken") || localStorage.getItem("token");
+      
+      const payload = {
+        cipcNumber: cipcNumber.trim(),
+        companyName: verifiedCompany.name,
+        contactPerson,
+        contactMobile,
+        contactEmail,
+        website,
+        categories: selectedCategories,
+        deliveryAreas,
+        businessAddress: sameRegisteredAddress ? verifiedCompany.registeredAddress : businessAddress,
+        postalAddress,
+        province,
+      };
+
+      const res = await fetch(`${API_BASE}/api/supplier/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to submit application.");
+
+      setApplicationSubmitted(true);
+      setShowApplicationReview(false);
+      setShowCompanyDetails(false);
+    } catch (err) {
+      alert(err.message || "Failed to submit application. Please try again.");
+    } finally {
+      setSubmittingApplication(false);
+    }
+  };
+
+  const handleBackToAccount = () => {
+    closeVerification();
+    setApplicationApproved(true);
+  };
+
   return (
     <div className="supplier-dashboard-layout">
       <SupplierSidebar />
@@ -456,20 +486,15 @@ const SupplierDashboard = () => {
           <header className="supplier-dashboard-header">
             <h1>Welcome</h1>
             <div className="supplier-dashboard-account">
-              <div className="supplier-company-pill">
-                <span className="supplier-company-initials">
-                  {getInitials(
-                    dashboard?.supplier?.companyName ||
-                      localStorage.getItem("companyName") ||
-                      "Supplier"
-                  )}
+              <Link
+                to="/supplier/company-profile"
+                className="supplier-company-pill"
+              >
+                <span className="supplier-company-initials" aria-hidden="true">
+                  {localStorage.getItem("companyName")?.[0] || "S"}
                 </span>
-                <span>
-                  {dashboard?.supplier?.companyName ||
-                    localStorage.getItem("companyName") ||
-                    "Supplier"}
-                </span>
-              </div>
+                <span>{localStorage.getItem("companyName") || "Supplier"}</span>
+              </Link>
               <SupplierUserMenu />
             </div>
           </header>
@@ -488,7 +513,7 @@ const SupplierDashboard = () => {
               <>
                 <h2 id="supplier-register-title">Application submitted</h2>
                 <p className="supplier-register-description">
-                  {verifiedCompany.name} is awaiting approval from IIK. You can
+                  {verifiedCompany?.name || "Your company"} is awaiting approval from IIK. You can
                   see demand requests and send quotations after approval.
                 </p>
                 <span className="supplier-application-pending-badge">
@@ -612,7 +637,7 @@ const SupplierDashboard = () => {
             {applicationSubmitted ? (
               <div className="supplier-application-success" role="status">
                 <p>
-                  {verifiedCompany.name} has been sent to IIK for review. You
+                  {verifiedCompany?.name} has been sent to IIK for review. You
                   will get a notification when it is approved. After that you
                   can see demand requests and send quotations.
                 </p>
@@ -622,14 +647,7 @@ const SupplierDashboard = () => {
                 <button
                   type="button"
                   className="supplier-verify-button supplier-success-account-button"
-                  onClick={() => {
-                    sessionStorage.setItem(
-                      "supplierApplicationApproved",
-                      "true"
-                    );
-                    setApplicationApproved(true);
-                    closeVerification();
-                  }}
+                  onClick={handleBackToAccount}
                 >
                   Back to my account
                 </button>
@@ -823,15 +841,13 @@ const SupplierDashboard = () => {
                     type="button"
                     className="supplier-verify-button"
                     disabled={
-                      !acceptedSupplierTerms || !confirmedApplicationDetails
+                      !acceptedSupplierTerms || 
+                      !confirmedApplicationDetails || 
+                      submittingApplication
                     }
-                    onClick={() => {
-                      setApplicationSubmitted(true);
-                      setShowApplicationReview(false);
-                      setShowCompanyDetails(false);
-                    }}
+                    onClick={handleSubmitApplication}
                   >
-                    Submit application
+                    {submittingApplication ? "Submitting..." : "Submit application"}
                   </button>
                   <button
                     type="button"

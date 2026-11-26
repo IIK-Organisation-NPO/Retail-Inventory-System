@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import SupplierSidebar from "../../components/Supplier/SupplierSidebar";
 import SupplierUserMenu from "../../components/Supplier/SupplierUserMenu";
 import "../../Style/components/Supplier/SupplierDemandRequests.css";
@@ -137,10 +137,14 @@ const SupplierDemandRequests = () => {
         <header className="supplier-demand-header">
           <h1>{selectedRequest ? selectedRequest.product : "Demand requests"}</h1>
           <div className="supplier-demand-account">
-            <div className="supplier-demand-company-pill">
-              <span className="supplier-demand-company-initials">TB</span>
+            <Link
+              to="/supplier/company-profile"
+              className="supplier-demand-company-pill"
+              aria-label="Tiger Brands Ltd company profile"
+            >
+              <span className="supplier-demand-company-initials" aria-hidden="true">TB</span>
               <span>Tiger Brands Ltd</span>
-            </div>
+            </Link>
             <SupplierUserMenu />
           </div>
         </header>

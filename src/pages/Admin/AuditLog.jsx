@@ -1,95 +1,160 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminSidebar from "../../components/Admin/AdminSidebar";
 import AdminUserMenu from "../../components/Admin/AdminUserMenu";
 import "../../Style/Admin/AuditLog.css";
 
-const AUDIT_EVENTS = [
-  {
-    time: "13 Nov, 08:15",
-    user: "Lindiwe Ngecobo",
-    action: "Login",
-    details: "082 000 0011",
-    daysAgo: 0,
-  },
-  {
-    time: "13 Nov, 08:02",
-    user: "Sipho Dlamini",
-    action: "Login",
-    details: "sipho@gmail.com",
-    daysAgo: 0,
-  },
-  {
-    time: "12 Nov, 17:40",
-    user: "Sipho Dlamini",
-    action: "Stock adjustment",
-    details: "Sprite 500ml, Mseleku Tuckshop: 60 to 58",
-    daysAgo: 1,
-  },
-  {
-    time: "12 Nov, 10:05",
-    user: "Sipho Dlamini",
-    action: "Price change",
-    details: "Coca-Cola 500ml selling price updated",
-    daysAgo: 1,
-  },
-  {
-    time: "11 Nov, 09:30",
-    user: "Sipho Dlamini",
-    action: "User administration",
-    details: "Disabled user Zanele Cele",
-    daysAgo: 2,
-  },
-  {
-    time: "10 Nov, 14:00",
-    user: "Thabo Mkhize",
-    action: "User administration",
-    details: "Store application submitted: Edendale Spaza",
-    daysAgo: 3,
-  },
-];
+const API_URL = "http://localhost:5000/api";
+const PAGE_SIZE = 20;
 
-const TOTAL_LOG_ENTRIES = 214;
-const EVENT_TYPES = [...new Set(AUDIT_EVENTS.map((event) => event.action))];
-const USERS = [...new Set(AUDIT_EVENTS.map((event) => event.user))];
+const formatDateTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const formatFullDateTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const request = async (path) => {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const fieldError = data.errors && Object.values(data.errors)[0];
+    throw new Error(fieldError || data.message || "Something went wrong.");
+  }
+  return data;
+};
+
+const buildParams = ({ search, action, user, range }) => {
+  const params = new URLSearchParams();
+  params.set("range", range);
+  if (search) params.set("search", search);
+  if (action !== "all") params.set("action", action);
+  if (user !== "all") params.set("user", user);
+  return params;
+};
+
+const errorStyle = { color: "#c62828", margin: "8px 0" };
 
 const AuditLog = () => {
+  const [events, setEvents] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totalEntries, setTotalEntries] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filterOptions, setFilterOptions] = useState({ actions: [], users: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
+
   const [search, setSearch] = useState("");
-  const [eventType, setEventType] = useState("All events");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [eventType, setEventType] = useState("all");
   const [dateRange, setDateRange] = useState("7");
-  const [user, setUser] = useState("All users");
+  const [user, setUser] = useState("all");
+  const [page, setPage] = useState(1);
 
-  const normalizedSearch = search.trim().toLowerCase();
-  const filteredEvents = AUDIT_EVENTS.filter((event) => {
-    const matchesSearch = [event.user, event.action, event.details]
-      .some((value) => value.toLowerCase().includes(normalizedSearch));
-    const matchesEvent = eventType === "All events" || event.action === eventType;
-    const matchesDate = dateRange === "all" || event.daysAgo < Number(dateRange);
-    const matchesUser = user === "All users" || event.user === user;
+  // Wait until the person stops typing before asking the server.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
-    return matchesSearch && matchesEvent && matchesDate && matchesUser;
-  });
+  useEffect(() => {
+    let cancelled = false;
 
-  const exportEvents = () => {
-    const rows = [
-      ["Time", "User", "Action", "Details"],
-      ...filteredEvents.map(({ time, user: eventUser, action, details }) => [
-        time,
-        eventUser,
-        action,
-        details,
-      ]),
-    ];
-    const csv = rows
-      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
-      .join("\r\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "audit-log.csv";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const loadEvents = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const params = buildParams({
+          search: debouncedSearch,
+          action: eventType,
+          user,
+          range: dateRange,
+        });
+        params.set("page", String(page));
+        params.set("limit", String(PAGE_SIZE));
+
+        const data = await request(`/admin/audit-log?${params.toString()}`);
+        if (cancelled) return;
+        setEvents(data.events || []);
+        setTotal(data.total || 0);
+        setTotalEntries(data.totalEntries || 0);
+        setTotalPages(data.totalPages || 1);
+        setFilterOptions(data.filters || { actions: [], users: [] });
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Could not load the audit log.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadEvents();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, eventType, dateRange, user, page]);
+
+  const exportEvents = async () => {
+    try {
+      setExporting(true);
+      setError("");
+      const params = buildParams({
+        search: debouncedSearch,
+        action: eventType,
+        user,
+        range: dateRange,
+      });
+      params.set("export", "true");
+
+      const data = await request(`/admin/audit-log?${params.toString()}`);
+      const rows = [
+        ["Time", "User", "Action", "Details"],
+        ...(data.events || []).map((event) => [
+          formatFullDateTime(event.time),
+          event.user,
+          event.action,
+          event.details,
+        ]),
+      ];
+      const csv = rows
+        .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+        .join("\r\n");
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "audit-log.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setError(err.message || "Could not export the audit log.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -100,8 +165,13 @@ const AuditLog = () => {
         <header className="admin-audit-header">
           <h1>Audit log</h1>
           <div className="admin-audit-header-actions">
-            <button type="button" className="admin-audit-export" onClick={exportEvents}>
-              Export
+            <button
+              type="button"
+              className="admin-audit-export"
+              disabled={exporting}
+              onClick={exportEvents}
+            >
+              {exporting ? "Exporting..." : "Export"}
             </button>
             <AdminUserMenu />
           </div>
@@ -119,14 +189,28 @@ const AuditLog = () => {
           </label>
           <label>
             <span className="admin-audit-visually-hidden">Filter by event</span>
-            <select value={eventType} onChange={(event) => setEventType(event.target.value)}>
-              <option>All events</option>
-              {EVENT_TYPES.map((type) => <option key={type}>{type}</option>)}
+            <select
+              value={eventType}
+              onChange={(event) => {
+                setEventType(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="all">All events</option>
+              {filterOptions.actions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </label>
           <label>
             <span className="admin-audit-visually-hidden">Filter by date range</span>
-            <select value={dateRange} onChange={(event) => setDateRange(event.target.value)}>
+            <select
+              value={dateRange}
+              onChange={(event) => {
+                setDateRange(event.target.value);
+                setPage(1);
+              }}
+            >
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
               <option value="90">Last 90 days</option>
@@ -135,15 +219,24 @@ const AuditLog = () => {
           </label>
           <label>
             <span className="admin-audit-visually-hidden">Filter by user</span>
-            <select value={user} onChange={(event) => setUser(event.target.value)}>
-              <option>All users</option>
-              {USERS.map((name) => <option key={name}>{name}</option>)}
+            <select
+              value={user}
+              onChange={(event) => {
+                setUser(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="all">All users</option>
+              {filterOptions.users.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </label>
         </div>
 
         <section className="admin-audit-card">
           <h2>Activity on the platform</h2>
+          {error && <p role="alert" style={errorStyle}>{error}</p>}
           <div className="admin-audit-table-scroll">
             <table className="admin-audit-table">
               <thead>
@@ -155,15 +248,20 @@ const AuditLog = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredEvents.map((event) => (
-                  <tr key={`${event.time}-${event.user}-${event.action}`}>
-                    <td>{event.time}</td>
+                {loading && (
+                  <tr>
+                    <td className="admin-audit-empty" colSpan="4">Loading activity...</td>
+                  </tr>
+                )}
+                {!loading && events.map((event) => (
+                  <tr key={event.id}>
+                    <td>{formatDateTime(event.time)}</td>
                     <td>{event.user}</td>
                     <td>{event.action}</td>
                     <td>{event.details}</td>
                   </tr>
                 ))}
-                {filteredEvents.length === 0 && (
+                {!loading && events.length === 0 && (
                   <tr>
                     <td className="admin-audit-empty" colSpan="4">No activity matches these filters.</td>
                   </tr>
@@ -171,10 +269,43 @@ const AuditLog = () => {
               </tbody>
             </table>
           </div>
-          <p className="admin-audit-note">
-            Logged: sign-ins, stock adjustments, price changes and user administration.
-            {" "}Showing {filteredEvents.length} of {TOTAL_LOG_ENTRIES} entries.
-          </p>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
+            <p className="admin-audit-note">
+              Logged: store approvals, rejections and suspensions, and user enabling and disabling.
+              {" "}Showing {events.length} of {total} entries
+              {total !== totalEntries ? ` (${totalEntries} in the whole log)` : ""}.
+            </p>
+            {totalPages > 1 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="admin-audit-export"
+                  disabled={page === 1 || loading}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Previous
+                </button>
+                <span>Page {page} of {totalPages}</span>
+                <button
+                  type="button"
+                  className="admin-audit-export"
+                  disabled={page === totalPages || loading}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
         </section>
       </main>
     </div>

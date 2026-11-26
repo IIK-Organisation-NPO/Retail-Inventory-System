@@ -15,8 +15,9 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const supplierRoutes = require('./routes/supplierRoutes');
 const adminStoreRoutes = require('./routes/adminStoreRoutes');
-
-
+const adminReportRoutes = require('./routes/adminReportRoutes');
+const adminUserRoutes = require('./routes/adminUserRoutes');
+const adminAuditRoutes = require('./routes/adminAuditRoutes');
 
 
 
@@ -38,6 +39,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use("/api/owner", require("./routes/ownerProfileRoutes"));
 app.use('/api/supplier', supplierRoutes);
 app.use('/api/admin/stores', adminStoreRoutes);
+app.use('/api/admin/reports', adminReportRoutes);
+app.use('/api/admin/users', adminUserRoutes);
+app.use('/api/admin/audit-log', adminAuditRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

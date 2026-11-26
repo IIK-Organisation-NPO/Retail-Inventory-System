@@ -11,7 +11,6 @@ router.get('/profile', supplierController.getProfile);
 router.put('/profile', supplierController.updateProfile);
 router.post('/resend-email-otp', supplierController.resendEmailOTP);
 
-// Step 4B — Supplier password change.
 router.put(
   '/change-password',
   (req, res, next) => {
@@ -25,8 +24,11 @@ router.put(
   supplierController.changePassword
 );
 
-// Step 4C — Company profile persistence (categories / delivery areas / depots)
 router.get('/company-profile', supplierController.getCompanyProfile);
 router.put('/company-profile', supplierController.updateCompanyProfile);
+
+// NEW: CIPC and Registration routes
+router.post('/verify-cipc', supplierController.verifyCipc);
+router.post('/register', supplierController.registerSupplier);
 
 module.exports = router;
