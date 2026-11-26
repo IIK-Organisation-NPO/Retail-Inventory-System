@@ -34,7 +34,7 @@ exports.getOwnerDashboard = async (req, res) => {
   try {
     const ownerId = req.user.id;
 
-    // 1. The frontend must say which store (?storeId=1). No more silent default to store 1.
+    // 1. The frontend must say which store (?storeId=1).
     const storeId = Number(req.query.storeId);
     if (!Number.isInteger(storeId) || storeId <= 0) {
       return res.status(400).json({ message: "A valid storeId is required" });
@@ -45,7 +45,7 @@ exports.getOwnerDashboard = async (req, res) => {
     if (ownerResults.length === 0) return res.status(404).json({ message: "Owner not found" });
     const owner = ownerResults[0];
 
-    // 3. Make sure this store belongs to this owner (the ownership check)
+    // 3. Make sure this store belongs to this owner
     const [storeRes] = await db.query(
       'SELECT StoreName, Status FROM STORES WHERE StoreID = ? AND OwnerID = ?',
       [storeId, ownerId]
@@ -55,7 +55,7 @@ exports.getOwnerDashboard = async (req, res) => {
     // 4. Safe defaults
     let dashboardData = {
       storeName: storeRes[0].StoreName,
-      storeStatus: storeRes[0].Status, // lets the frontend show a "pending approval" notice if needed
+      storeStatus: storeRes[0].Status,
       alerts: { lowStockCount: 0, newQuotesCount: 0 },
       stats: {
         todaySales: 0,
@@ -65,21 +65,23 @@ exports.getOwnerDashboard = async (req, res) => {
         lowStockCount: 0,
         openRequests: 0
       },
-      salesData: buildLast7Days([]), // 7 bars of 0 until real sales exist
+      salesData: buildLast7Days([]), 
       topSelling: [],
       lowStock: [],
       staff: [],
       procurement: []
     };
 
-    // 5. Inventory stats
+    // 5. Inventory stats (FIXED: Join with Inventory table and use UnitCost)
     try {
       const [inventory] = await db.query(
         `SELECT
-          COUNT(*) AS totalProducts,
-          COALESCE(SUM(OnHand * CostPrice), 0) AS totalValue,
-          COALESCE(SUM(CASE WHEN OnHand <= ReorderLevel THEN 1 ELSE 0 END), 0) AS lowStock
-         FROM Products WHERE StoreID = ?`,
+          COUNT(i.InventoryID) AS totalProducts,
+          COALESCE(SUM(i.Quantity * p.UnitCost), 0) AS totalValue,
+          COALESCE(SUM(CASE WHEN i.Quantity <= i.ReorderLevel THEN 1 ELSE 0 END), 0) AS lowStock
+         FROM Inventory i
+         JOIN Products p ON i.ProductID = p.ProductID
+         WHERE i.StoreID = ?`,
         [storeId]
       );
       dashboardData.stats.inventoryValue = Number(inventory[0].totalValue);
@@ -100,7 +102,7 @@ exports.getOwnerDashboard = async (req, res) => {
       dashboardData.stats.todaySales = Number(todayStats[0].sales);
     } catch (e) { console.log("Today's sales query failed:", e.message); }
 
-    // 7. Last 7 days chart (GROUP BY the alias so MySQL 8 accepts it)
+    // 7. Last 7 days chart
     try {
       const [salesChart] = await db.query(
         `SELECT DATE_FORMAT(SaleDate, '%Y-%m-%d') AS date, SUM(TotalAmount) AS amount
@@ -109,31 +111,32 @@ exports.getOwnerDashboard = async (req, res) => {
          GROUP BY date`,
         [storeId]
       );
-      dashboardData.salesData = buildLast7Days(salesChart); // always exactly 7 days, 0 where no sales
+      dashboardData.salesData = buildLast7Days(salesChart); 
     } catch (e) { console.log("Sales chart query failed:", e.message); }
 
-    // 8. Top selling today
+    // 8. Top selling today (FIXED: Use ProductName)
     try {
       const [topSelling] = await db.query(
-        `SELECT p.Name AS product, SUM(si.Quantity) AS sold
+        `SELECT p.ProductName AS product, SUM(si.Quantity) AS sold
          FROM SaleItems si
          JOIN Products p ON si.ProductID = p.ProductID
          JOIN Sales s ON si.SaleID = s.SaleID
          WHERE s.StoreID = ? AND s.SaleDate >= CURDATE() AND s.SaleDate < CURDATE() + INTERVAL 1 DAY
-         GROUP BY p.ProductID, p.Name
+         GROUP BY p.ProductID, p.ProductName
          ORDER BY sold DESC LIMIT 3`,
         [storeId]
       );
       dashboardData.topSelling = topSelling.map(t => ({ ...t, sold: Number(t.sold) }));
     } catch (e) { console.log("Top selling query failed:", e.message); }
 
-    // 9. Low stock products (emptiest first), with the status label the page needs
+    // 9. Low stock products (FIXED: Join Inventory and Products)
     try {
       const [lowStock] = await db.query(
-        `SELECT Name AS product, OnHand AS inStock, ReorderLevel AS reorder
-         FROM Products
-         WHERE StoreID = ? AND OnHand <= ReorderLevel
-         ORDER BY OnHand ASC LIMIT 5`,
+        `SELECT p.ProductName AS product, i.Quantity AS inStock, i.ReorderLevel AS reorder
+         FROM Inventory i
+         JOIN Products p ON i.ProductID = p.ProductID
+         WHERE i.StoreID = ? AND i.Quantity <= i.ReorderLevel
+         ORDER BY i.Quantity ASC LIMIT 5`,
         [storeId]
       );
       dashboardData.lowStock = lowStock.map(p => ({
@@ -142,7 +145,7 @@ exports.getOwnerDashboard = async (req, res) => {
       }));
     } catch (e) { console.log("Low stock query failed:", e.message); }
 
-    // 10. Staff list. FIXED: Join with StoreUsers to get IsActive and filter by StoreID.
+    // 10. Staff list
     try {
       const [staffResults] = await db.query(`
         SELECT 
