@@ -142,13 +142,20 @@ exports.getOwnerDashboard = async (req, res) => {
       }));
     } catch (e) { console.log("Low stock query failed:", e.message); }
 
-    // 10. Staff list. TEMPORARY: the Staff table has no StoreID or Role column yet,
-    // so this stays empty until the staff-to-store link exists.
+    // 10. Staff list. FIXED: Join with StoreUsers to get IsActive and filter by StoreID.
     try {
-      const [staffResults] = await db.query(
-        'SELECT StaffID AS id, Name AS name, Surname AS surname, Role AS role, IsActive FROM Staff WHERE StoreID = ?',
-        [storeId]
-      );
+      const [staffResults] = await db.query(`
+        SELECT 
+          s.StaffID AS id, 
+          s.Name AS name, 
+          s.Surname AS surname, 
+          s.Role AS role, 
+          su.IsActive 
+        FROM Staff s
+        INNER JOIN StoreUsers su ON s.StaffID = su.StaffID
+        WHERE su.StoreID = ?
+      `, [storeId]);
+      
       dashboardData.staff = staffResults.map(s => ({
         ...s,
         status: s.IsActive ? 'Active' : 'Disabled'

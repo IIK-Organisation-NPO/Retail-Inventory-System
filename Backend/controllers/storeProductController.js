@@ -86,21 +86,22 @@ exports.getProducts = async (req, res) => {
     const [products] = await db.query(`
       SELECT 
         p.ProductID,
-        p.Name,
+        p.ProductName AS Name,
         p.Barcode,
-        p.CostPrice,
+        p.UnitCost AS CostPrice,
         p.SellingPrice,
-        p.OnHand,
-        p.ReorderLevel,
+        i.Quantity AS OnHand,
+        i.ReorderLevel,
         c.CategoryName as Category,
         u.UnitName as Unit,
         p.CategoryID,
         p.UnitOfMeasure as UnitOfMeasureID
       FROM Products p
+      LEFT JOIN Inventory i ON p.ProductID = i.ProductID AND i.StoreID = ?
       LEFT JOIN Category c ON p.CategoryID = c.CategoryID
       LEFT JOIN UnitOfMeasure u ON p.UnitOfMeasure = u.UnitOfMeasureID
-      WHERE p.StoreID = ?
-    `, [storeId]);
+      WHERE i.StoreID = ?
+    `, [storeId, storeId]);
     
     res.status(200).json(products);
   } catch (error) {
@@ -149,17 +150,17 @@ const convertUnit = (unitString) => {
 };
 
 // --- HELPER: Get or Create Unit ID ---
-const getOrCreateUnitId = async (unitName) => {
+const getOrCreateUnitId = async (conn, unitName) => {
   const convertedName = convertUnit(unitName);
   const cleanName = convertedName.trim();
   if (!cleanName) return null;
 
-  const [existing] = await db.query('SELECT UnitOfMeasureID FROM UnitOfMeasure WHERE UnitName = ?', [cleanName]);
+  const [existing] = await conn.query('SELECT UnitOfMeasureID FROM UnitOfMeasure WHERE UnitName = ?', [cleanName]);
   if (existing.length > 0) {
     return existing[0].UnitOfMeasureID;
   }
 
-  const [result] = await db.query('INSERT INTO UnitOfMeasure (UnitName) VALUES (?)', [cleanName]);
+  const [result] = await conn.query('INSERT INTO UnitOfMeasure (UnitName) VALUES (?)', [cleanName]);
   return result.insertId;
 };
 
@@ -171,40 +172,51 @@ exports.addProduct = async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
+  // FIX: Define the connection properly
+  const conn = await db.getConnection();
+
   try {
-    const unitId = await getOrCreateUnitId(unitOfMeasureName);
+    // 1. Get or create the unit
+    const unitId = await getOrCreateUnitId(conn, unitOfMeasureName);
 
-    const lookups = await lookupErrors(conn, categoryId, unitOfMeasure);
-    if (Object.keys(lookups).length)
+    // 2. Check if category and unit are valid
+    const lookups = await lookupErrors(conn, categoryId, unitId);
+    if (Object.keys(lookups).length) {
+      conn.release(); // release before returning
       return res.status(400).json({ message: "Validation failed", errors: lookups });
+    }
 
-    // The same barcode can't be used twice in one store
+    // 3. Check for duplicate barcode in this store
     const [dupes] = await conn.query(
       `SELECT p.ProductID FROM products p
        JOIN inventory i ON i.ProductID = p.ProductID
        WHERE i.StoreID = ? AND p.Barcode = ?`,
       [storeId, barcode]
     );
-    if (dupes.length)
+    if (dupes.length) {
+      conn.release();
       return res.status(409).json({ message: "A product with this barcode already exists in this store" });
+    }
 
+    // 4. Start transaction
     await conn.beginTransaction();
 
+    // 5. Insert Product
     const [result] = await conn.query(
       `INSERT INTO products (ProductName, CategoryID, UnitCost, SellingPrice, Barcode, UnitOfMeasure)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, Number(categoryId), Number(costPrice), Number(sellingPrice), barcode, Number(unitOfMeasure)]
+      [name, Number(categoryId), Number(costPrice), Number(sellingPrice), barcode, Number(unitId)]
     );
     const productId = result.insertId;
 
+    // 6. Insert Inventory
     await conn.query(
       "INSERT INTO inventory (StoreID, ProductID, Quantity, ReorderLevel) VALUES (?, ?, ?, ?)",
-      [storeId, productId, onHand, reorderLevel]
+      [storeId, productId, onHand || 0, reorderLevel || 15]
     );
 
+    // 7. Log Initial Stock Movement
     if (onHand > 0) {
-      // StaffID is NULL because the owner made this entry.
-      // inventorymovement.StaffID must allow NULL (ALTER TABLE inventorymovement MODIFY StaffID INT NULL).
       await conn.query(
         `INSERT INTO inventorymovement (StoreID, ProductID, OwnerID, StaffID, MovementType, Quantity, Reason)
          VALUES (?, ?, ?, NULL, 'Stock in', ?, 'Opening stock')`,
@@ -212,34 +224,47 @@ exports.addProduct = async (req, res) => {
       );
     }
 
+    // 8. Commit
     await conn.commit();
     res.status(201).json({ message: "Product added successfully", productId });
+
   } catch (error) {
+    await conn.rollback();
     console.error("ADD PRODUCT ERROR:", error);
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ message: "A product with this barcode already exists." });
     }
     res.status(500).json({ message: "Database error" });
+  } finally {
+    conn.release(); // Always release the connection!
   }
 };
 
 // --- UPDATE A PRODUCT ---
 exports.updateProduct = async (req, res) => {
   const { productId } = req.params;
-  const { name, categoryId, barcode, unitOfMeasureName, costPrice, sellingPrice, reorderLevel } = req.body;
+  // FIX: Need storeId from the body/query to find the inventory record
+  const { storeId, name, categoryId, barcode, unitOfMeasureName, costPrice, sellingPrice, reorderLevel } = req.body;
+
+  const conn = await db.getConnection();
 
   try {
-    const unitId = await getOrCreateUnitId(unitOfMeasureName);
+    const unitId = await getOrCreateUnitId(conn, unitOfMeasureName);
 
     const [stocked] = await conn.query(
       "SELECT InventoryID FROM inventory WHERE StoreID = ? AND ProductID = ?",
       [storeId, productId]
     );
-    if (stocked.length === 0) return res.status(404).json({ message: "Product not found in this store" });
+    if (stocked.length === 0) {
+      conn.release();
+      return res.status(404).json({ message: "Product not found in this store" });
+    }
 
-    const lookups = await lookupErrors(conn, categoryId, unitOfMeasure);
-    if (Object.keys(lookups).length)
+    const lookups = await lookupErrors(conn, categoryId, unitId);
+    if (Object.keys(lookups).length) {
+      conn.release();
       return res.status(400).json({ message: "Validation failed", errors: lookups });
+    }
 
     // Barcode must not clash with another product in this store
     const [dupes] = await conn.query(
@@ -248,29 +273,37 @@ exports.updateProduct = async (req, res) => {
        WHERE i.StoreID = ? AND p.Barcode = ? AND p.ProductID <> ?`,
       [storeId, barcode, productId]
     );
-    if (dupes.length)
+    if (dupes.length) {
+      conn.release();
       return res.status(409).json({ message: "Another product in this store already uses this barcode" });
+    }
 
     await conn.beginTransaction();
+    
     await conn.query(
       `UPDATE products
        SET ProductName = ?, CategoryID = ?, Barcode = ?, UnitOfMeasure = ?, UnitCost = ?, SellingPrice = ?
        WHERE ProductID = ?`,
-      [name, categoryId, barcode || null, unitId, costPrice, sellingPrice, reorderLevel, productId]
+      [name, categoryId, barcode || null, unitId, costPrice, sellingPrice, productId]
     );
-    if (req.body.reorderLevel !== undefined && req.body.reorderLevel !== "") {
+
+    if (reorderLevel !== undefined && reorderLevel !== "") {
       await conn.query(
         "UPDATE inventory SET ReorderLevel = ? WHERE InventoryID = ?",
-        [Number(req.body.reorderLevel), stocked[0].InventoryID]
+        [Number(reorderLevel), stocked[0].InventoryID]
       );
     }
+    
     await conn.commit();
     res.status(200).json({ message: "Product updated successfully" });
   } catch (error) {
+    await conn.rollback();
     console.error("UPDATE PRODUCT ERROR:", error);
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ message: "A product with this barcode already exists." });
     }
     res.status(500).json({ message: "Database error" });
+  } finally {
+    conn.release();
   }
 };
