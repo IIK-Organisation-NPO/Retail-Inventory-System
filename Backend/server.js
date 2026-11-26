@@ -18,9 +18,9 @@ const adminStoreRoutes = require('./routes/adminStoreRoutes');
 const adminReportRoutes = require('./routes/adminReportRoutes');
 const adminUserRoutes = require('./routes/adminUserRoutes');
 const adminAuditRoutes = require('./routes/adminAuditRoutes');
-
-
-
+const adminDashboardRoutes = require('./routes/adminDashboardRoutes');
+const adminProfileRoutes = require('./routes/adminProfileRoutes');
+const adminSettingsRoutes = require('./routes/adminSettingsRoutes');
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -42,6 +42,9 @@ app.use('/api/admin/stores', adminStoreRoutes);
 app.use('/api/admin/reports', adminReportRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/audit-log', adminAuditRoutes);
+app.use('/api/admin/dashboard', adminDashboardRoutes);
+app.use('/api/admin', adminProfileRoutes);
+app.use('/api/admin', adminSettingsRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

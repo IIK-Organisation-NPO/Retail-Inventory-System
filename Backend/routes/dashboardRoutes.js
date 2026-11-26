@@ -5,12 +5,7 @@ const { verifyToken, authorizeRole } = require('../middleware/authMiddleware');
 const requireActiveStore = require('../middleware/requireActiveStore');
 
 // Admin dashboard
-router.get(
-  '/admin/dashboard',
-  verifyToken,
-  authorizeRole('ADMIN'),
-  dashboardController.getAdminDashboard
-);
+
 
 // Owner dashboard (requires ?storeId=). Blocked with a clear message when the
 // selected store is Pending, Rejected or Suspended.

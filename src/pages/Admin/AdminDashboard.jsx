@@ -1,64 +1,145 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../../components/Admin/AdminSidebar";
 import AdminUserMenu from "../../components/Admin/AdminUserMenu";
 import "../../Style/Admin/AdminDashboard.css";
 
-const METRICS = [
-  { label: "Stores onboarded", value: "2", note: "Target 100", progress: 2 },
-  { label: "Active users", value: "10", note: "Target 250 a month", progress: 4 },
-  { label: "Transactions today", value: "66", note: "Target 10,000 a day", progress: 1 },
-  { label: "System uptime", value: "99.9%", note: "Target 99% · Updated 5 min ago", progress: 99.9 },
-  { label: "Sync success", value: "97.5%", note: "Target 95% · Updated 5 min ago", progress: 97.5 },
-  { label: "Average page load", value: "1.8 s", note: "Target under 3 s · Updated 5 min ago", progress: 60 },
+// Change this to match how your other admin pages reach the backend.
+const API_BASE = "http://localhost:5000";
+
+// Button label -> value sent to the backend (?range=)
+const RANGES = [
+  { label: "Today", key: "today" },
+  { label: "Last 7 days", key: "7" },
+  { label: "Last 30 days", key: "30" },
 ];
 
-const ACTIVITY = [
-  { time: "13 Nov, 08:15", user: "Lindiwe Ngecobo", event: "Login", details: "082 000 0011" },
-  { time: "13 Nov, 08:02", user: "Sipho Dlamini", event: "Login", details: "sipho@gmail.com" },
-  { time: "12 Nov, 17:40", user: "Sipho Dlamini", event: "Stock adjustment", details: "Sprite 500ml, Mseleku Tuckshop: 60 to 58" },
-  { time: "12 Nov, 10:05", user: "Sipho Dlamini", event: "Price change", details: "Coca-Cola 500ml selling price updated" },
-];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const pad = (n) => String(n).padStart(2, "0");
 
-const WAITING_APPLICATIONS = [
-  { applicant: "Edendale Spaza", type: "Store", sent: "12 Nov", to: "/admin/stores?store=edendale-spaza" },
-  { applicant: "Coastal Wholesale (Pty) Ltd", type: "Supplier", sent: "13 Nov", to: "/admin/suppliers?supplier=coastal-wholesale" },
-];
+const formatDate = (value) => {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+};
 
-const CHART_DATA = {
-  Today: [
-    { day: "00–04", value: 4 },
-    { day: "04–08", value: 8 },
-    { day: "08–12", value: 18 },
-    { day: "12–16", value: 16 },
-    { day: "16–20", value: 13 },
-    { day: "20–24", value: 7 },
-  ],
-  "Last 7 days": [
-    { day: "Sat", value: 55 },
-    { day: "Sun", value: 62 },
-    { day: "Mon", value: 48 },
-    { day: "Tue", value: 71 },
-    { day: "Wed", value: 74 },
-    { day: "Thu", value: 64 },
-    { day: "Fri", value: 66 },
-  ],
-  "Last 30 days": [
-    { day: "1–4", value: 55 },
-    { day: "5–8", value: 62 },
-    { day: "9–12", value: 48 },
-    { day: "13–16", value: 71 },
-    { day: "17–20", value: 74 },
-    { day: "21–24", value: 64 },
-    { day: "25–30", value: 66 },
-  ],
+const formatDateTime = (value) => {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// How full the progress bar is, between 0 and 100.
+const percentOf = (value, target) => {
+  if (value === null || value === undefined || !target) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / target) * 100)));
+};
+
+// Builds the six cards from the backend's metrics object.
+const buildMetrics = (m) => {
+  const storesValue = m.storesOnboarded.value;
+  const usersValue = m.activeUsers.value;
+  const transactionsValue = m.transactionsToday.value;
+  const syncValue = m.syncSuccess.value;
+
+  return [
+    {
+      label: "Stores onboarded",
+      value: String(storesValue),
+      note: `Target ${m.storesOnboarded.target}`,
+      progress: percentOf(storesValue, m.storesOnboarded.target),
+    },
+    {
+      label: "Active users",
+      value: String(usersValue),
+      note: `Active accounts · Target ${m.activeUsers.target}`,
+      progress: percentOf(usersValue, m.activeUsers.target),
+    },
+    {
+      label: "Transactions today",
+      value: transactionsValue.toLocaleString("en-ZA"),
+      note: `Target ${m.transactionsToday.target.toLocaleString("en-ZA")} a day`,
+      progress: percentOf(transactionsValue, m.transactionsToday.target),
+    },
+    {
+      label: "System uptime",
+      value: "—",
+      note: "Not connected yet · Azure Monitor",
+      progress: 0,
+    },
+    {
+      label: "Sync success",
+      value: syncValue === null ? "—" : `${syncValue}%`,
+      note:
+        syncValue === null
+          ? "No sync records for this period"
+          : `Target ${m.syncSuccess.target}% · This period`,
+      progress: syncValue === null ? 0 : Math.min(100, syncValue),
+    },
+    {
+      label: "Average page load",
+      value: "—",
+      note: "Not connected yet · Azure Monitor",
+      progress: 0,
+    },
+  ];
+};
+
+const reviewNotice = (waiting) => {
+  if (!waiting || waiting.total === 0) {
+    return "No applications are waiting for your review.";
+  }
+  const parts = [];
+  if (waiting.stores > 0) parts.push(`${waiting.stores} store${waiting.stores === 1 ? "" : "s"}`);
+  if (waiting.suppliers > 0) {
+    parts.push(`${waiting.suppliers} supplier${waiting.suppliers === 1 ? "" : "s"}`);
+  }
+  const verb = waiting.total === 1 ? "application is" : "applications are";
+  return `${waiting.total} ${verb} waiting for your review: ${parts.join(" and ")}.`;
 };
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [selectedRange, setSelectedRange] = useState("Last 30 days");
-  const chartData = CHART_DATA[selectedRange];
-  const chartMaximum = Math.max(...chartData.map((item) => item.value));
+  const [selectedRange, setSelectedRange] = useState(RANGES[2]); // Last 30 days
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDashboard = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `${API_BASE}/api/admin/dashboard?range=${selectedRange.key}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body.message || "Could not load the dashboard.");
+        }
+        if (!cancelled) setData(body);
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Could not load the dashboard.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadDashboard();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRange]);
+
+  const metrics = data ? buildMetrics(data.metrics) : [];
+  const chartData = data ? data.chart : [];
+  const chartMaximum = Math.max(...chartData.map((item) => item.value), 1);
+  const waitingItems = data ? data.waiting.items : [];
+  const activity = data ? data.activity : [];
 
   return (
     <div className="admin-dashboard-layout">
@@ -70,142 +151,172 @@ const AdminDashboard = () => {
           <AdminUserMenu />
         </header>
 
-        <p className="admin-review-notice">
-          2 applications are waiting for your review: 1 store and 1 supplier.
-        </p>
+        {error && (
+          <p role="alert" style={{ color: "#c0392b", margin: "0 0 12px" }}>
+            {error}
+          </p>
+        )}
+
+        {data && <p className="admin-review-notice">{reviewNotice(data.waiting)}</p>}
 
         <div className="admin-dashboard-context">
-          <p>Uptime, sync and page-load come from Azure Monitor and cover the period you choose. Sample values here.</p>
+          <p>
+            Stores, users, transactions, sync and activity are live. Uptime and page load will come
+            from Azure Monitor once it is connected.
+          </p>
           <div className="admin-period-controls" role="group" aria-label="Dashboard reporting period">
-            {Object.keys(CHART_DATA).map((range) => (
+            {RANGES.map((range) => (
               <button
                 type="button"
-                key={range}
-                className={selectedRange === range ? "active" : ""}
-                aria-pressed={selectedRange === range}
+                key={range.key}
+                className={selectedRange.key === range.key ? "active" : ""}
+                aria-pressed={selectedRange.key === range.key}
                 onClick={() => setSelectedRange(range)}
               >
-                {range}
+                {range.label}
               </button>
             ))}
           </div>
         </div>
 
-        <section className="admin-metrics-grid" aria-label="Key metrics">
-          {METRICS.map((metric) => (
-            <article className="admin-metric-card" key={metric.label}>
-              <span className="admin-metric-label">{metric.label}</span>
-              <strong className="admin-metric-value">{metric.value}</strong>
-              <div
-                className="admin-metric-progress"
-                role="progressbar"
-                aria-label={`${metric.label} progress`}
-                aria-valuemin="0"
-                aria-valuemax="100"
-                aria-valuenow={metric.progress}
-              >
-                <span style={{ width: `${metric.progress}%` }} />
-              </div>
-              <span className="admin-metric-note">{metric.note}</span>
-            </article>
-          ))}
-        </section>
+        {!data && loading && <p>Loading dashboard…</p>}
 
-        <div className="admin-dashboard-middle">
-          <section className="admin-dashboard-card admin-transactions-card">
-            <h2>Transactions, {selectedRange.toLowerCase()}</h2>
-            <div
-              className="admin-transactions-chart"
-              role="img"
-              aria-label={`Transactions ${selectedRange}`}
-              style={{ gridTemplateColumns: `repeat(${chartData.length}, minmax(0, 1fr))` }}
-            >
-              {chartData.map((item, index) => (
-                <div className="admin-chart-column" key={item.day}>
-                  <span className="admin-chart-value">{item.value}</span>
-                  <div className="admin-chart-bar-area">
-                    <span
-                      className={`admin-chart-bar${index === chartData.length - 1 ? " latest" : ""}`}
-                      style={{ height: `${Math.max((item.value / chartMaximum) * 100, 8)}%` }}
-                    />
+        {data && (
+          <>
+            <section className="admin-metrics-grid" aria-label="Key metrics">
+              {metrics.map((metric) => (
+                <article className="admin-metric-card" key={metric.label}>
+                  <span className="admin-metric-label">{metric.label}</span>
+                  <strong className="admin-metric-value">{metric.value}</strong>
+                  <div
+                    className="admin-metric-progress"
+                    role="progressbar"
+                    aria-label={`${metric.label} progress`}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow={metric.progress}
+                  >
+                    <span style={{ width: `${metric.progress}%` }} />
                   </div>
-                  <span className="admin-chart-day">{item.day}</span>
-                </div>
+                  <span className="admin-metric-note">{metric.note}</span>
+                </article>
               ))}
-            </div>
-          </section>
+            </section>
 
-          <section className="admin-dashboard-card admin-review-card">
-            <h2>Waiting for review</h2>
-            <div className="admin-table-scroll">
-              <table className="admin-dashboard-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Applicant</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Sent</th>
-                    <th scope="col"><span className="admin-visually-hidden">Action</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {WAITING_APPLICATIONS.map((application) => (
-                    <tr key={application.applicant}>
-                      <td>{application.applicant}</td>
-                      <td>{application.type}</td>
-                      <td>{application.sent}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="admin-dashboard-link"
-                          onClick={() => navigate(application.to)}
-                        >
-                          Review
-                        </button>
-                      </td>
-                    </tr>
+            <div className="admin-dashboard-middle">
+              <section className="admin-dashboard-card admin-transactions-card">
+                <h2>Transactions, {selectedRange.label.toLowerCase()}</h2>
+                <div
+                  className="admin-transactions-chart"
+                  role="img"
+                  aria-label={`Transactions ${selectedRange.label}`}
+                  style={{
+                    gridTemplateColumns: `repeat(${chartData.length}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {chartData.map((item, index) => (
+                    <div className="admin-chart-column" key={item.label}>
+                      <span className="admin-chart-value">{item.value}</span>
+                      <div className="admin-chart-bar-area">
+                        <span
+                          className={`admin-chart-bar${index === chartData.length - 1 ? " latest" : ""}`}
+                          style={{
+                            height: `${Math.max((item.value / chartMaximum) * 100, 8)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="admin-chart-day">{item.label}</span>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </section>
+
+              <section className="admin-dashboard-card admin-review-card">
+                <h2>Waiting for review</h2>
+                <div className="admin-table-scroll">
+                  <table className="admin-dashboard-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Applicant</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Sent</th>
+                        <th scope="col">
+                          <span className="admin-visually-hidden">Action</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {waitingItems.length === 0 ? (
+                        <tr>
+                          <td colSpan={4}>Nothing is waiting for review.</td>
+                        </tr>
+                      ) : (
+                        waitingItems.map((application) => (
+                          <tr key={application.id}>
+                            <td>{application.applicant}</td>
+                            <td>{application.type}</td>
+                            <td>{formatDate(application.sent)}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="admin-dashboard-link"
+                                onClick={() => navigate(application.to)}
+                              >
+                                Review
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             </div>
-          </section>
-        </div>
 
-        <section className="admin-dashboard-card admin-activity-card">
-          <div className="admin-activity-header">
-            <h2>Recent activity</h2>
-            <button
-              type="button"
-              className="admin-dashboard-audit-button"
-              onClick={() => navigate("/admin/audit-log")}
-            >
-              Open audit log
-            </button>
-          </div>
-          <div className="admin-table-scroll">
-            <table className="admin-dashboard-table">
-              <thead>
-                <tr>
-                  <th scope="col">Time</th>
-                  <th scope="col">User</th>
-                  <th scope="col">Event</th>
-                  <th scope="col">Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ACTIVITY.map((activity) => (
-                  <tr key={`${activity.time}-${activity.user}`}>
-                    <td>{activity.time}</td>
-                    <td>{activity.user}</td>
-                    <td>{activity.event}</td>
-                    <td>{activity.details}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+            <section className="admin-dashboard-card admin-activity-card">
+              <div className="admin-activity-header">
+                <h2>Recent activity</h2>
+                <button
+                  type="button"
+                  className="admin-dashboard-audit-button"
+                  onClick={() => navigate("/admin/audit-log")}
+                >
+                  Open audit log
+                </button>
+              </div>
+              <div className="admin-table-scroll">
+                <table className="admin-dashboard-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Time</th>
+                      <th scope="col">User</th>
+                      <th scope="col">Event</th>
+                      <th scope="col">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activity.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>No activity recorded yet.</td>
+                      </tr>
+                    ) : (
+                      activity.map((item) => (
+                        <tr key={item.id}>
+                          <td>{formatDateTime(item.time)}</td>
+                          <td>{item.user}</td>
+                          <td>{item.event}</td>
+                          <td>{item.details}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
       </main>
-
     </div>
   );
 };
