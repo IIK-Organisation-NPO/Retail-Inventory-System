@@ -1,4 +1,5 @@
 // src/components/common/ForgotPasswordModal.jsx
+// Forgot password popup flow: email address -> OTP code -> new password
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../../Style/components/auth.css";
@@ -56,9 +57,6 @@ const ForgotPasswordModal = ({ onClose, role = "ADMIN" }) => {
     setStep(nextStep);
   };
 
-  // ==========================================
-  // STEP 1: SEND OTP API CALL
-  // ==========================================
   const sendCode = async () => {
     setLoading(true);
     setError("");
@@ -89,6 +87,7 @@ const ForgotPasswordModal = ({ onClose, role = "ADMIN" }) => {
     }
   };
 
+  // --- Step 1: Email address ---
   const handleSendOtp = (e) => {
     e.preventDefault();
     const recipient = email.trim();

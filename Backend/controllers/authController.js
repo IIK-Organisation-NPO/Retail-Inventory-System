@@ -142,7 +142,7 @@ const processLogin = async (user, actualRole, providedPassword, res) => {
         name: user.Name,
         surname: user.Surname,
         email: user.Email,
-        companyName: user.CompanyName || null, 
+        companyName: user.CompanyName || null, // ← new
       },
     });
   } catch (error) {
