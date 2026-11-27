@@ -3,7 +3,11 @@ const { isValidRegNumber, lookupCompany } = require('../services/cipcService');
 
 // --- CREATE A NEW STORE ---
 exports.createStore = async (req, res) => {
-  const { storeName, registrationNumber, contactNumber, email, province, address, operatingHours } = req.body;
+  const { 
+    storeName, registrationNumber, contactNumber, email, province, address, 
+    operatingHours, logoBase64, logoName, logoType // Added logo fields
+  } = req.body;
+  
   // The page calls this field "storeLocation"; the database column is "Municipality"
   const municipality = req.body.municipality || req.body.storeLocation;
 
@@ -52,12 +56,20 @@ exports.createStore = async (req, res) => {
       return res.status(400).json({ message: 'This company is not in business, so a store cannot be registered.' });
     }
 
-    // PART D: Save. Status is left out on purpose: the database fills in 'Pending'.
+    // PART D: Process the Logo (Convert Base64 string to Buffer for LONGBLOB)
+    let logoBuffer = null;
+    if (logoBase64) {
+      // Remove the data:image/png;base64, prefix
+      const base64Data = logoBase64.replace(/^data:image\/\w+;base64,/, "");
+      logoBuffer = Buffer.from(base64Data, 'base64');
+    }
+
+    // PART E: Save. Status is left out on purpose: the database fills in 'Pending'.
     const [result] = await db.query(
       `INSERT INTO STORES
-      (OwnerID, StoreName, RegistrationNumber, ContactNumber, Email, Province, Municipality, Address, OperatingHours)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [ownerId, name, regNumber, contact, mail, prov, muni, addr, hours]
+      (OwnerID, StoreName, RegistrationNumber, ContactNumber, Email, Province, Municipality, Address, OperatingHours, StoreLogo, LogoFileName, LogoFileType)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [ownerId, name, regNumber, contact, mail, prov, muni, addr, hours, logoBuffer, logoName || null, logoType || null]
     );
 
     res.status(201).json({
@@ -79,7 +91,7 @@ exports.getMyStores = async (req, res) => {
 
     if (role === 'OWNER') {
       const [stores] = await db.query(
-        "SELECT StoreID, StoreName FROM Stores WHERE OwnerID = ? AND Status = 'Approved'",
+        "SELECT StoreID, StoreName, LogoFileName FROM Stores WHERE OwnerID = ? AND Status = 'Approved'",
         [req.user.id]
       );
       return res.status(200).json(stores);
@@ -87,7 +99,7 @@ exports.getMyStores = async (req, res) => {
 
     if (role === 'STAFF') {
       const [stores] = await db.query(
-        `SELECT DISTINCT s.StoreID, s.StoreName
+        `SELECT DISTINCT s.StoreID, s.StoreName, s.LogoFileName
          FROM StoreUsers su
          JOIN Stores s ON s.StoreID = su.StoreID
          WHERE su.StaffID = ?
@@ -112,8 +124,12 @@ exports.getStoreById = async (req, res) => {
   const ownerId = req.user.id;
 
   try {
+    // We don't select StoreLogo (LONGBLOB) here to prevent sending a massive file to the frontend.
+    // We only send the metadata. If the frontend needs the image, it can hit a separate endpoint.
     const [stores] = await db.query(
-      'SELECT * FROM STORES WHERE StoreID = ? AND OwnerID = ?',
+      `SELECT StoreID, OwnerID, StoreName, RegistrationNumber, ContactNumber, Email, 
+              Province, Municipality, Address, OperatingHours, Status, LogoFileName, LogoFileType 
+       FROM STORES WHERE StoreID = ? AND OwnerID = ?`,
       [storeId, ownerId]
     );
 
@@ -136,7 +152,8 @@ exports.getStoreById = async (req, res) => {
 exports.updateStore = async (req, res) => {
   const { storeId } = req.params;
   const {
-    storeName, contactNumber, email, province, municipality, address, operatingHours
+    storeName, contactNumber, email, province, municipality, address, operatingHours,
+    logoBase64, logoName, logoType // Added logo fields for updating
   } = req.body;
 
   const ownerId = req.user.id;
@@ -164,13 +181,27 @@ exports.updateStore = async (req, res) => {
 
     const nextStatus = currentStatus === 'Rejected' ? 'Pending' : currentStatus;
 
-    // 2. Update the store details (and resubmit it if it was rejected)
-    await db.query(
-      `UPDATE STORES
-       SET StoreName = ?, ContactNumber = ?, Email = ?, Province = ?, Municipality = ?, Address = ?, OperatingHours = ?, Status = ?
-       WHERE StoreID = ?`,
-      [storeName, contactNumber, email, province, municipality, address, operatingHours, nextStatus, storeId]
-    );
+    // 2. Prepare the update query
+    let updateQuery = `
+      UPDATE STORES
+      SET StoreName = ?, ContactNumber = ?, Email = ?, Province = ?, Municipality = ?, Address = ?, OperatingHours = ?, Status = ?
+    `;
+    let queryParams = [storeName, contactNumber, email, province, municipality, address, operatingHours, nextStatus];
+
+    // 3. If a new logo was uploaded, add it to the query
+    if (logoBase64) {
+      const base64Data = logoBase64.replace(/^data:image\/\w+;base64,/, "");
+      const logoBuffer = Buffer.from(base64Data, 'base64');
+      
+      updateQuery += `, StoreLogo = ?, LogoFileName = ?, LogoFileType = ?`;
+      queryParams.push(logoBuffer, logoName || null, logoType || null);
+    }
+
+    updateQuery += ` WHERE StoreID = ?`;
+    queryParams.push(storeId);
+
+    // 4. Execute the update
+    await db.query(updateQuery, queryParams);
 
     res.status(200).json({
       message:
@@ -183,5 +214,30 @@ exports.updateStore = async (req, res) => {
   } catch (error) {
     console.error("UPDATE STORE ERROR:", error);
     res.status(500).json({ message: "Database error while updating store." });
+  }
+};
+
+// --- GET STORE LOGO IMAGE ---
+// This streams the binary image directly to the browser so <img> tags can display it.
+exports.getStoreLogo = async (req, res) => {
+  const { storeId } = req.params;
+  try {
+    const [rows] = await db.query(
+      'SELECT StoreLogo, LogoFileType FROM STORES WHERE StoreID = ?',
+      [storeId]
+    );
+
+    if (rows.length === 0 || !rows[0].StoreLogo) {
+      return res.status(404).send('No logo found');
+    }
+
+    // Set the correct image type (e.g., image/png) so the browser displays it
+    res.setHeader('Content-Type', rows[0].LogoFileType || 'image/png');
+    
+    // Send the binary buffer directly
+    res.send(rows[0].StoreLogo);
+  } catch (error) {
+    console.error("GET STORE LOGO ERROR:", error);
+    res.status(500).send('Server error');
   }
 };

@@ -1,12 +1,31 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/reportController');
-const { verifyToken } = require('../middleware/authMiddleware');
-const requireActiveStore = require('../middleware/requireActiveStore');
 
-// requireActiveStore only blocks the owner (or staff) of a store that is not
-// Approved; it reads ?storeId= from the query. Access rules are unchanged.
-router.get('/sales', verifyToken, requireActiveStore, reportController.getSalesReport);
-router.get('/inventory', verifyToken, requireActiveStore, reportController.getInventoryReport);
+// --- IMPORT MIDDLEWARE ---
+const { verifyToken, authorizeRole } = require('../middleware/authMiddleware');
+const checkStoreOwnership = require('../middleware/checkStoreOwnership'); 
+
+// ==========================================
+// REPORT ROUTES
+// ==========================================
+
+// 1. Get Sales Report (ALLOW STAFF, OWNER, ADMIN)
+router.get(
+    '/sales', 
+    verifyToken, 
+    authorizeRole('STAFF', 'OWNER', 'ADMIN'), 
+    checkStoreOwnership, 
+    reportController.getSalesReport
+);
+
+// 2. Get Inventory Report (ALLOW STAFF, OWNER, ADMIN)
+router.get(
+    '/inventory', 
+    verifyToken, 
+    authorizeRole('STAFF', 'OWNER', 'ADMIN'), 
+    checkStoreOwnership, 
+    reportController.getInventoryReport
+);
 
 module.exports = router;

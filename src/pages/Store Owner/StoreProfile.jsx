@@ -45,7 +45,7 @@ const formatOperatingHours = ({ fromDay, toDay, openTime, closeTime }) => {
   return `${dayLabels[fromDay]}-${dayLabels[toDay]} ${openTime}-${closeTime}`;
 };
 
-const validateStoreForm = (formData, address, hours) => {
+const validateStoreForm = (formData, address, hours, operatingHoursObj) => {
   const get = (name) => (formData.get(name) || "").toString().trim();
   const errors = {};
 
@@ -74,8 +74,12 @@ const validateStoreForm = (formData, address, hours) => {
 
   if (!get("storeLocation")) errors.storeLocation = "Enter the store location / area.";
   if (!get("province")) errors.province = "Select a province.";
+  
+  // Operating Hours Validation
   if (!hours) {
     errors.operatingHours = "Choose operating days and opening and closing times.";
+  } else if (operatingHoursObj.fromDay === operatingHoursObj.toDay) {
+    errors.operatingHours = "Can not approve same days";
   } else if (hours.length < 5) {
     errors.operatingHours = "Enter valid operating hours, for example Mon-Fri 08:00-17:00.";
   } else if (!/\d/.test(hours)) {
@@ -104,7 +108,9 @@ const StoreProfile = () => {
 
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
+  const [logoBase64, setLogoBase64] = useState(""); // Added for DB storage
   const [logoError, setLogoError] = useState("");
+  
   // Draft saved earlier (if the user hit "Back" from the review page)
   const [savedDraft] = useState(() => {
     try {
@@ -167,6 +173,14 @@ const StoreProfile = () => {
     logoPreviewUrl.current = previewUrl;
     setLogoPreview(previewUrl);
     setLogoFile(file);
+    
+    // Convert to Base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoBase64(reader.result);
+    };
+    reader.readAsDataURL(file);
+    
     setLogoError("");
   };
 
@@ -175,6 +189,7 @@ const StoreProfile = () => {
     logoPreviewUrl.current = "";
     setLogoPreview("");
     setLogoFile(null);
+    setLogoBase64(""); // Clear Base64
     setLogoError("");
   };
 
@@ -203,7 +218,8 @@ const StoreProfile = () => {
     const formattedHours = formatOperatingHours(operatingHours);
 
     // Check all fields first, and stop with a message under each problem field
-    const foundErrors = validateStoreForm(formData, physicalAddress, formattedHours);
+    const foundErrors = validateStoreForm(formData, physicalAddress, formattedHours, operatingHours);
+    
     if (Object.keys(foundErrors).length > 0) {
       setErrors(foundErrors);
       setOperatingHoursError(foundErrors.operatingHours || "");
@@ -213,6 +229,7 @@ const StoreProfile = () => {
       }
       return;
     }
+    
     setErrors({});
     setOperatingHoursError("");
 
@@ -236,7 +253,12 @@ const StoreProfile = () => {
       province: formData.get("province"),
       operatingHours: formattedHours,
       operatingHoursDetails: operatingHours,
-      // Note: We aren't uploading the logo to the DB yet, just keeping it in UI for now
+      
+      // NEW LOGO DATA FOR BACKEND
+      hasLogo: !!logoFile,
+      logoName: logoFile ? logoFile.name : null,
+      logoType: logoFile ? logoFile.type : null,
+      logoBase64: logoBase64
     };
 
     // Save to localStorage so ReviewStore can read it
@@ -471,12 +493,21 @@ const StoreProfile = () => {
                     <FieldError message={errors.province} />
                   </div>
                 </div>
+                
+                {/* Operating Hours Component */}
                 <div className="input-group operating-hours-input-group">
                   <OperatingHoursField
                     value={operatingHours}
                     onChange={(hours) => {
                       setOperatingHours(hours);
-                      if (formatOperatingHours(hours)) setOperatingHoursError("");
+                      // Immediate validation for same days
+                      if (hours.fromDay && hours.toDay) {
+                        if (hours.fromDay === hours.toDay) {
+                           setOperatingHoursError("Can not approve same days");
+                        } else {
+                           setOperatingHoursError("");
+                        }
+                      }
                     }}
                     error={operatingHoursError}
                   />

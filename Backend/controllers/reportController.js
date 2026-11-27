@@ -27,7 +27,7 @@ exports.getSalesReport = async (req, res) => {
       [storeId]
     );
 
-    // 3. Top Products (Updated to use ProductName)
+    // 3. Top Products
     const [topProducts] = await db.query(
       `SELECT p.ProductName as name, SUM(si.Quantity) as units 
        FROM SaleItems si
@@ -65,22 +65,29 @@ exports.getSalesReport = async (req, res) => {
 exports.getInventoryReport = async (req, res) => {
   const { storeId } = req.query;
   try {
-    // 1. Summary Stats (Updated to use OnHand and UnitCost directly from Products)
+    // 1. Summary Stats
+    // FIXED: Now joins Inventory and Products because StoreID, Quantity, and ReorderLevel 
+    // are no longer inside the Products table.
     const [summary] = await db.query(
       `SELECT 
-        COUNT(*) as totalProducts,
-        COALESCE(SUM(OnHand * UnitCost), 0) as inventoryValue,
-        COALESCE(SUM(CASE WHEN OnHand <= ReorderLevel AND OnHand > 0 THEN 1 ELSE 0 END), 0) as lowStock,
-        COALESCE(SUM(CASE WHEN OnHand = 0 THEN 1 ELSE 0 END), 0) as outOfStock
-       FROM Products WHERE StoreID = ?`,
+        COUNT(i.ProductID) as totalProducts,
+        COALESCE(SUM(i.Quantity * p.UnitCost), 0) as inventoryValue,
+        COALESCE(SUM(CASE WHEN i.Quantity <= i.ReorderLevel AND i.Quantity > 0 THEN 1 ELSE 0 END), 0) as lowStock,
+        COALESCE(SUM(CASE WHEN i.Quantity = 0 THEN 1 ELSE 0 END), 0) as outOfStock
+       FROM Inventory i
+       JOIN Products p ON i.ProductID = p.ProductID
+       WHERE i.StoreID = ?`,
       [storeId]
     );
 
-    // 2. Lowest stock items (Updated to use ProductName)
+    // 2. Lowest stock items
+    // FIXED: Now joins Inventory to get the correct Quantity and ProductName
     const [lowStockItems] = await db.query(
-      `SELECT ProductName as name, OnHand as quantity 
-       FROM Products WHERE StoreID = ? AND OnHand <= ReorderLevel 
-       ORDER BY OnHand ASC LIMIT 5`,
+      `SELECT p.ProductName as name, i.Quantity 
+       FROM Inventory i
+       JOIN Products p ON i.ProductID = p.ProductID
+       WHERE i.StoreID = ? AND i.Quantity <= i.ReorderLevel 
+       ORDER BY i.Quantity ASC LIMIT 5`,
       [storeId]
     );
 

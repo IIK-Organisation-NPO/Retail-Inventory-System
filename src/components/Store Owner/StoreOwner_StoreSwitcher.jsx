@@ -4,19 +4,42 @@ import { useState, useEffect } from "react";
 import useDropdown from "../../hooks/useDropdown";
 import "../../Style/Store Owner/StoreOwner_HeaderMenus.css";
 
-const StoreLogo = ({ store }) => (
-  <svg
-    className="so-store-logo"
-    viewBox="0 0 32 32"
-    role="img"
-    aria-label={`${store.name} logo`}
-  >
-    <circle cx="16" cy="16" r="16" fill="#e5e7eb" />
-    <rect x="7" y="8" width="18" height="16" rx="3" fill="#fff" stroke="#9ca3af" strokeWidth="1.5" />
-    <circle cx="12.5" cy="13.5" r="2" fill="#9ca3af" />
-    <path d="m9 22 5-5 3 3 2-2 4 4" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+// UPDATED: StoreLogo now tries to load the image from the backend first
+const StoreLogo = ({ store }) => {
+  const [imgError, setImgError] = useState(false);
+
+  // Reset error state if the user switches to a different store in the dropdown
+  useEffect(() => {
+    setImgError(false);
+  }, [store.id]);
+
+  if (store.hasLogo && !imgError) {
+    return (
+      <img
+        src={`http://localhost:5000/api/stores/${store.id}/logo`}
+        alt={`${store.name} logo`}
+        className="so-store-logo"
+        style={{ objectFit: 'cover', borderRadius: '50%', width: '32px', height: '32px' }}
+        onError={() => setImgError(true)} // Fallback to SVG if the image fails to load
+      />
+    );
+  }
+
+  // Fallback SVG placeholder
+  return (
+    <svg
+      className="so-store-logo"
+      viewBox="0 0 32 32"
+      role="img"
+      aria-label={`${store.name} logo`}
+    >
+      <circle cx="16" cy="16" r="16" fill="#e5e7eb" />
+      <rect x="7" y="8" width="18" height="16" rx="3" fill="#fff" stroke="#9ca3af" strokeWidth="1.5" />
+      <circle cx="12.5" cy="13.5" r="2" fill="#9ca3af" />
+      <path d="m9 22 5-5 3 3 2-2 4 4" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+};
 
 const StoreOwner_StoreSwitcher = ({ onChange, readOnly = false }) => {
   const { ref, isOpen, toggle, close } = useDropdown();
@@ -40,9 +63,11 @@ const StoreOwner_StoreSwitcher = ({ onChange, readOnly = false }) => {
         
         if (response.ok && data.length > 0) {
           // Map database columns to the frontend's expected structure
+          // Added hasLogo flag
           const formattedStores = data.map(s => ({
             id: String(s.StoreID),
-            name: s.StoreName
+            name: s.StoreName,
+            hasLogo: !!s.LogoFileName 
           }));
 
           setStores(formattedStores);

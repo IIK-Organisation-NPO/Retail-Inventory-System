@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
 import StoreOwnerSidebar from "../../components/Store Owner/StoreOwnerSidebar";
@@ -64,33 +64,44 @@ const Reports = () => {
         
         // Fetch Sales Report
         const salesRes = await fetch(`http://localhost:5000/api/reports/sales?storeId=${storeId}`, { headers });
+        if (!salesRes.ok) {
+          const errData = await salesRes.json().catch(() => ({}));
+          throw new Error(`Sales API Error ${salesRes.status}: ${errData.message || salesRes.statusText}`);
+        }
         const salesData = await salesRes.json();
-        if (salesRes.ok) setSalesReport(salesData);
+        setSalesReport(salesData);
 
         // Fetch Inventory Report
         const invRes = await fetch(`http://localhost:5000/api/reports/inventory?storeId=${storeId}`, { headers });
+        if (!invRes.ok) {
+          const errData = await invRes.json().catch(() => ({}));
+          throw new Error(`Inventory API Error ${invRes.status}: ${errData.message || invRes.statusText}`);
+        }
         const invData = await invRes.json();
-        if (invRes.ok) setInventoryReport(invData);
+        setInventoryReport(invData);
 
       } catch (err) {
-        console.error("Failed to load reports", err);
+        console.error("Failed to load reports:", err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    if (token) fetchReports();
+    if (token && storeId) fetchReports();
   }, [storeId, token]);
 
-  // Calculate highest payment method for progress bars
-  const totalPayments = salesReport.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+  // --- 2. MEMOIZED CALCULATIONS (Improves Rendering Performance) ---
+  const totalPayments = useMemo(() => {
+    return salesReport.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+  }, [salesReport.payments]);
   
-  // Calculate best day dynamically
-  const bestDay = salesReport.chartData.length > 0 
-    ? salesReport.chartData.reduce((prev, current) => (prev.amount > current.amount) ? prev : current)
-    : { day: "N/A", amount: 0 };
+  const bestDay = useMemo(() => {
+    return salesReport.chartData.length > 0 
+      ? salesReport.chartData.reduce((prev, current) => (prev.amount > current.amount) ? prev : current)
+      : { day: "N/A", amount: 0 };
+  }, [salesReport.chartData]);
 
-  // --- 2. EXPORT LOGIC ---
+  // --- 3. EXPORT LOGIC ---
   const handleReportExport = async ({ fileType, includeGraphs }) => {
     if (fileType === "pdf") {
       const { jsPDF } = await import("jspdf");

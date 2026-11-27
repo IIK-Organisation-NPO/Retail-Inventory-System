@@ -4,14 +4,6 @@ const isId = (v) => Number.isInteger(Number(v)) && Number(v) > 0;
 const isMoney = (v) => v !== "" && v !== null && v !== undefined && !Number.isNaN(Number(v)) && Number(v) >= 0;
 const isCount = (v) => Number.isInteger(Number(v)) && Number(v) >= 0 && Number(v) <= 100000;
 
-const ownsStore = async (conn, storeId, ownerId) => {
-  const [rows] = await conn.query(
-    "SELECT StoreID FROM stores WHERE StoreID = ? AND OwnerID = ?",
-    [storeId, ownerId]
-  );
-  return rows.length > 0;
-};
-
 // Field validation shared by add and update (no database needed)
 const validateProductBody = (b) => {
   const errors = {};
@@ -80,9 +72,6 @@ exports.getProducts = async (req, res) => {
   }
 
   try {
-    // REMOVED THE ownsStore CHECK HERE because the checkStoreOwnership middleware 
-    // now verifies that either the Owner OR an assigned Staff member is making the request.
-
     const [products] = await db.query(`
       SELECT 
         p.ProductID,
@@ -90,18 +79,18 @@ exports.getProducts = async (req, res) => {
         p.Barcode,
         p.UnitCost AS CostPrice,
         p.SellingPrice,
-        i.Quantity AS OnHand,
-        i.ReorderLevel,
+        i.Quantity AS OnHand,         -- Stock now comes from Inventory table
+        i.ReorderLevel,               -- Reorder Level now comes from Inventory table
         c.CategoryName as Category,
         u.UnitName as Unit,
         p.CategoryID,
         p.UnitOfMeasure as UnitOfMeasureID
       FROM Products p
-      LEFT JOIN Inventory i ON p.ProductID = i.ProductID AND i.StoreID = ?
+      INNER JOIN Inventory i ON p.ProductID = i.ProductID
       LEFT JOIN Category c ON p.CategoryID = c.CategoryID
       LEFT JOIN UnitOfMeasure u ON p.UnitOfMeasure = u.UnitOfMeasureID
       WHERE i.StoreID = ?
-    `, [storeId, storeId]);
+    `, [storeId]);
     
     res.status(200).json(products);
   } catch (error) {
@@ -185,10 +174,11 @@ exports.addProduct = async (req, res) => {
       return res.status(400).json({ message: "Validation failed", errors: lookups });
     }
 
-    // 3. Check for duplicate barcode in this store
+    // 3. Check for duplicate barcode in THIS store's inventory
     const [dupes] = await conn.query(
       `SELECT p.ProductID FROM Products p
-       WHERE p.StoreID = ? AND p.Barcode = ?`,
+       JOIN Inventory i ON p.ProductID = i.ProductID
+       WHERE i.StoreID = ? AND p.Barcode = ?`,
       [storeId, barcode]
     );
     if (dupes.length) {
@@ -198,15 +188,15 @@ exports.addProduct = async (req, res) => {
 
     await conn.beginTransaction();
 
-    // 4. Insert Product
+    // 4. Insert Product (No StoreID, No OnHand, No ReorderLevel)
     const [result] = await conn.query(
-      `INSERT INTO Products (StoreID, ProductName, CategoryID, UnitCost, SellingPrice, Barcode, UnitOfMeasure, OnHand, ReorderLevel)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [storeId, name, Number(categoryId), Number(costPrice), Number(sellingPrice), barcode, Number(unitId), onHand || 0, reorderLevel || 15]
+      `INSERT INTO Products (ProductName, CategoryID, UnitCost, SellingPrice, Barcode, UnitOfMeasure)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [name, Number(categoryId), Number(costPrice), Number(sellingPrice), barcode, Number(unitId)]
     );
     const productId = result.insertId;
 
-    // 5. Insert Inventory
+    // 5. Insert Inventory (Links the product to the specific store with initial stock)
     await conn.query(
       "INSERT INTO Inventory (StoreID, ProductID, Quantity, ReorderLevel) VALUES (?, ?, ?, ?)",
       [storeId, productId, onHand || 0, reorderLevel || 15]
@@ -246,8 +236,9 @@ exports.updateProduct = async (req, res) => {
   try {
     const unitId = await getOrCreateUnitId(conn, unitOfMeasureName);
 
+    // Check if this product is actually in this store's inventory
     const [stocked] = await conn.query(
-      "SELECT InventoryID FROM inventory WHERE StoreID = ? AND ProductID = ?",
+      "SELECT InventoryID FROM Inventory WHERE StoreID = ? AND ProductID = ?",
       [storeId, productId]
     );
     if (stocked.length === 0) {
@@ -263,8 +254,8 @@ exports.updateProduct = async (req, res) => {
 
     // Barcode must not clash with another product in this store
     const [dupes] = await conn.query(
-      `SELECT p.ProductID FROM products p
-       JOIN inventory i ON i.ProductID = p.ProductID
+      `SELECT p.ProductID FROM Products p
+       JOIN Inventory i ON i.ProductID = p.ProductID
        WHERE i.StoreID = ? AND p.Barcode = ? AND p.ProductID <> ?`,
       [storeId, barcode, productId]
     );
@@ -275,16 +266,18 @@ exports.updateProduct = async (req, res) => {
 
     await conn.beginTransaction();
     
+    // 1. Update the generic Product info
     await conn.query(
-      `UPDATE products
+      `UPDATE Products
        SET ProductName = ?, CategoryID = ?, Barcode = ?, UnitOfMeasure = ?, UnitCost = ?, SellingPrice = ?
        WHERE ProductID = ?`,
       [name, categoryId, barcode || null, unitId, costPrice, sellingPrice, productId]
     );
 
+    // 2. Update the Store-specific Inventory info (ReorderLevel)
     if (reorderLevel !== undefined && reorderLevel !== "") {
       await conn.query(
-        "UPDATE inventory SET ReorderLevel = ? WHERE InventoryID = ?",
+        "UPDATE Inventory SET ReorderLevel = ? WHERE InventoryID = ?",
         [Number(reorderLevel), stocked[0].InventoryID]
       );
     }

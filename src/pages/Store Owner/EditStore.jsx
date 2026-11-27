@@ -29,7 +29,9 @@ const EditStore = () => {
   const navigate = useNavigate();
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
+  const [logoBase64, setLogoBase64] = useState(""); // Added for DB storage
   const [logoError, setLogoError] = useState("");
+  const [imageError, setImageError] = useState(false); // Tracks if the backend image fails to load
   const [sameAsRegisteredAddress, setSameAsRegisteredAddress] = useState(false);
   const [physicalAddress, setPhysicalAddress] = useState("Pietermaritzburg, KwaZulu-Natal");
   
@@ -50,12 +52,19 @@ const EditStore = () => {
   
   const logoPreviewUrl = useRef("");
 
-  // Load any previously saved draft data on mount (in case they hit "Back")
+  // Load any previously saved draft data on mount AND fetch existing logo from backend
   useEffect(() => {
     const savedDraft = localStorage.getItem("draftStore");
     if (savedDraft) {
       const parsed = JSON.parse(savedDraft);
       if (parsed.address) setPhysicalAddress(parsed.address);
+    }
+
+    // Fetch logo from backend if an active store is selected
+    const activeStoreId = localStorage.getItem("activeStoreId");
+    if (activeStoreId) {
+      // We add a timestamp so the browser doesn't cache an old image if they just updated it
+      setLogoPreview(`http://localhost:5000/api/stores/${activeStoreId}/logo?t=${Date.now()}`);
     }
   }, []);
 
@@ -87,6 +96,15 @@ const EditStore = () => {
     logoPreviewUrl.current = previewUrl;
     setLogoPreview(previewUrl);
     setLogoFile(file);
+    setImageError(false); // Reset error state for new image
+    
+    // Convert file to Base64 for the Backend LONGBLOB
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoBase64(reader.result); 
+    };
+    reader.readAsDataURL(file);
+    
     setLogoError("");
   };
 
@@ -95,6 +113,8 @@ const EditStore = () => {
     logoPreviewUrl.current = "";
     setLogoPreview("");
     setLogoFile(null);
+    setLogoBase64(""); // Clear base64 data
+    setImageError(false);
     setLogoError("");
   };
 
@@ -136,7 +156,6 @@ const EditStore = () => {
     return errors;
   };
 
-  // --- THIS IS THE FIXED FUNCTION ---
   const handleSaveChanges = (event) => {
     event.preventDefault();
     
@@ -145,9 +164,12 @@ const EditStore = () => {
     
     let hasError = false;
 
-    // 2. Check Operating Hours
+    // 2. Check Operating Hours (Strict check for same days)
     if (!operatingHours.fromDay || !operatingHours.toDay) {
       setOperatingHoursError("Choose both the first and last open day.");
+      hasError = true;
+    } else if (operatingHours.fromDay === operatingHours.toDay) {
+      setOperatingHoursError("Can not approve same days");
       hasError = true;
     } else {
       setOperatingHoursError("");
@@ -167,7 +189,7 @@ const EditStore = () => {
       return;
     }
 
-    // 5. Build the draft object (Restored Backend Integration)
+    // 5. Build the draft object (Including Base64 Logo Data for the Review page & Backend)
     const draftStore = {
       storeName: formData.get("storeName"),
       registrationNumber: "2024/123456/07", 
@@ -183,6 +205,12 @@ const EditStore = () => {
       storeLocation: formData.get("storeLocation"),
       operatingHours: `${operatingHours.fromDay} - ${operatingHours.toDay}, ${operatingHours.openTime} - ${operatingHours.closeTime}`,
       gpsCoordinates: formData.get("gpsCoordinates"),
+      
+      // NEW LOGO DATA FOR BACKEND & REVIEW PAGE
+      hasLogo: !!logoFile,
+      logoName: logoFile ? logoFile.name : null,
+      logoType: logoFile ? logoFile.type : null,
+      logoBase64: logoBase64 // The actual image data string
     };
 
     // 6. Save to localStorage for the Review page
@@ -229,11 +257,19 @@ const EditStore = () => {
             <div className="card logo-upload-card">
               <h2 className="form-title">Store logo</h2>
               <div className="logo-upload-row">
-                {logoPreview ? (
-                  <img src={logoPreview} alt="Store logo preview" className="avatar-large-initials logo-preview" />
+                
+                {/* LOGO DISPLAY LOGIC */}
+                {logoPreview && !imageError ? (
+                  <img 
+                    src={logoPreview} 
+                    alt="Store logo preview" 
+                    className="avatar-large-initials logo-preview" 
+                    onError={() => setImageError(true)} // Fallback if backend returns 404
+                  />
                 ) : (
                   <div className="avatar-large-initials">MT</div>
                 )}
+
                 <div className="upload-actions">
                   <label className="btn-outline choose-logo-btn">
                     Upload logo
@@ -426,7 +462,14 @@ const EditStore = () => {
                     value={operatingHours}
                     onChange={(hours) => {
                       setOperatingHours(hours);
-                      if (hours.fromDay && hours.toDay) setOperatingHoursError("");
+                      // Clear error if fixed, show error if same day selected
+                      if (hours.fromDay && hours.toDay) {
+                        if (hours.fromDay === hours.toDay) {
+                           setOperatingHoursError("Can not approve same days");
+                        } else {
+                           setOperatingHoursError("");
+                        }
+                      }
                     }}
                     error={operatingHoursError}
                   />

@@ -68,6 +68,7 @@ const ReviewStore = () => {
 
     try {
       // Send the draft data to the backend API
+      // Note: The spread operator (...draftStore) automatically includes the new logoBase64 data
       const response = await fetch("http://localhost:5000/api/stores", {
         method: "POST",
         headers: {
@@ -196,7 +197,6 @@ const ReviewStore = () => {
               </div>
               <div className="review-row">
                 <span className="review-label">Registered name</span>
-                {/* FIXED: Changed company.companyName to company.registeredName to match CompanyInformation.jsx */}
                 <span className="review-value">{company.registeredName || "Not provided"}</span>
               </div>
               <div className="review-row">
@@ -227,7 +227,6 @@ const ReviewStore = () => {
               </div>
               <div className="review-row">
                 <span className="review-label">Operating hours</span>
-                {/* Displays the new string format perfectly */}
                 <span className="review-value">{draftStore.operatingHours || "Not provided"}</span>
               </div>
             </div>
@@ -293,7 +292,12 @@ const ReviewStore = () => {
             <span className="bullet-separator">•</span>
             <span>Website: {draftStore.website || "Not provided"}</span>
           </div>
-          <p className="logo-note">Store logo: Not uploaded — you can add a logo after registration.</p>
+          {/* UPDATED LOGO LOGIC HERE */}
+          <p className="logo-note">
+            Store logo: {draftStore.hasLogo 
+              ? `${draftStore.logoName} (Uploaded)` 
+              : "Not uploaded — you can add a logo after registration."}
+          </p>
         </div>
 
         {/* Edit Profile Button */}
