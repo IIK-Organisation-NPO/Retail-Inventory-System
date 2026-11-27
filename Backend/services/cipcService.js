@@ -19,6 +19,12 @@ const MOCK_COMPANIES = {
     status: 'Deregistered',
     address: '5 Church Street, Umzimkhulu, KwaZulu-Natal, 3297',
   },
+  // NEW TEST COMPANY:
+  '2025/555555/07': {
+    companyName: 'Kgotso Logistics (Pty) Ltd',
+    status: 'In Business',
+    address: '45 Kgotso Avenue, Sandton, Gauteng, 2196',
+  },
 };
 
 async function lookupCompany(regNumber) {

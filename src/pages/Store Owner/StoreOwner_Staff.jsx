@@ -7,7 +7,7 @@ import StoreOwner_StoreSwitcher from "../../components/Store Owner/StoreOwner_St
 import StoreOwner_UserMenu from "../../components/Store Owner/StoreOwner_UserMenu";
 import StoreOwner_AddStaff_popup from "../../components/Store Owner/StoreOwner_AddStaff_popup";
 import StoreOwner_ConfirmModal from "../../components/Store Owner/StoreOwner_ConfirmModal";
-import { STORES } from "../../data/stores";
+// REMOVED: import { STORES } from "../../data/stores";
 
 const TOAST_MS = 3000;
 
@@ -23,15 +23,43 @@ const fullName = (s) => `${s.name} ${s.surname}`;
 const StoreOwner_Staff = () => {
   // --- State ---
   const [staff, setStaff] = useState([]);
+  const [stores, setStores] = useState([]); // <-- NEW: State for dynamic stores
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
   const [storeId, setStoreId] = useState(() => localStorage.getItem("activeStoreId") || 1);
-  const [popup, setPopup] = useState(null); // { mode: "add" } | { mode: "edit", member }
-  const [confirm, setConfirm] = useState(null); // { member, action: "disable" | "enable" }
+  const [popup, setPopup] = useState(null); 
+  const [confirm, setConfirm] = useState(null); 
   const [toast, setToast] = useState("");
 
   const token = localStorage.getItem("token");
+
+  // --- 0. FETCH OWNER'S REAL STORES ---
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        // Note: Adjust the URL if your backend route for fetching owner stores is different
+        const response = await fetch("http://localhost:5000/api/stores", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Map to { id, name } format expected by the popup
+          const formattedStores = data.map((s) => ({
+            id: s.StoreID || s.id,
+            name: s.StoreName || s.name
+          }));
+          setStores(formattedStores);
+        }
+      } catch (err) {
+        console.error("Failed to load stores", err);
+      }
+    };
+
+    if (token) fetchStores();
+  }, [token]);
 
   // --- 1. FETCH STAFF FROM BACKEND ---
   const fetchStaff = async () => {
@@ -86,7 +114,7 @@ const StoreOwner_Staff = () => {
       let response;
       
       const payload = {
-        storeId: storeId,
+        storeId: member.storeId || storeId, // Use the selected store from the popup, or fallback to current
         name: member.name,
         surname: member.surname,
         email: member.email,
@@ -271,7 +299,7 @@ const StoreOwner_Staff = () => {
       {/* ADD / EDIT STAFF POPUP */}
       {popup && (
         <StoreOwner_AddStaff_popup
-          stores={STORES}
+          stores={stores} // <-- PASSING DYNAMIC STORES NOW
           defaultStoreId={storeId}
           staffMember={popup.mode === "edit" ? popup.member : undefined}
           isMobileTaken={isMobileTaken}

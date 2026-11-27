@@ -14,7 +14,7 @@ exports.getSalesReport = async (req, res) => {
       [storeId]
     );
 
-    // 2. Chart Data (Sales per day) - FIXED FOR ONLY_FULL_GROUP_BY
+    // 2. Chart Data (Sales per day)
     const [chartData] = await db.query(
       `SELECT 
          DATE_FORMAT(SaleDate, '%a') as day, 
@@ -27,14 +27,14 @@ exports.getSalesReport = async (req, res) => {
       [storeId]
     );
 
-    // 3. Top Products
+    // 3. Top Products (Updated to use ProductName)
     const [topProducts] = await db.query(
-      `SELECT p.Name as name, SUM(si.Quantity) as units 
+      `SELECT p.ProductName as name, SUM(si.Quantity) as units 
        FROM SaleItems si
        JOIN Products p ON si.ProductID = p.ProductID
        JOIN Sales s ON si.SaleID = s.SaleID
        WHERE s.StoreID = ? 
-       GROUP BY p.ProductID, p.Name 
+       GROUP BY p.ProductID, p.ProductName 
        ORDER BY units DESC 
        LIMIT 5`,
       [storeId]
@@ -65,20 +65,20 @@ exports.getSalesReport = async (req, res) => {
 exports.getInventoryReport = async (req, res) => {
   const { storeId } = req.query;
   try {
-    // 1. Summary Stats
+    // 1. Summary Stats (Updated to use OnHand and UnitCost directly from Products)
     const [summary] = await db.query(
       `SELECT 
         COUNT(*) as totalProducts,
-        COALESCE(SUM(OnHand * CostPrice), 0) as inventoryValue,
+        COALESCE(SUM(OnHand * UnitCost), 0) as inventoryValue,
         COALESCE(SUM(CASE WHEN OnHand <= ReorderLevel AND OnHand > 0 THEN 1 ELSE 0 END), 0) as lowStock,
         COALESCE(SUM(CASE WHEN OnHand = 0 THEN 1 ELSE 0 END), 0) as outOfStock
        FROM Products WHERE StoreID = ?`,
       [storeId]
     );
 
-    // 2. Lowest stock items
+    // 2. Lowest stock items (Updated to use ProductName)
     const [lowStockItems] = await db.query(
-      `SELECT Name as name, OnHand as quantity 
+      `SELECT ProductName as name, OnHand as quantity 
        FROM Products WHERE StoreID = ? AND OnHand <= ReorderLevel 
        ORDER BY OnHand ASC LIMIT 5`,
       [storeId]

@@ -72,24 +72,37 @@ exports.createStore = async (req, res) => {
 };
 
 // --- GET MY STORES (For Store Switcher and Stores Page) ---
+// Returns ONLY approved stores for an OWNER, or active assigned approved stores for STAFF.
 exports.getMyStores = async (req, res) => {
-  const ownerId = req.user.id;
   try {
-    // We use a subquery to count how many staff members are assigned to each store.
-    // FIX: We now count from StoreUsers instead of the Staff table.
-    const [stores] = await db.query(`
-      SELECT 
-        s.*, 
-        (SELECT COUNT(*) FROM StoreUsers su WHERE su.StoreID = s.StoreID) as staffCount
-      FROM STORES s 
-      WHERE s.OwnerID = ? 
-      ORDER BY s.CreatedAt DESC
-    `, [ownerId]);
-    
-    res.status(200).json(stores);
+    const role = String(req.user.role || '').trim().toUpperCase();
+
+    if (role === 'OWNER') {
+      const [stores] = await db.query(
+        "SELECT StoreID, StoreName FROM Stores WHERE OwnerID = ? AND Status = 'Approved'",
+        [req.user.id]
+      );
+      return res.status(200).json(stores);
+    }
+
+    if (role === 'STAFF') {
+      const [stores] = await db.query(
+        `SELECT DISTINCT s.StoreID, s.StoreName
+         FROM StoreUsers su
+         JOIN Stores s ON s.StoreID = su.StoreID
+         WHERE su.StaffID = ?
+           AND su.IsActive = TRUE
+           AND su.Status = 'Active'
+           AND s.Status = 'Approved'`,
+        [req.user.id]
+      );
+      return res.status(200).json(stores);
+    }
+
+    return res.status(403).json({ message: 'Access denied.' });
   } catch (error) {
     console.error("GET STORES ERROR:", error);
-    res.status(500).json({ message: "Database error fetching stores." });
+    res.status(500).json({ message: "Database error" });
   }
 };
 
@@ -100,14 +113,14 @@ exports.getStoreById = async (req, res) => {
 
   try {
     const [stores] = await db.query(
-      'SELECT * FROM STORES WHERE StoreID = ? AND OwnerID = ?', 
+      'SELECT * FROM STORES WHERE StoreID = ? AND OwnerID = ?',
       [storeId, ownerId]
     );
-    
+
     if (stores.length === 0) {
       return res.status(404).json({ message: "Store not found or you don't have permission." });
     }
-    
+
     res.status(200).json(stores[0]);
   } catch (error) {
     console.error("GET STORE BY ID ERROR:", error);
@@ -116,10 +129,14 @@ exports.getStoreById = async (req, res) => {
 };
 
 // --- UPDATE AN EXISTING STORE ---
+// Status rules (so an owner cannot undo an admin's decision by editing):
+//   Suspended -> cannot be edited; the owner must contact support.
+//   Rejected  -> goes back to Pending (this is the owner sending it again).
+//   Pending / Approved -> keep their current status.
 exports.updateStore = async (req, res) => {
   const { storeId } = req.params;
-  const { 
-    storeName, contactNumber, email, province, municipality, address, operatingHours 
+  const {
+    storeName, contactNumber, email, province, municipality, address, operatingHours
   } = req.body;
 
   const ownerId = req.user.id;
@@ -127,7 +144,7 @@ exports.updateStore = async (req, res) => {
   try {
     // 1. Verify the owner owns this store
     const [existing] = await db.query(
-      'SELECT * FROM STORES WHERE StoreID = ? AND OwnerID = ?', 
+      'SELECT * FROM STORES WHERE StoreID = ? AND OwnerID = ?',
       [storeId, ownerId]
     );
 
@@ -135,15 +152,33 @@ exports.updateStore = async (req, res) => {
       return res.status(403).json({ message: "Store not found or you don't have permission to edit it." });
     }
 
-    // 2. Update the store details and set Status back to 'Pending' for Admin review
+    const currentStatus = existing[0].Status;
+
+    if (currentStatus === 'Suspended') {
+      return res.status(403).json({
+        message: 'This store has been suspended, so it cannot be edited. Contact support.',
+        code: 'STORE_NOT_ACTIVE',
+        storeStatus: 'Suspended',
+      });
+    }
+
+    const nextStatus = currentStatus === 'Rejected' ? 'Pending' : currentStatus;
+
+    // 2. Update the store details (and resubmit it if it was rejected)
     await db.query(
-      `UPDATE STORES 
-       SET StoreName = ?, ContactNumber = ?, Email = ?, Province = ?, Municipality = ?, Address = ?, OperatingHours = ?, Status = 'Pending'
+      `UPDATE STORES
+       SET StoreName = ?, ContactNumber = ?, Email = ?, Province = ?, Municipality = ?, Address = ?, OperatingHours = ?, Status = ?
        WHERE StoreID = ?`,
-      [storeName, contactNumber, email, province, municipality, address, operatingHours, storeId]
+      [storeName, contactNumber, email, province, municipality, address, operatingHours, nextStatus, storeId]
     );
 
-    res.status(200).json({ message: "Store updated successfully. Awaiting Admin approval." });
+    res.status(200).json({
+      message:
+        nextStatus === 'Pending'
+          ? 'Store updated successfully. Awaiting Admin approval.'
+          : 'Store updated successfully.',
+      status: nextStatus,
+    });
 
   } catch (error) {
     console.error("UPDATE STORE ERROR:", error);

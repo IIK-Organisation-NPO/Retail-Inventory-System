@@ -111,6 +111,27 @@ export const SupplierDeleteDepotPopup = ({ depot, onClose, onDelete }) => (
   </PopupShell>
 );
 
+/* Popup: Remove delivery area */
+export const SupplierRemoveAreaPopup = ({ area, onClose, onRemove }) => (
+  <PopupShell title="Remove delivery area" onClose={onClose}>
+    <div className="sdp">
+      <p className="sdp-intro">
+        Are you sure you want to remove <strong>{area}</strong>? You will stop seeing demand requests
+        from this area. You can add it again later.
+      </p>
+
+      <div className="sdp-actions">
+        <button type="button" className="sdp-button sdp-button-danger" onClick={onRemove}>
+          Remove area
+        </button>
+        <button type="button" className="sdp-button sdp-button-outline" onClick={onClose} autoFocus>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </PopupShell>
+);
+
 /* Popup: Add delivery area */
 export const SupplierAddAreaPopup = ({ existingAreas, onClose, onAdd }) => {
   const [area, setArea] = useState("");

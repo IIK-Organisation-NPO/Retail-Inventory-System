@@ -80,8 +80,8 @@ exports.getProducts = async (req, res) => {
   }
 
   try {
-    if (!(await ownsStore(db, storeId, req.user.id)))
-      return res.status(403).json({ message: "You do not own this store" });
+    // REMOVED THE ownsStore CHECK HERE because the checkStoreOwnership middleware 
+    // now verifies that either the Owner OR an assigned Staff member is making the request.
 
     const [products] = await db.query(`
       SELECT 
@@ -172,7 +172,6 @@ exports.addProduct = async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // FIX: Define the connection properly
   const conn = await db.getConnection();
 
   try {
@@ -182,15 +181,14 @@ exports.addProduct = async (req, res) => {
     // 2. Check if category and unit are valid
     const lookups = await lookupErrors(conn, categoryId, unitId);
     if (Object.keys(lookups).length) {
-      conn.release(); // release before returning
+      conn.release(); 
       return res.status(400).json({ message: "Validation failed", errors: lookups });
     }
 
     // 3. Check for duplicate barcode in this store
     const [dupes] = await conn.query(
-      `SELECT p.ProductID FROM products p
-       JOIN inventory i ON i.ProductID = p.ProductID
-       WHERE i.StoreID = ? AND p.Barcode = ?`,
+      `SELECT p.ProductID FROM Products p
+       WHERE p.StoreID = ? AND p.Barcode = ?`,
       [storeId, barcode]
     );
     if (dupes.length) {
@@ -198,33 +196,31 @@ exports.addProduct = async (req, res) => {
       return res.status(409).json({ message: "A product with this barcode already exists in this store" });
     }
 
-    // 4. Start transaction
     await conn.beginTransaction();
 
-    // 5. Insert Product
+    // 4. Insert Product
     const [result] = await conn.query(
-      `INSERT INTO products (ProductName, CategoryID, UnitCost, SellingPrice, Barcode, UnitOfMeasure)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, Number(categoryId), Number(costPrice), Number(sellingPrice), barcode, Number(unitId)]
+      `INSERT INTO Products (StoreID, ProductName, CategoryID, UnitCost, SellingPrice, Barcode, UnitOfMeasure, OnHand, ReorderLevel)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [storeId, name, Number(categoryId), Number(costPrice), Number(sellingPrice), barcode, Number(unitId), onHand || 0, reorderLevel || 15]
     );
     const productId = result.insertId;
 
-    // 6. Insert Inventory
+    // 5. Insert Inventory
     await conn.query(
-      "INSERT INTO inventory (StoreID, ProductID, Quantity, ReorderLevel) VALUES (?, ?, ?, ?)",
+      "INSERT INTO Inventory (StoreID, ProductID, Quantity, ReorderLevel) VALUES (?, ?, ?, ?)",
       [storeId, productId, onHand || 0, reorderLevel || 15]
     );
 
-    // 7. Log Initial Stock Movement
+    // 6. Log Initial Stock Movement
     if (onHand > 0) {
       await conn.query(
-        `INSERT INTO inventorymovement (StoreID, ProductID, OwnerID, StaffID, MovementType, Quantity, Reason)
+        `INSERT INTO InventoryMovement (StoreID, ProductID, OwnerID, StaffID, MovementType, Quantity, Reason)
          VALUES (?, ?, ?, NULL, 'Stock in', ?, 'Opening stock')`,
         [storeId, productId, req.user.id, onHand]
       );
     }
 
-    // 8. Commit
     await conn.commit();
     res.status(201).json({ message: "Product added successfully", productId });
 
@@ -236,14 +232,13 @@ exports.addProduct = async (req, res) => {
     }
     res.status(500).json({ message: "Database error" });
   } finally {
-    conn.release(); // Always release the connection!
+    conn.release();
   }
 };
 
 // --- UPDATE A PRODUCT ---
 exports.updateProduct = async (req, res) => {
   const { productId } = req.params;
-  // FIX: Need storeId from the body/query to find the inventory record
   const { storeId, name, categoryId, barcode, unitOfMeasureName, costPrice, sellingPrice, reorderLevel } = req.body;
 
   const conn = await db.getConnection();

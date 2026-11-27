@@ -7,6 +7,7 @@ import {
   SupplierDepotFormPopup,
   SupplierDeleteDepotPopup,
   SupplierAddAreaPopup,
+  SupplierRemoveAreaPopup,
 } from "../../components/Supplier/SupplierDepotPopups";
 import "../../Style/components/Supplier/SupplierDashboard.css";
 import "../../Style/components/Supplier/Supplier_CompanyProfile.css";
@@ -16,7 +17,7 @@ const OTP_LENGTH = 6;
 
 const PRODUCT_CATEGORIES = [
   "Groceries",
-  "Drinks",
+  "Beveragers",
   "Snacks",
   "Household",
   "Toiletries",
@@ -24,11 +25,6 @@ const PRODUCT_CATEGORIES = [
   "Agriculture",
   "Hardware",
 ];
-
-const CIPC_DETAILS = {
-  registrationNumber: "2012/123456/07",
-  registeredName: "Tiger Brands Ltd",
-};
 
 const EMPTY_PROFILE = {
   companyName: "",
@@ -70,7 +66,7 @@ const PROFILE_FIELDS = [
     autoComplete: "tel",
     inputMode: "tel",
     readOnly: false,
-    hint: "Must be unique. Cannot match another supplier's number.",
+    hint: "South African format only. E.g., 0821234567. Must be unique.",
   },
 ];
 
@@ -100,17 +96,22 @@ const sameProfile = (a, b) =>
 const getAuthToken = () =>
   localStorage.getItem("supplierToken") || localStorage.getItem("token");
 
+// Validate SA phone number (Starts with 0, followed by 9 digits)
+const isValidSAPhone = (phone) => {
+  const cleaned = phone.replace(/\s/g, "");
+  return /^0\d{9}$/.test(cleaned);
+};
+
 const Supplier_CompanyProfile = () => {
   const navigate = useNavigate();
   const [savedProfile, setSavedProfile] = useState(EMPTY_PROFILE);
   const [profile, setProfile] = useState(EMPTY_PROFILE);
   const [errors, setErrors] = useState({});
   const [savedMessage, setSavedMessage] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
 
-  // 4C persistence state — saved* = last server snapshot, unsaved = current UI
+  // Persistence state — saved* = last server snapshot, unsaved = current UI
   const [areas, setAreas] = useState([]);
   const [savedAreas, setSavedAreas] = useState([]);
   const [depots, setDepots] = useState([]);
@@ -118,9 +119,9 @@ const Supplier_CompanyProfile = () => {
   const [savedCategories, setSavedCategories] = useState([]);
   const [savingAreas, setSavingAreas] = useState(false);
   const [savingDepots, setSavingDepots] = useState(false);
-  const [areasSavedMsg, setAreasSavedMsg] = useState("");
   const [depotsSavedMsg, setDepotsSavedMsg] = useState("");
 
+  // Which popup is open
   const [popup, setPopup] = useState(null);
 
   const [otpModal, setOtpModal] = useState(null);
@@ -152,7 +153,6 @@ const Supplier_CompanyProfile = () => {
         setSavedProfile(mapped);
         setProfile(mapped);
 
-        // Load 4C persisted data
         const cpRes = await fetch(
           `${API_BASE}/api/supplier/company-profile?cb=${Date.now()}`,
           { cache: "no-store", headers: { Authorization: `Bearer ${token}` } }
@@ -172,8 +172,6 @@ const Supplier_CompanyProfile = () => {
         }
       } catch (err) {
         if (!cancelled) setLoadError(err.message || "Failed to load profile.");
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     };
     run();
@@ -199,7 +197,6 @@ const Supplier_CompanyProfile = () => {
     setSavedMessage("");
   };
 
-  // Persists company-profile data (categories + areas + depots) in one PUT.
   const persistCompanyProfile = async ({
     categories,
     deliveryAreas,
@@ -229,13 +226,22 @@ const Supplier_CompanyProfile = () => {
     e.preventDefault();
     setErrors({});
     setSavedMessage("");
+
+    // 1. Frontend Validation: SA Phone Format
+    if (!isValidSAPhone(profile.mobile.trim())) {
+      setErrors((cur) => ({
+        ...cur,
+        mobile: "Please enter a valid SA mobile number (e.g., 0821234567).",
+      }));
+      return;
+    }
+
     setSaving(true);
 
     try {
       const token = getAuthToken();
       if (!token) throw new Error("No token. Please log in again.");
 
-      // 1. Profile fields (email/mobile/company)
       const payload = {
         companyName: profile.companyName.trim(),
         email: profile.email.trim(),
@@ -253,6 +259,7 @@ const Supplier_CompanyProfile = () => {
 
       const body = await res.json();
 
+      // 2. Backend Validation: Duplicate phone/email checks
       if (res.status === 400 || res.status === 409) {
         setErrors(body.errors || {});
         return;
@@ -264,7 +271,6 @@ const Supplier_CompanyProfile = () => {
         throw new Error(msg);
       }
 
-      // 2. Persist 4C categories (areas/depots have their own save buttons)
       const nextCategories = profile.categories;
       if (
         nextCategories.length !== savedCategories.length ||
@@ -329,6 +335,96 @@ const Supplier_CompanyProfile = () => {
 
   const closePopup = () => setPopup(null);
 
+  const handleSaveDepot = async (depotData) => {
+    setSavingDepots(true);
+    try {
+      let nextDepots;
+      if (popup.depot) {
+        nextDepots = depots.map((d) =>
+          d.id === popup.depot.id ? { ...d, ...depotData } : d
+        );
+      } else {
+        nextDepots = [...depots, { ...depotData, id: Date.now() }];
+      }
+
+      const cp = await persistCompanyProfile({
+        categories: savedCategories,
+        deliveryAreas: savedAreas,
+        depots: nextDepots,
+      });
+
+      setDepots(cp.depots);
+      setSavedDepots(cp.depots);
+      setDepotsSavedMsg("Depots updated.");
+      closePopup();
+    } catch (err) {
+      alert(err.message || "Failed to save depot.");
+    } finally {
+      setSavingDepots(false);
+    }
+  };
+
+  const handleDeleteDepot = async () => {
+    setSavingDepots(true);
+    try {
+      const nextDepots = depots.filter((d) => d.id !== popup.depot.id);
+      const cp = await persistCompanyProfile({
+        categories: savedCategories,
+        deliveryAreas: savedAreas,
+        depots: nextDepots,
+      });
+
+      setDepots(cp.depots);
+      setSavedDepots(cp.depots);
+      setDepotsSavedMsg("Depot deleted.");
+      closePopup();
+    } catch (err) {
+      alert(err.message || "Failed to delete depot.");
+    } finally {
+      setSavingDepots(false);
+    }
+  };
+
+  const handleAddArea = async (newArea) => {
+    setSavingAreas(true);
+    try {
+      const nextAreas = [...areas, newArea];
+      const cp = await persistCompanyProfile({
+        categories: savedCategories,
+        deliveryAreas: nextAreas,
+        depots: savedDepots,
+      });
+
+      setAreas(cp.deliveryAreas);
+      setSavedAreas(cp.deliveryAreas);
+      closePopup();
+    } catch (err) {
+      alert(err.message || "Failed to add area.");
+    } finally {
+      setSavingAreas(false);
+    }
+  };
+
+  const handleRemoveArea = async () => {
+    setSavingAreas(true);
+    try {
+      const nextAreas = areas.filter((item) => item !== popup.area);
+      const cp = await persistCompanyProfile({
+        categories: savedCategories,
+        deliveryAreas: nextAreas,
+        depots: savedDepots,
+      });
+
+      setAreas(cp.deliveryAreas);
+      setSavedAreas(cp.deliveryAreas);
+      closePopup();
+    } catch (err) {
+      alert(err.message || "Failed to remove area.");
+    } finally {
+      setSavingAreas(false);
+    }
+  };
+
   const handleOtpChange = (index, value) => {
     const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH - index);
     setOtpError("");
@@ -386,93 +482,6 @@ const Supplier_CompanyProfile = () => {
     }
   };
 
-  const handleSaveDepot = async (depot) => {
-    const nextDepots =
-      popup.type === "editDepot"
-        ? depots.map((item) => (item.id === depot.id ? depot : item))
-        : [...depots, { ...depot, id: Date.now() }];
-    setDepots(nextDepots);
-    closePopup();
-    // Persist immediately
-    setSavingDepots(true);
-    setDepotsSavedMsg("");
-    try {
-      const cp = await persistCompanyProfile({
-        categories: savedCategories,
-        deliveryAreas: savedAreas,
-        depots: nextDepots,
-      });
-      setSavedDepots(cp.depots);
-      setSavedCategories(cp.categories);
-      setSavedAreas(cp.deliveryAreas);
-      setDepotsSavedMsg("Depots saved.");
-    } catch (err) {
-      setDepots(savedDepots);
-      setDepotsSavedMsg(err.message || "Failed to save depots.");
-    } finally {
-      setSavingDepots(false);
-    }
-  };
-
-  const handleDeleteDepot = async () => {
-    const nextDepots = depots.filter((item) => item.id !== popup.depot.id);
-    setDepots(nextDepots);
-    closePopup();
-    setSavingDepots(true);
-    setDepotsSavedMsg("");
-    try {
-      const cp = await persistCompanyProfile({
-        categories: savedCategories,
-        deliveryAreas: savedAreas,
-        depots: nextDepots,
-      });
-      setSavedDepots(cp.depots);
-      setSavedCategories(cp.categories);
-      setSavedAreas(cp.deliveryAreas);
-      setDepotsSavedMsg("Depot deleted.");
-    } catch (err) {
-      setDepots(savedDepots);
-      setDepotsSavedMsg(err.message || "Failed to delete depot.");
-    } finally {
-      setSavingDepots(false);
-    }
-  };
-
-  const handleAddArea = async (area) => {
-    const nextAreas = [...areas, area];
-    setAreas(nextAreas);
-    closePopup();
-    setSavingAreas(true);
-    setAreasSavedMsg("");
-    try {
-      const cp = await persistCompanyProfile({
-        categories: savedCategories,
-        deliveryAreas: nextAreas,
-        depots: savedDepots,
-      });
-      setSavedAreas(cp.deliveryAreas);
-      setSavedCategories(cp.categories);
-      setSavedDepots(cp.depots);
-      setAreasSavedMsg("Delivery area added.");
-    } catch (err) {
-      setAreas(savedAreas);
-      setAreasSavedMsg(err.message || "Failed to add delivery area.");
-    } finally {
-      setSavingAreas(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="supplier-dashboard-layout">
-        <SupplierSidebar />
-        <main className="supplier-dashboard-main scp">
-          <p className="scp-hint">Loading your profile…</p>
-        </main>
-      </div>
-    );
-  }
-
   return (
     <div className="supplier-dashboard-layout">
       <SupplierSidebar />
@@ -514,12 +523,8 @@ const Supplier_CompanyProfile = () => {
             <span className="scp-chip">Verified with CIPC · read-only</span>
             <dl>
               <div>
-                <dt>Company registration number</dt>
-                <dd>{CIPC_DETAILS.registrationNumber}</dd>
-              </div>
-              <div>
                 <dt>Registered company name</dt>
-                <dd>{CIPC_DETAILS.registeredName}</dd>
+                <dd>{savedProfile.companyName || "—"}</dd>
               </div>
             </dl>
           </div>
@@ -543,7 +548,7 @@ const Supplier_CompanyProfile = () => {
                     className={`${errors[field.key] ? "error" : ""}${
                       field.readOnly ? " readonly" : ""
                     }`}
-                    value={profile[field.key]}
+                    value={profile[field.key] || ""}
                     onChange={
                       field.readOnly ? undefined : handleFieldChange(field.key)
                     }
@@ -628,9 +633,16 @@ const Supplier_CompanyProfile = () => {
           </h2>
           <div className="scp-chips">
             {areas.map((area) => (
-              <span key={area} className="scp-area">
+              <button
+                key={area}
+                type="button"
+                className="scp-area"
+                onClick={() => setPopup({ type: "removeArea", area })}
+                aria-label={`Remove ${area}`}
+              >
                 {area}
-              </span>
+                <span className="scp-area-remove" aria-hidden="true">×</span>
+              </button>
             ))}
             <button
               type="button"
@@ -641,15 +653,11 @@ const Supplier_CompanyProfile = () => {
               {savingAreas ? "Saving…" : "Add area"}
             </button>
           </div>
-          {areasSavedMsg ? (
-            <p className="scp-hint" role="status">
-              {areasSavedMsg}
-            </p>
-          ) : (
-            <p className="scp-hint">
-              You see demand requests only in these areas.
-            </p>
-          )}
+          <p className="scp-hint">
+            {areas.length === 0
+              ? "No delivery areas yet. Add an area to start seeing demand requests."
+              : "You see demand requests only in these areas. Select an area to remove it."}
+          </p>
         </section>
 
         <section
@@ -825,6 +833,10 @@ const Supplier_CompanyProfile = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {popup?.type === "removeArea" && (
+        <SupplierRemoveAreaPopup area={popup.area} onClose={closePopup} onRemove={handleRemoveArea} />
       )}
     </div>
   );
