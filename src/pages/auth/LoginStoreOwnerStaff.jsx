@@ -138,7 +138,8 @@ const LoginStoreOwnerStaff = () => {
             <p className="subtitle">Sign in as a store owner or a staff member to continue.</p>
 
             <div className="role-toggle">
-              <button type="button" className="role-btn active">Store</button>
+              {/* 'active' class highlights the currently selected role */}
+              <Link to="/login" className="role-btn active">Store</Link>
               <Link to="/login/supplier" className="role-btn">Supplier</Link>
             </div>
 
